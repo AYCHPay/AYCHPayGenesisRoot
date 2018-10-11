@@ -81,7 +81,7 @@ src/qt/genesis-qt.includes
 *.qm
 Makefile
 genesis-qt
-Bitcoin-Qt.app
+Genesis-Qt.app
 background.tiff*
 
 # Unit-tests
