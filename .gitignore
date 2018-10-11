@@ -1,13 +1,13 @@
 *.tar.gz
 
 *.exe
-src/safecash
-src/safecashd
-src/safecash-cli
-src/safecash-tx
-src/test/test_safecash
-src/test/test_safecash_fuzzy
-src/qt/test/test_safecash-qt
+src/genesis
+src/genesisd
+src/genesis-cli
+src/genesis-tx
+src/test/test_genesis
+src/test/test_genesis_fuzzy
+src/qt/test/test_genesis-qt
 
 # autoreconf
 Makefile.in
@@ -30,8 +30,8 @@ config.log
 config.status
 configure
 libtool
-src/config/safecash-config.h
-src/config/safecash-config.h.in
+src/config/genesis-config.h
+src/config/genesis-config.h.in
 src/config/stamp-h1
 share/setup.nsi
 share/qt/Info.plist
@@ -44,11 +44,11 @@ src/qt/forms/ui_*.h
 
 src/qt/test/moc*.cpp
 
-src/qt/safecash-qt.config
-src/qt/safecash-qt.creator
-src/qt/safecash-qt.creator.user
-src/qt/safecash-qt.files
-src/qt/safecash-qt.includes
+src/qt/genesis-qt.config
+src/qt/genesis-qt.creator
+src/qt/genesis-qt.creator.user
+src/qt/genesis-qt.files
+src/qt/genesis-qt.includes
 
 .deps
 .dirstamp
@@ -80,13 +80,13 @@ src/qt/safecash-qt.includes
 # Compilation and Qt preprocessor part
 *.qm
 Makefile
-safecash-qt
+genesis-qt
 Bitcoin-Qt.app
 background.tiff*
 
 # Unit-tests
 Makefile.test
-safecash-qt_test
+genesis-qt_test
 
 # Resources cpp
 qrc_*.cpp
@@ -99,7 +99,7 @@ build
 *.gcno
 *.gcda
 /*.info
-test_safecash.coverage/
+test_genesis.coverage/
 total.coverage/
 coverage_percent.txt
 
@@ -114,5 +114,5 @@ test/cache/*
 
 /doc/doxygen/
 .vs/
-libsafecashconsensus.pc
+libgenesisconsensus.pc
 contrib/devtools/split-debug.sh
