@@ -113,6 +113,6 @@ test/cache/*
 !src/leveldb*/Makefile
 
 /doc/doxygen/
-
+.vs/
 libsafecashconsensus.pc
 contrib/devtools/split-debug.sh
