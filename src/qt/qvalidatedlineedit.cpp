@@ -17,12 +17,12 @@ QValidatedLineEdit::QValidatedLineEdit(QWidget *parent) :
 
 void QValidatedLineEdit::setValid(bool _valid)
 {
-    if(_valid == this->valid)
+    if (_valid == this->valid)
     {
         return;
     }
 
-    if(_valid)
+    if (_valid)
     {
         setStyleSheet("");
     }

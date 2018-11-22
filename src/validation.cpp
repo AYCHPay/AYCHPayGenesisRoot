@@ -17,6 +17,7 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
+#include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
@@ -40,11 +41,16 @@
 #include <validationinterface.h>
 #include <warnings.h>
 
+#include <masternodes/governance-classes.h>
+#include <masternodes/masternodeman.h>
+#include <masternodes/masternode-payments.h>
+
 #include <future>
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <boost/foreach.hpp>
 
@@ -422,6 +428,50 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool 
         }
     }
     return EvaluateSequenceLocks(index, lockPair);
+}
+
+// Masternodes
+// TODO check ~ maybe replaced by newer function
+bool GetUTXOCoin(const COutPoint& outpoint, Coin& coin)
+{
+    LOCK(cs_main);
+    if (!pcoinsTip->GetCoin(outpoint, coin))
+        return false;
+    if (coin.IsSpent())
+        return false;
+    return true;
+}
+
+int GetUTXOHeight(const COutPoint& outpoint)
+{
+    // -1 means UTXO is yet unknown or already spent
+    Coin coin;
+    return GetUTXOCoin(outpoint, coin) ? coin.nHeight : -1;
+}
+
+int GetUTXOConfirmations(const COutPoint& outpoint)
+{
+    // -1 means UTXO is yet unknown or already spent
+    LOCK(cs_main);
+    int nPrevoutHeight = GetUTXOHeight(outpoint);
+    return (nPrevoutHeight > -1 && chainActive.Tip()) ? chainActive.Height() - nPrevoutHeight + 1 : -1;
+}
+
+CAmount GetMasternodePayment(int nHeight, CAmount blockValue)
+{
+    CAmount ret = blockValue * Params().GetConsensus().nBlockRewardMasternode; 
+    return ret;
+}
+
+// TODO replace by newer function
+bool GetBlockHash(uint256& hashRet, int nBlockHeight)
+{
+    LOCK(cs_main);
+    if (chainActive.Tip() == NULL) return false;
+    if (nBlockHeight < -1 || nBlockHeight > chainActive.Height()) return false;
+    if (nBlockHeight == -1) nBlockHeight = chainActive.Height();
+    hashRet = chainActive[nBlockHeight]->GetBlockHash();
+    return true;
 }
 
 // Returns the script flags which should be checked for a given block
@@ -1143,7 +1193,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     return true;
 }
 
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
+CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, bool fGovernanceBlockPartOnly)
 {
     int subsidy = 0;
 
@@ -1157,74 +1207,100 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
         // There are no mature blocks yet...
         subsidy = BLOCK_REWARD_MAX;
     }
+    else if (
+        // Normal bonus block
+        (nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == 0) ||
+        // Governance block
+        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    )
+    {
+        // ultra block (once a lunar year +/- 336 days)
+        subsidy = (consensusParams.GetUltraBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if (
+        // Normal bonus block
+        (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0) ||
+        // Governance block
+        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    )
+    {
+        // a mega block (once a lunar month +/- 28 days) 
+        subsidy = (consensusParams.GetMegaBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if (
+        // Normal bonus block
+        (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0) ||
+        // Governance block
+        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == consensusParams.nGovernanceBlockOffset) 
+    )
+    {
+        // a weekly super block (+/- 7 days)
+        subsidy = (consensusParams.GetSuperBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if (
+        // Normal bonus block
+        (nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == 0) ||
+        // Governance block
+        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    )
+    {
+        // a daily bonus block
+        subsidy = (consensusParams.GetBonusBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if(nHeight < consensusParams.nMasternodePaymentsStartBlock)
+    {
+        // A normal block... pre-masternodes
+        // Get the most recent confirmed block's hash
+        auto lookupBlockHeight = nHeight - COINBASE_MATURITY;
+        CBlockIndex* pblockindex = chainActive[lookupBlockHeight];
+        assert(pblockindex != nullptr);
+        uint256  confirmedHash = pblockindex->GetBlockHash();
+        //LogPrintf("Confirmed Hash for block %i: %s \n", nHeight - COINBASE_MATURITY, confirmedHash.GetHex());
+        // Get a sum of the significant bytes
+        // 7 23 3 2 27 4
+        unsigned int total = 0;
+        total += confirmedHash.GetUint64Char(7); 
+        total += confirmedHash.GetUint64Char(23);
+        total += confirmedHash.GetUint64Char(3); 
+        total += confirmedHash.GetUint64Char(2); 
+        total += confirmedHash.GetUint64Char(27); 
+        total += confirmedHash.GetUint64Char(4);
+
+        subsidy = total;
+
+        // sanity check... make sure it is not too little or too much
+        if (subsidy <= BLOCK_REWARD_MIN)
+        {
+            //LogPrintf("Subsidy %i too low, resetting to %i \n", subsidy, subsidy * BLOCK_REWARD_MIN);
+            if (subsidy == 0)
+            { 
+                subsidy++;
+            }
+            subsidy = subsidy * BLOCK_REWARD_MIN;
+        }
+        else if (subsidy > BLOCK_REWARD_MAX)
+        {
+            //LogPrintf("Subsidy %i too high, resetting to %i \n", subsidy, subsidy / 10);
+            subsidy = subsidy / 10;
+        }
+        // Make sure the subsidy divides by 4 to make the rest of the math work better
+        subsidy -= subsidy % 4;
+    }
     else
     {
-        // Is this a superblock?
-        if (nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == 0)
-        {
-            // ultra block (once a lunar year +/- 354 days)
-            subsidy = (consensusParams.GetUltraBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else if (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0)
-        {
-            // a mega block (once a lunar month +/- 28 days) 
-            subsidy = (consensusParams.GetMegaBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else if (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0)
-        {
-            // a weekly super block (+/- 7 days)
-            subsidy = (consensusParams.GetSuperBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else if (nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == 0)
-        {
-            // a daily bonus block
-            subsidy = (consensusParams.GetBonusBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else
-        {
-            // A normal block...
-            // Get the most recent confirmed block's hash
-            auto lookupBlockHeight = nHeight - COINBASE_MATURITY;
-            CBlockIndex* pblockindex = chainActive[lookupBlockHeight];
-            assert(pblockindex != nullptr);
-            uint256  confirmedHash = pblockindex->GetBlockHash();
-            //LogPrintf("Confirmed Hash for block %i: %s \n", nHeight - COINBASE_MATURITY, confirmedHash.GetHex());
-            
-            // Get a sum of the significant bytes
-            // 7 23 3 2 27 4
-            unsigned int total = 0;
-            total += confirmedHash.GetUint64Char(7); 
-            total += confirmedHash.GetUint64Char(23);
-            total += confirmedHash.GetUint64Char(3); 
-            total += confirmedHash.GetUint64Char(2); 
-            total += confirmedHash.GetUint64Char(27); 
-            total += confirmedHash.GetUint64Char(4);
-
-            subsidy = total;
-
-            // sanity check... make sure it is not too little or too much
-            if (subsidy <= BLOCK_REWARD_MIN)
-            {
-                //LogPrintf("Subsidy %i too low, resetting to %i \n", subsidy, subsidy * BLOCK_REWARD_MIN);
-                if (subsidy == 0)
-                { 
-                    subsidy++;
-                }
-                subsidy = subsidy * BLOCK_REWARD_MIN;
-            }
-            else if (subsidy > BLOCK_REWARD_MAX)
-            {
-                //LogPrintf("Subsidy %i too high, resetting to %i \n", subsidy, subsidy / 10);
-                subsidy = subsidy / 10;
-            }
-        }
+        // A normal block... with masternodes
+        subsidy = consensusParams.nBlockRewardTotal;
     }
-    // Make sure the subsidy divides by 4 to make the rest of the math work better
-    subsidy -= subsidy % 4;
 
     //LogPrintf("Subsidy %i acceptable for block %i \n", subsidy, nHeight);
     CAmount nSubsidy = subsidy * COIN;
-    return nSubsidy;
+    // Deduct the "normal" payments from the big block amount
+    CAmount nGovernanceBlockPart = 0;
+    if (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    {
+        nGovernanceBlockPart = subsidy - consensusParams.nBlockRewardTotal;
+    }
+    return fGovernanceBlockPartOnly ? nGovernanceBlockPart :  nSubsidy;
 }
 
 bool IsInitialBlockDownload()
@@ -1771,6 +1847,21 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
         ThresholdState state = VersionBitsState(pindexPrev, params, (Consensus::DeploymentPos)i, versionbitscache);
         if (state == THRESHOLD_LOCKED_IN || state == THRESHOLD_STARTED) {
             nVersion |= VersionBitsMask(params, (Consensus::DeploymentPos)i);
+
+            CScript payee;
+            masternode_info_t mnInfo;
+            if (!mnpayments.GetBlockPayee(pindexPrev->nHeight + 1, payee)) {
+                // no votes for this block
+                continue;
+            }
+            if (!mnodeman.GetMasternodeInfo(payee, mnInfo)) {
+                // unknown masternode
+                continue;
+            }
+            if (mnInfo.nProtocolVersion < BLOCKRESTRUCTURE_AND_MASTERNODES) {
+                // masternode is not upgraded yet
+                continue;
+            }
         }
     }
 
@@ -2044,11 +2135,32 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    if (block.vtx[0]->GetValueOut() > blockReward)
-        return state.DoS(100,
-                         error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
-                               block.vtx[0]->GetValueOut(), blockReward),
-                               REJECT_INVALID, "bad-cb-amount");
+	if (!CGovernanceBlock::IsValidBlockHeight(pindex->nHeight))
+		if (block.vtx[0]->GetValueOut() > blockReward)
+		return state.DoS(100,
+						 error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
+							   block.vtx[0]->GetValueOut(), blockReward),
+							   REJECT_INVALID, "bad-cb-amount");
+
+    // Genesis Masternode : Modified to check masternode payments and governance blocks
+    // It's possible that we simply don't have enough data and this could fail
+    // (i.e. block itself could be a correct one and we need to store it),
+    // that's why this is in ConnectBlock. Could be the other way around however -
+    // the peer who sent us this block is missing some data and wasn't able
+    // to recognize that block is actually invalid.
+    // TODO: resync data (both ways?) and try to reprocess this block later.
+    std::string strError = "";
+    if (!IsBlockValueValid(block, pindex->nHeight, blockReward, strError)) {
+        return state.DoS(20, error("ConnectBlock(GENX): %s", strError), REJECT_INVALID, "bad-cb-amount");
+    }
+    
+    if (pindex->nHeight > Params().GetConsensus().nMasternodePaymentsStartBlock) {
+        if (!IsBlockPayeeValid(block.vtx[0], pindex->nHeight, blockReward)) {
+            return state.DoS(20, error("ConnectBlock(GENX): couldn't find masternode or governance block payments"),
+                                    REJECT_INVALID, "bad-cb-payee");
+        }
+    }
+    // END Genesis Masternode
 
     if (!control.Wait())
         return state.DoS(100, error("%s: CheckQueue failed", __func__), REJECT_INVALID, "block-validation-failed");
@@ -2671,8 +2783,8 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
             SyncWithValidationInterfaceQueue();
         }
 
-        const CBlockIndex *pindexFork;
-        bool fInitialDownload;
+        // const CBlockIndex *pindexFork;
+        // bool fInitialDownload;
         {
             LOCK(cs_main);
             CBlockIndex* starting_tip = chainActive.Tip();
@@ -3061,7 +3173,7 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
         {
             // LogPrintf("CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
         }
-        else if (IsInitialBlockDownload && CheckEquihashSolution(&block, Params(), "SafeCash"))
+        else if (IsInitialBlockDownload() && CheckEquihashSolution(&block, Params(), "SafeCash"))
         {
             // LogPrintf("CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
         }
@@ -3248,7 +3360,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
 
     // Reject outdated version blocks when 95% (75% on testnet) of the network has upgraded:
     // check for version 2, 3 and 4 upgrades
-    if((block.nVersion < 2 && nHeight >= consensusParams.BIP34Height) ||
+    if ((block.nVersion < 2 && nHeight >= consensusParams.BIP34Height) ||
        (block.nVersion < 3 && nHeight >= consensusParams.BIP66Height) ||
        (block.nVersion < 4 && nHeight >= consensusParams.BIP65Height))
             return state.Invalid(false, REJECT_OBSOLETE, strprintf("bad-version(0x%08x)", block.nVersion),
@@ -3361,9 +3473,9 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         vFounders -= foundersChange;
     }
     // Calculate the individual founder's reward
-    auto ifr = vFounders / allFounderScripts.size();
+    int64_t ifr = vFounders / allFounderScripts.size();
     // create the transactions
-    auto foundScripts = 0;
+    uint32_t foundScripts = 0;
     for (auto &founderScript : allFounderScripts)
     {
         BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
@@ -3984,7 +4096,7 @@ bool static LoadBlockIndexDB(const CChainParams& chainparams)
     // Check whether we need to continue reindexing
     bool fReindexing = false;
     pblocktree->ReadReindexing(fReindexing);
-    if(fReindexing) fReindex = true;
+    if (fReindexing) fReindex = true;
 
     // Check whether we have a transaction index
     pblocktree->ReadFlag("txindex", fTxIndex);

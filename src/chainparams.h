@@ -54,7 +54,7 @@ public:
     const Consensus::Params& GetConsensus() const { return consensus; }
     const CMessageHeader::MessageStartChars& MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
-
+    
     const CBlock& GenesisBlock() const { return genesis; }
     /** Make miner wait to have peers to avoid wasting work */
     bool MiningRequiresPeers() const { return fMiningRequiresPeers; }
@@ -78,18 +78,18 @@ public:
     const ChainTxData& TxData() const { return chainTxData; }
     void UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64_t nStartTime, int64_t nTimeout);
     /** Return the founder's address and script for a given block height */
-    std::string GetFounderAddressAtHeight(int height) const;
-    CScript GetFounderScriptAtHeight(int height) const;
-    std::string GetFounderAddressAtIndex(int i) const;
+    std::string GetFounderAddressAtHeight(uint32_t height) const;
+    CScript GetFounderScriptAtHeight(uint32_t height) const;
+    std::string GetFounderAddressAtIndex(uint32_t i) const;
     std::vector<CScript> GetAllFounderScripts() const;
     /** Return the infrastucture address and script for a given block height */
-    std::string GetInfrastructureAddressAtHeight(int height) const;
-    CScript GetInfrastructureScriptAtHeight(int height) const;
-    std::string GetInfrastructureAddressAtIndex(int i) const;
+    std::string GetInfrastructureAddressAtHeight(uint32_t height) const;
+    CScript GetInfrastructureScriptAtHeight(uint32_t height) const;
+    std::string GetInfrastructureAddressAtIndex(uint32_t i) const;
     /** Return the giveaway address and script for a given block height */
-    std::string GetGiveawayAddressAtHeight(int height) const;
-    CScript GetGiveawayScriptAtHeight(int height) const;
-    std::string GetGiveawayAddressAtIndex(int i) const;
+    std::string GetGiveawayAddressAtHeight(uint32_t height) const;
+    CScript GetGiveawayScriptAtHeight(uint32_t height) const;
+    std::string GetGiveawayAddressAtIndex(uint32_t i) const;
     /* Convenience Functions*/
     CScript AddressToScript(std::string inAddress) const;
     bool IsAfterSwitch(int nHeight) const
@@ -106,6 +106,11 @@ protected:
 
     Consensus::Params consensus;
     CMessageHeader::MessageStartChars pchMessageStart;
+    
+    // Masternodes
+    //! Raw pub key bytes for the broadcast alert signing key.
+    std::string strMasternodePaymentsPubKey;
+    
     int nDefaultPort;
     uint64_t nPruneAfterHeight;
     unsigned int nEquihashN = 0;

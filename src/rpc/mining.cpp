@@ -26,6 +26,11 @@
 #include <utilstrencodings.h>
 #include <validationinterface.h>
 #include <warnings.h>
+#include <script/standard.h>
+
+#include <masternodes/governance-classes.h>
+#include <masternodes/masternode-payments.h>
+#include <masternodes/masternode-sync.h>
 
 #include <memory>
 #include <stdint.h>
@@ -483,6 +488,23 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             "  \"height\" : n                      (numeric) The height of the next block\n"
             "  \"equihashn\" : n                   (numeric) Equihash N\n"
             "  \"equihashk\" : n                   (numeric) Equihash K\n"
+            "  \"masternode\" : {                  (json object) required masternode payee that must be included in the next block\n"
+            "      \"payee\" : \"xxxx\",             (string) payee address\n"
+            "      \"script\" : \"xxxx\",            (string) payee scriptPubKey\n"
+            "      \"amount\": n                   (numeric) required amount to pay\n"
+            "  },\n"
+            "  \"masternode_payments_started\" :  true|false, (boolean) true, if masternode payments started\n"
+            "  \"masternode_payments_enforced\" : true|false, (boolean) true, if masternode payments are enforced\n"
+            "  \"governanceblock\" : [                  (array) required governanceblock payees that must be included in the next block\n"
+            "      {\n"
+            "         \"payee\" : \"xxxx\",          (string) payee address\n"
+            "         \"script\" : \"xxxx\",         (string) payee scriptPubKey\n"
+            "         \"amount\": n                (numeric) required amount to pay\n"
+            "      }\n"
+            "      ,...\n"
+            "  ],\n"
+            "  \"governanceblocks_started\" : true|false, (boolean) true, if governanceblock payments started\n"
+            "  \"governanceblocks_enabled\" : true|false  (boolean) true, if governanceblock payments are enabled\n"
             "}\n"
 
             "\nExamples:\n"
@@ -558,7 +580,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     if (strMode != "template")
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
-    if(!g_connman)
+    if (!g_connman)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
 
     if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0)
@@ -566,6 +588,17 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
 
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis Official is downloading blocks...");
+
+    // when enforcement is on we need information about a masternode payee or otherwise our block is going to be orphaned by the network
+    CScript payee;
+    if (!masternodeSync.IsWinnersListSynced()
+        && !mnpayments.GetBlockPayee(chainActive.Height() + 1, payee))
+            throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is downloading masternode winners...");
+
+    // next bock is a governanceblock and we need governance info to correctly construct it
+    if (!masternodeSync.IsSynced()
+        && CGovernanceBlock::IsValidBlockHeight(chainActive.Height() + 1))
+            throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is syncing with network...");
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -796,6 +829,38 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
     result.push_back(Pair("equihashn", (int64_t)(Params().EquihashN())));
     result.push_back(Pair("equihashk", (int64_t)(Params().EquihashK())));
+
+    UniValue masternodeObjArray(UniValue::VARR);
+    if (pblock->vtxoutMasternode.size()) {
+        for (const auto& txout : pblock->vtxoutMasternode) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination dest;
+            ExtractDestination(txout.scriptPubKey, dest);
+            entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            entry.push_back(Pair("script", HexStr(txout.scriptPubKey)));
+            entry.push_back(Pair("amount", txout.nValue));
+            masternodeObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("masternode", masternodeObjArray));
+    result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
+    result.push_back(Pair("masternode_payments_enforced", true));
+
+    UniValue governanceblockObjArray(UniValue::VARR);
+    if (pblock->vtxoutGovernance.size()) {
+        for (const auto& txout : pblock->vtxoutGovernance) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination dest;
+            ExtractDestination(txout.scriptPubKey, dest);
+            entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            entry.push_back(Pair("script", HexStr(txout.scriptPubKey)));
+            entry.push_back(Pair("amount", txout.nValue));
+            governanceblockObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("governanceblock", governanceblockObjArray));
+    result.push_back(Pair("governanceblocks_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
+    result.push_back(Pair("governanceblocks_enabled", true));
 
     if (!pblocktemplate->vchCoinbaseCommitment.empty() && fSupportsSegwit) {
         result.push_back(Pair("default_witness_commitment", HexStr(pblocktemplate->vchCoinbaseCommitment.begin(), pblocktemplate->vchCoinbaseCommitment.end())));

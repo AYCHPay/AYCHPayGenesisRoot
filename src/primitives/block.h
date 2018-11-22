@@ -87,6 +87,8 @@ public:
     std::vector<CTransactionRef> vtx;
 
     // memory only
+    mutable std::vector<CTxOut> vtxoutMasternode; // masternode payments
+    mutable std::vector<CTxOut> vtxoutGovernance; // Governance block payment
     mutable bool fChecked;
 
     CBlock()
@@ -112,6 +114,8 @@ public:
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        vtxoutMasternode.clear();
+        vtxoutGovernance.clear();
         fChecked = false;
     }
 

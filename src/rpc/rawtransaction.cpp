@@ -263,7 +263,7 @@ UniValue gettxoutproof(const JSONRPCRequest& request)
     }
 
     CBlock block;
-    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+    if (!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
 
     unsigned int ntxFound = 0;
@@ -1022,7 +1022,7 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)
 
     promise.get_future().wait();
 
-    if(!g_connman)
+    if (!g_connman)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
 
     CInv inv(MSG_TX, hashTx);

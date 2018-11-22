@@ -39,7 +39,39 @@ const char *SENDCMPCT="sendcmpct";
 const char *CMPCTBLOCK="cmpctblock";
 const char *GETBLOCKTXN="getblocktxn";
 const char *BLOCKTXN="blocktxn";
+// Genesis Masternode message types
+const char *MASTERNODEPAYMENTVOTEPRIMARY="mnwp";
+const char *MASTERNODEPAYMENTVOTESECONDARY="mnws";
+const char *MASTERNODEPAYMENTBLOCKPRIMARY="mnwbp";
+const char *MASTERNODEPAYMENTBLOCKSECONDARY="mnwbs";
+const char *MASTERNODEPAYMENTSYNC="mnget";
+const char *MNQUORUM="mn quorum"; // not implemented
+const char *MNANNOUNCE="mnb";
+const char *MNPING="mnp";
+const char *DSEG="dseg";
+const char *SYNCSTATUSCOUNT="ssc";
+const char *MNGOVERNANCESYNC="govsync";
+const char *MNGOVERNANCEOBJECT="govobj";
+const char *MNGOVERNANCEOBJECTVOTE="govobjvote";
+const char *MNVERIFY="mnv";
 } // namespace NetMsgType
+
+const static std::string ppszTypeName[] =
+{
+    "ERROR", // Should never occur
+    // Genesis Masternode message types
+    // NOTE: include non-implmented here, we must keep this list in sync with enum in protocol.h
+    NetMsgType::MASTERNODEPAYMENTVOTEPRIMARY,
+    NetMsgType::MASTERNODEPAYMENTVOTESECONDARY,
+    NetMsgType::MASTERNODEPAYMENTBLOCKPRIMARY, 
+    NetMsgType::MASTERNODEPAYMENTBLOCKSECONDARY, 
+    NetMsgType::MNQUORUM, // not implemented yet
+    NetMsgType::MNANNOUNCE,
+    NetMsgType::MNPING,
+    NetMsgType::MNGOVERNANCEOBJECT,
+    NetMsgType::MNGOVERNANCEOBJECTVOTE,
+    NetMsgType::MNVERIFY,
+};
 
 /** All known message types. Keep this in the same order as the list of
  * messages above and in protocol.h.
@@ -71,6 +103,21 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::CMPCTBLOCK,
     NetMsgType::GETBLOCKTXN,
     NetMsgType::BLOCKTXN,
+    // Genesis Masternode message types
+    // NOTE: do NOT include non-implmented here, we want them to be "Unknown command" in ProcessMessage()
+    NetMsgType::MASTERNODEPAYMENTVOTEPRIMARY,
+    NetMsgType::MASTERNODEPAYMENTVOTESECONDARY,
+    // NetMsgType::MASTERNODEPAYMENTBLOCKPRIMARY, // there is no message for this, only inventory
+    // NetMsgType::MASTERNODEPAYMENTBLOCKSECONDARY, // there is no message for this, only inventory
+    NetMsgType::MASTERNODEPAYMENTSYNC,
+    NetMsgType::MNANNOUNCE,
+    NetMsgType::MNPING,
+    NetMsgType::DSEG,
+    NetMsgType::SYNCSTATUSCOUNT,
+    NetMsgType::MNGOVERNANCESYNC,
+    NetMsgType::MNGOVERNANCEOBJECT,
+    NetMsgType::MNGOVERNANCEOBJECTVOTE,
+    NetMsgType::MNVERIFY,
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 
@@ -158,6 +205,11 @@ bool operator<(const CInv& a, const CInv& b)
     return (a.type < b.type || (a.type == b.type && a.hash < b.hash));
 }
 
+bool IsKnownType(int typeIn)
+{
+    return (typeIn >= 1 && typeIn < (int)ARRAYLEN(ppszTypeName));
+}
+
 std::string CInv::GetCommand() const
 {
     std::string cmd;
@@ -171,7 +223,10 @@ std::string CInv::GetCommand() const
     case MSG_FILTERED_BLOCK: return cmd.append(NetMsgType::MERKLEBLOCK);
     case MSG_CMPCT_BLOCK:    return cmd.append(NetMsgType::CMPCTBLOCK);
     default:
-        throw std::out_of_range(strprintf("CInv::GetCommand(): type=%d unknown type", type));
+        if (!IsKnownType(type))
+            throw std::out_of_range(strprintf("CInv::GetCommand(): type=%d unknown type", type));
+        else
+            return ppszTypeName[type];
     }
 }
 

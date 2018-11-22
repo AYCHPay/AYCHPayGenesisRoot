@@ -51,10 +51,10 @@ int RecentRequestsTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant RecentRequestsTableModel::data(const QModelIndex &index, int role) const
 {
-    if(!index.isValid() || index.row() >= list.length())
+    if (!index.isValid() || index.row() >= list.length())
         return QVariant();
 
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
+    if (role == Qt::DisplayRole || role == Qt::EditRole)
     {
         const RecentRequestEntry *rec = &list[index.row()];
         switch(index.column())
@@ -62,7 +62,7 @@ QVariant RecentRequestsTableModel::data(const QModelIndex &index, int role) cons
         case Date:
             return GUIUtil::dateTimeStr(rec->date);
         case Label:
-            if(rec->recipient.label.isEmpty() && role == Qt::DisplayRole)
+            if (rec->recipient.label.isEmpty() && role == Qt::DisplayRole)
             {
                 return tr("(no label)");
             }
@@ -71,7 +71,7 @@ QVariant RecentRequestsTableModel::data(const QModelIndex &index, int role) cons
                 return rec->recipient.label;
             }
         case Message:
-            if(rec->recipient.message.isEmpty() && role == Qt::DisplayRole)
+            if (rec->recipient.message.isEmpty() && role == Qt::DisplayRole)
             {
                 return tr("(no message)");
             }
@@ -103,9 +103,9 @@ bool RecentRequestsTableModel::setData(const QModelIndex &index, const QVariant 
 
 QVariant RecentRequestsTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if(orientation == Qt::Horizontal)
+    if (orientation == Qt::Horizontal)
     {
-        if(role == Qt::DisplayRole && section < columns.size())
+        if (role == Qt::DisplayRole && section < columns.size())
         {
             return columns[section];
         }
@@ -137,7 +137,7 @@ bool RecentRequestsTableModel::removeRows(int row, int count, const QModelIndex 
 {
     Q_UNUSED(parent);
 
-    if(count > 0 && row >= 0 && (row+count) <= list.size())
+    if (count > 0 && row >= 0 && (row+count) <= list.size())
     {
         const RecentRequestEntry *rec;
         for (int i = 0; i < count; ++i)

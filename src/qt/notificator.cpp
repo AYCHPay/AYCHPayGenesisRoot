@@ -42,21 +42,21 @@ Notificator::Notificator(const QString &_programName, QSystemTrayIcon *_trayIcon
     ,interface(0)
 #endif
 {
-    if(_trayIcon && _trayIcon->supportsMessages())
+    if (_trayIcon && _trayIcon->supportsMessages())
     {
         mode = QSystemTray;
     }
 #ifdef USE_DBUS
     interface = new QDBusInterface("org.freedesktop.Notifications",
         "/org/freedesktop/Notifications", "org.freedesktop.Notifications");
-    if(interface->isValid())
+    if (interface->isValid())
     {
         mode = Freedesktop;
     }
 #endif
 #ifdef Q_OS_MAC
     // check if users OS has support for NSUserNotification
-    if( MacNotificationHandler::instance()->hasUserNotificationCenterSupport()) {
+    if ( MacNotificationHandler::instance()->hasUserNotificationCenterSupport()) {
         mode = UserNotificationCenter;
     }
 #endif
@@ -182,7 +182,7 @@ void Notificator::notifyDBus(Class cls, const QString &title, const QString &tex
 
     // If no icon specified, set icon based on class
     QIcon tmpicon;
-    if(icon.isNull())
+    if (icon.isNull())
     {
         QStyle::StandardPixmap sicon = QStyle::SP_MessageBoxQuestion;
         switch(cls)
@@ -249,7 +249,7 @@ void Notificator::notify(Class cls, const QString &title, const QString &text, c
         break;
 #endif
     default:
-        if(cls == Critical)
+        if (cls == Critical)
         {
             // Fall back to old fashioned pop-up dialog if critical and no other notification available
             QMessageBox::critical(parent, title, text, QMessageBox::Ok, QMessageBox::Ok);

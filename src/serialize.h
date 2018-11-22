@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <ios>
 #include <limits>
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
@@ -59,6 +60,35 @@ inline T* NCONST_PTR(const T* val)
     return const_cast<T*>(val);
 }
 
+/** 
+ * Get begin pointer of vector (non-const version).
+ * @note These functions avoid the undefined case of indexing into an empty
+ * vector, as well as that of indexing after the end of the vector.
+ */
+template <typename V>
+inline typename V::value_type* begin_ptr(V& v)
+{
+    return v.empty() ? NULL : &v[0];
+}
+/** Get begin pointer of vector (const version) */
+template <typename V>
+inline const typename V::value_type* begin_ptr(const V& v)
+{
+    return v.empty() ? NULL : &v[0];
+}
+/** Get end pointer of vector (non-const version) */
+template <typename V>
+inline typename V::value_type* end_ptr(V& v)
+{
+    return v.empty() ? NULL : (&v[0] + v.size());
+}
+/** Get end pointer of vector (const version) */
+template <typename V>
+inline const typename V::value_type* end_ptr(const V& v)
+{
+    return v.empty() ? NULL : (&v[0] + v.size());
+}
+
 /*
  * Lowest-level serialization and conversion.
  * @note Sizes of these types are verified in the tests
@@ -75,6 +105,11 @@ template<typename Stream> inline void ser_writedata16(Stream &s, uint16_t obj)
 template<typename Stream> inline void ser_writedata32(Stream &s, uint32_t obj)
 {
     obj = htole32(obj);
+    s.write((char*)&obj, 4);
+}
+template<typename Stream> inline void ser_writedata32be(Stream &s, uint32_t obj)
+{
+    obj = htobe32(obj);
     s.write((char*)&obj, 4);
 }
 template<typename Stream> inline void ser_writedata64(Stream &s, uint64_t obj)
@@ -99,6 +134,12 @@ template<typename Stream> inline uint32_t ser_readdata32(Stream &s)
     uint32_t obj;
     s.read((char*)&obj, 4);
     return le32toh(obj);
+}
+template<typename Stream> inline uint32_t ser_readdata32be(Stream &s)
+{
+    uint32_t obj;
+    s.read((char*)&obj, 4);
+    return be32toh(obj);
 }
 template<typename Stream> inline uint64_t ser_readdata64(Stream &s)
 {
@@ -421,6 +462,10 @@ protected:
     uint64_t &n;
 public:
     explicit CCompactSize(uint64_t& nIn) : n(nIn) { }
+
+    unsigned int GetSerializeSize() const {
+        return GetSizeOfCompactSize(n);
+    }
 
     template<typename Stream>
     void Serialize(Stream &s) const {
@@ -811,6 +856,39 @@ void Unserialize(Stream& is, std::shared_ptr<const T>& p)
     p = std::make_shared<const T>(deserialize, is);
 }
 
+
+/**
+ * list
+ */
+template<typename T, typename A>
+unsigned int GetSerializeSize(const std::list<T, A>& l)
+{
+    unsigned int nSize = GetSizeOfCompactSize(l.size());
+    for (typename std::list<T, A>::const_iterator it = l.begin(); it != l.end(); ++it)
+        nSize += GetSerializeSize((*it));
+    return nSize;
+}
+
+template<typename Stream, typename T, typename A>
+void Serialize(Stream& os, const std::list<T, A>& l)
+{
+    WriteCompactSize(os, l.size());
+    for (typename std::list<T, A>::const_iterator it = l.begin(); it != l.end(); ++it)
+        Serialize(os, (*it));
+}
+
+template<typename Stream, typename T, typename A>
+void Unserialize(Stream& is, std::list<T, A>& l)
+{
+    l.clear();
+    unsigned int nSize = ReadCompactSize(is);
+    for (unsigned int i = 0; i < nSize; i++)
+    {
+        T val;
+        Unserialize(is, val);
+        l.push_back(val);
+    }
+}
 
 
 /**

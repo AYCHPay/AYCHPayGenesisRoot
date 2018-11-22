@@ -6,6 +6,8 @@
 #ifndef GENESIS_WALLET_INIT_H
 #define GENESIS_WALLET_INIT_H
 
+#include <primitives/transaction.h>
+
 #include <string>
 
 class CRPCTable;
@@ -27,6 +29,9 @@ bool VerifyWallets();
 
 //! Load wallet databases.
 bool OpenWallets();
+
+//! Lock masternode coins on startup.
+void MasternodeLock(COutPoint outpoint);
 
 //! Complete startup of wallets.
 void StartWallets(CScheduler& scheduler);

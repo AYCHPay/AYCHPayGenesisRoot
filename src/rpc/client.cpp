@@ -145,6 +145,10 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "echojson", 9, "arg9" },
     { "rescanblockchain", 0, "start_height"},
     { "rescanblockchain", 1, "stop_height"},
+    // Masternodes
+    { "getgovernanceblockbudget", 0, "height" },
+    { "voteraw", 1, "arg1" },
+    { "voteraw", 5, "arg2" },
 };
 
 class CRPCConvertTable

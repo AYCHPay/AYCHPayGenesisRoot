@@ -273,7 +273,7 @@ public:
     UniValue PrepareRequest(const std::string& method, const std::vector<std::string>& args) override
     {
         UniValue params;
-        if(gArgs.GetBoolArg("-named", DEFAULT_NAMED)) {
+        if (gArgs.GetBoolArg("-named", DEFAULT_NAMED)) {
             params = RPCConvertNamedValues(method, args);
         } else {
             params = RPCConvertValues(method, args);

@@ -8,6 +8,7 @@
 #include <hash.h>
 #include <script/script.h>
 #include <uint256.h>
+#include <utiltime.h>
 #include <utilstrencodings.h>
 
 #include <boost/variant/apply_visitor.hpp>

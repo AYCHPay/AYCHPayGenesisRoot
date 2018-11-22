@@ -243,6 +243,37 @@ public:
         {
             "SQnWFjgxMJyyMQK97gjdF8gYBUUH3kSWEA", // Giveaways
         };
+
+        // Masternodes
+        consensus.nMasternodeCollateral = 750000;
+        consensus.nMasternodePaymentsStartBlock = 100000;
+		consensus.nGovernanceBlockOffset = 1; // One block after the bonus block
+        consensus.nGovernanceMinQuorum = 10;
+        consensus.nGovernanceFilterElements = 20000;
+        consensus.nMasternodeMinimumConfirmations = 15;
+        consensus.nFulfilledRequestExpireTime = 60*60; // fulfilled requests expire in 1 hour
+        consensus.nMasternodeCheckSeconds = 5;                    
+        consensus.nMasternodeMinMnbSeconds = 5 * 60;                      
+        consensus.nMasternodeMinMnpSeconds = 10 * 60;                    
+        consensus.nMasternodeSentinelPingMaxSeconds = 60 * 60;              
+        consensus.nMasternodeExpirationSeconds = 120 * 60;                   
+        consensus.nMasternodeNewStartRequiredSeconds = 180 * 60;             
+        consensus.nMasternodePoseBanMaxScore = 5;                    
+        consensus.nMasternodeSignHashThreshold = 600000;                  
+        // Masternode maturity configuration
+        consensus.nMasternodeMaturityBlockMultiplier = consensus.nGovernanceBlockOffset;             
+        consensus.nMasternodeMaturityThreshold = 336;                   
+        consensus.nMasternodeMaturitySecondariesMaxCount = int(consensus.nMasternodeMaturityBlockMultiplier / 10); 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 0.5;       
+        // Block subsidy definition(s)
+        consensus.nBlockRewardTotal = 600;                              
+        consensus.nBlockRewardMasternode = 0.2;                         
+        consensus.nBlockRewardFounders = 0.1;                           
+        consensus.nBlockRewardGiveaways = 0.05;                          
+        consensus.nBlockRewardInfrastructure = 0.05;                    
+        consensus.nBlockRewardFinder = 0.6;                             
+
+
     }
 };
 
@@ -387,6 +418,34 @@ public:
             "c4NjsSBF4NGXbzxAJUiK1P1KfmxpxXiaaP", // Giveaways
         };
 
+        // Masternodes
+        consensus.nMasternodeCollateral = 1;
+        consensus.nMasternodePaymentsStartBlock = 120;
+		consensus.nGovernanceBlockOffset = 1; 
+        consensus.nGovernanceMinQuorum = 1;
+        consensus.nGovernanceFilterElements = 500;
+        consensus.nMasternodeMinimumConfirmations = 1;
+        consensus.nFulfilledRequestExpireTime = 5*60; // fulfilled requests expire in 5 minutes
+        consensus.nMasternodeCheckSeconds = 5;                    
+        consensus.nMasternodeMinMnbSeconds = 5 * 60;                      
+        consensus.nMasternodeMinMnpSeconds = 10 * 60;                    
+        consensus.nMasternodeSentinelPingMaxSeconds = 60 * 60;              
+        consensus.nMasternodeExpirationSeconds = 120 * 60;                   
+        consensus.nMasternodeNewStartRequiredSeconds = 180 * 60;             
+        consensus.nMasternodePoseBanMaxScore = 5;                    
+        consensus.nMasternodeSignHashThreshold = 600000;                  
+        // Masternode maturity configuration
+        consensus.nMasternodeMaturityBlockMultiplier = consensus.nGovernanceBlockOffset;             
+        consensus.nMasternodeMaturityThreshold = 336;                   
+        consensus.nMasternodeMaturitySecondariesMaxCount = int(consensus.nMasternodeMaturityBlockMultiplier / 10); 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 0.5;       
+        // Block subsidy definition(s)
+        consensus.nBlockRewardTotal = 600;                              
+        consensus.nBlockRewardMasternode = 0.2;                         
+        consensus.nBlockRewardFounders = 0.1;                           
+        consensus.nBlockRewardGiveaways = 0.05;                          
+        consensus.nBlockRewardInfrastructure = 0.05;                    
+        consensus.nBlockRewardFinder = 0.6;                             
     }
 };
 
@@ -520,6 +579,35 @@ public:
         {
             "c5M76MoQpWA5SqqKLiRWy8jpuT4Ubrcuqr", // Giveaways
         };
+
+        // Masternodes
+        consensus.nMasternodeCollateral = 1;
+        consensus.nMasternodePaymentsStartBlock = 0;
+		consensus.nGovernanceBlockOffset = 1;
+        consensus.nGovernanceMinQuorum = 1;
+        consensus.nGovernanceFilterElements = 500;
+        consensus.nMasternodeMinimumConfirmations = 1;
+        consensus.nFulfilledRequestExpireTime = 5*60; // fulfilled requests expire in 5 minutes
+        consensus.nMasternodeCheckSeconds = 5;                    
+        consensus.nMasternodeMinMnbSeconds = 5 * 60;                      
+        consensus.nMasternodeMinMnpSeconds = 10 * 60;                    
+        consensus.nMasternodeSentinelPingMaxSeconds = 60 * 60;              
+        consensus.nMasternodeExpirationSeconds = 120 * 60;                   
+        consensus.nMasternodeNewStartRequiredSeconds = 180 * 60;             
+        consensus.nMasternodePoseBanMaxScore = 5;                    
+        consensus.nMasternodeSignHashThreshold = 600000;                  
+        // Masternode maturity configuration
+        consensus.nMasternodeMaturityBlockMultiplier = consensus.nGovernanceBlockOffset;             
+        consensus.nMasternodeMaturityThreshold = 336;                   
+        consensus.nMasternodeMaturitySecondariesMaxCount = int(consensus.nMasternodeMaturityBlockMultiplier / 10); 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 0.5;       
+        // Block subsidy definition(s)
+        consensus.nBlockRewardTotal = 600;                              
+        consensus.nBlockRewardMasternode = 0.2;                         
+        consensus.nBlockRewardFounders = 0.1;                           
+        consensus.nBlockRewardGiveaways = 0.05;                          
+        consensus.nBlockRewardInfrastructure = 0.05;                    
+        consensus.nBlockRewardFinder = 0.6;
         
     }
 };
@@ -570,10 +658,11 @@ CScript CChainParams::AddressToScript(std::string inAddress) const
 // Block height must be >0 and <=last founders reward block height 
 // or block time must be within 1 year of the genesis block time
 // Index variable i ranges from 0 - (vFounderAddress.size()-1)
-std::string CChainParams::GetFounderAddressAtHeight(int nHeight) const 
+std::string CChainParams::GetFounderAddressAtHeight(uint32_t nHeight) const 
 {
-    int maxHeight = consensus.GetLastFoundersRewardBlockHeight();
-    assert(nHeight > 0 && nHeight <= maxHeight);
+    uint32_t maxHeight = consensus.GetLastFoundersRewardBlockHeight();
+    uint32_t justAZero = 0;
+    assert(nHeight > justAZero && nHeight <= maxHeight);
 
     size_t addressChangeInterval = (maxHeight + vFounderAddress.size()) / vFounderAddress.size();
     size_t i = nHeight / addressChangeInterval;
@@ -583,15 +672,16 @@ std::string CChainParams::GetFounderAddressAtHeight(int nHeight) const
 // Block height must be >0 and <=last founders reward block height
 // or block time must be within 1 year of the genesis block time
 // The address is expected to be a multisig (P2SH) address
-CScript CChainParams::GetFounderScriptAtHeight(int nHeight) const 
+CScript CChainParams::GetFounderScriptAtHeight(uint32_t nHeight) const 
 {
     //assert(nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight());
     return AddressToScript(GetFounderAddressAtHeight(nHeight).c_str());
 }
 
-std::string CChainParams::GetFounderAddressAtIndex(int i) const 
+std::string CChainParams::GetFounderAddressAtIndex(uint32_t i) const 
 {
-    assert(i >= 0 && i < vFounderAddress.size());
+    uint32_t justAZero = 0;
+    assert(i >= justAZero && i < vFounderAddress.size());
     return vFounderAddress[i];
 }
 
@@ -608,10 +698,11 @@ std::vector<CScript> CChainParams::GetAllFounderScripts() const
 // Block height must be >0 and <=last founders reward block height 
 // or block time must be within 1 year of the genesis block time
 // Index variable i ranges from 0 - (vFoundersRewardAddress.size()-1)
-std::string CChainParams::GetInfrastructureAddressAtHeight(int nHeight) const 
+std::string CChainParams::GetInfrastructureAddressAtHeight(uint32_t nHeight) const 
 {
-    int maxHeight = consensus.GetLastFoundersRewardBlockHeight();
-    assert(nHeight > 0 && nHeight <= maxHeight);
+    uint32_t maxHeight = consensus.GetLastFoundersRewardBlockHeight();
+    uint32_t justAZero = 0;
+    assert(nHeight > justAZero && nHeight <= maxHeight);
 
     size_t addressChangeInterval = (maxHeight + vInfrastructureAddress.size()) / vInfrastructureAddress.size();
     size_t i = nHeight / addressChangeInterval;
@@ -621,25 +712,27 @@ std::string CChainParams::GetInfrastructureAddressAtHeight(int nHeight) const
 // Block height must be >0 and <=last founders reward block height
 // or block time must be within 1 year of the genesis block time
 // The address is expected to be a multisig (P2SH) address
-CScript CChainParams::GetInfrastructureScriptAtHeight(int nHeight) const 
+CScript CChainParams::GetInfrastructureScriptAtHeight(uint32_t nHeight) const 
 {
     //assert(nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight());
     return AddressToScript(GetInfrastructureAddressAtHeight(nHeight).c_str());
 }
 
-std::string CChainParams::GetInfrastructureAddressAtIndex(int i) const 
+std::string CChainParams::GetInfrastructureAddressAtIndex(uint32_t i) const 
 {
-    assert(i >= 0 && i < vInfrastructureAddress.size());
+    uint32_t justAZero = 0;
+    assert(i >= justAZero && i < vInfrastructureAddress.size());
     return vInfrastructureAddress[i];
 }
 
 // Block height must be >0 and <=last founders reward block height 
 // or block time must be within 1 year of the genesis block time
 // Index variable i ranges from 0 - (vFoundersRewardAddress.size()-1)
-std::string CChainParams::GetGiveawayAddressAtHeight(int nHeight) const 
+std::string CChainParams::GetGiveawayAddressAtHeight(uint32_t nHeight) const 
 {
-    int maxHeight = consensus.GetLastFoundersRewardBlockHeight();
-    assert(nHeight > 0 && nHeight <= maxHeight);
+    uint32_t maxHeight = consensus.GetLastFoundersRewardBlockHeight();
+    uint32_t justAZero = 0;
+    assert(nHeight > justAZero && nHeight <= maxHeight);
 
     size_t addressChangeInterval = (maxHeight + vGiveawayAddress.size()) / vGiveawayAddress.size();
     size_t i = nHeight / addressChangeInterval;
@@ -649,14 +742,15 @@ std::string CChainParams::GetGiveawayAddressAtHeight(int nHeight) const
 // Block height must be >0 and <=last founders reward block height
 // or block time must be within 1 year of the genesis block time
 // The address is expected to be a multisig (P2SH) address
-CScript CChainParams::GetGiveawayScriptAtHeight(int nHeight) const 
+CScript CChainParams::GetGiveawayScriptAtHeight(uint32_t nHeight) const 
 {
     //assert(nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight());
     return AddressToScript(GetGiveawayAddressAtHeight(nHeight).c_str());
 }
 
-std::string CChainParams::GetGiveawayAddressAtIndex(int i) const 
+std::string CChainParams::GetGiveawayAddressAtIndex(uint32_t i) const 
 {
-    assert(i >= 0 && i < vGiveawayAddress.size());
+    uint32_t justAZero = 0;
+    assert(i >= justAZero && i < vGiveawayAddress.size());
     return vGiveawayAddress[i];
 }

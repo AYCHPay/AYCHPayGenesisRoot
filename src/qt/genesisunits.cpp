@@ -93,7 +93,7 @@ QString GenesisUnits::format(int unit, const CAmount& nIn, bool fPlus, Separator
 {
     // Note: not using straight sprintf here because we do NOT want
     // localized number formatting.
-    if(!valid(unit))
+    if (!valid(unit))
         return QString(); // Refuse to format invalid unit
     qint64 n = (qint64)nIn;
     qint64 coin = factor(unit);
@@ -143,37 +143,37 @@ QString GenesisUnits::formatHtmlWithUnit(int unit, const CAmount& amount, bool p
 
 bool GenesisUnits::parse(int unit, const QString &value, CAmount *val_out)
 {
-    if(!valid(unit) || value.isEmpty())
+    if (!valid(unit) || value.isEmpty())
         return false; // Refuse to parse invalid unit or empty string
     int num_decimals = decimals(unit);
 
     // Ignore spaces and thin spaces when parsing
     QStringList parts = removeSpaces(value).split(".");
 
-    if(parts.size() > 2)
+    if (parts.size() > 2)
     {
         return false; // More than one dot
     }
     QString whole = parts[0];
     QString decimals;
 
-    if(parts.size() > 1)
+    if (parts.size() > 1)
     {
         decimals = parts[1];
     }
-    if(decimals.size() > num_decimals)
+    if (decimals.size() > num_decimals)
     {
         return false; // Exceeds max precision
     }
     bool ok = false;
     QString str = whole + decimals.leftJustified(num_decimals, '0');
 
-    if(str.size() > 18)
+    if (str.size() > 18)
     {
         return false; // Longer numbers will exceed 63 bits
     }
     CAmount retvalue(str.toLongLong(&ok));
-    if(val_out)
+    if (val_out)
     {
         *val_out = retvalue;
     }
@@ -199,7 +199,7 @@ int GenesisUnits::rowCount(const QModelIndex &parent) const
 QVariant GenesisUnits::data(const QModelIndex &index, int role) const
 {
     int row = index.row();
-    if(row >= 0 && row < unitlist.size())
+    if (row >= 0 && row < unitlist.size())
     {
         Unit unit = unitlist.at(row);
         switch(role)

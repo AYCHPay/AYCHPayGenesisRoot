@@ -29,7 +29,7 @@ static void BenchLockedPool(benchmark::State& state)
             if (s & 0x80000000) {
                 b.free(addr[idx]);
                 addr[idx] = nullptr;
-            } else if(!addr[idx]) {
+            } else if (!addr[idx]) {
                 addr[idx] = b.alloc((s >> 16) & (MSIZE-1));
             }
             bool lsb = s & 1;

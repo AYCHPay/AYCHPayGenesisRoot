@@ -48,7 +48,7 @@ bool WalletFrame::addWallet(const QString& name, WalletModel *walletModel)
     walletView->setGenesisGUI(gui);
     walletView->setClientModel(clientModel);
     walletView->setWalletModel(walletModel);
-
+    walletView->showOutOfSyncWarning(bOutOfSync);
 
      /* TODO we should goto the currently selected page once dynamically adding wallets is supported */
     walletView->gotoOverviewPage();
@@ -102,6 +102,13 @@ bool WalletFrame::handlePaymentRequest(const SendCoinsRecipient &recipient)
     return walletView->handlePaymentRequest(recipient);
 }
 
+void WalletFrame::showOutOfSyncWarning(bool fShow)
+{
+    bOutOfSync = fShow;
+    QMap<QString, WalletView*>::const_iterator i;
+    for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
+        i.value()->showOutOfSyncWarning(fShow);
+}
 
 void WalletFrame::gotoOverviewPage()
 {
@@ -115,6 +122,13 @@ void WalletFrame::gotoHistoryPage()
     QMap<QString, WalletView*>::const_iterator i;
     for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
         i.value()->gotoHistoryPage();
+}
+
+void WalletFrame::gotoMasternodePage()
+{
+    QMap<QString, WalletView*>::const_iterator i;
+    for (i = mapWalletViews.constBegin(); i != mapWalletViews.constEnd(); ++i)
+        i.value()->gotoMasternodePage();
 }
 
 void WalletFrame::gotoReceiveCoinsPage()

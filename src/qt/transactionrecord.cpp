@@ -44,7 +44,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         {
             const CTxOut& txout = wtx.tx->vout[i];
             isminetype mine = wallet->IsMine(txout);
-            if(mine)
+            if (mine)
             {
                 TransactionRecord sub(hash, nTime);
                 CTxDestination address;
@@ -80,16 +80,16 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         for (const CTxIn& txin : wtx.tx->vin)
         {
             isminetype mine = wallet->IsMine(txin);
-            if(mine & ISMINE_WATCH_ONLY) involvesWatchAddress = true;
-            if(fAllFromMe > mine) fAllFromMe = mine;
+            if (mine & ISMINE_WATCH_ONLY) involvesWatchAddress = true;
+            if (fAllFromMe > mine) fAllFromMe = mine;
         }
 
         isminetype fAllToMe = ISMINE_SPENDABLE;
         for (const CTxOut& txout : wtx.tx->vout)
         {
             isminetype mine = wallet->IsMine(txout);
-            if(mine & ISMINE_WATCH_ONLY) involvesWatchAddress = true;
-            if(fAllToMe > mine) fAllToMe = mine;
+            if (mine & ISMINE_WATCH_ONLY) involvesWatchAddress = true;
+            if (fAllToMe > mine) fAllToMe = mine;
         }
 
         if (fAllFromMe && fAllToMe)
@@ -115,7 +115,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 sub.idx = nOut;
                 sub.involvesWatchAddress = involvesWatchAddress;
 
-                if(wallet->IsMine(txout))
+                if (wallet->IsMine(txout))
                 {
                     // Ignore parts sent to self, as this is usually the change
                     // from a transaction sent back to our own address.
@@ -196,7 +196,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
         }
     }
     // For generated transactions, determine maturity
-    else if(type == TransactionRecord::Generated)
+    else if (type == TransactionRecord::Generated)
     {
         if (wtx.GetBlocksToMaturity() > 0)
         {

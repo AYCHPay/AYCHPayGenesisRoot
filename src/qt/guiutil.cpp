@@ -191,7 +191,7 @@ void setupAmountWidget(QLineEdit *widget, QWidget *parent)
 bool parseGenesisURI(const QUrl &uri, SendCoinsRecipient *out)
 {
     // return if URI is not valid or is no genesis: URI
-    if(!uri.isValid() || uri.scheme() != QString("genesis"))
+    if (!uri.isValid() || uri.scheme() != QString("genesis"))
         return false;
 
     SendCoinsRecipient rv;
@@ -229,9 +229,9 @@ bool parseGenesisURI(const QUrl &uri, SendCoinsRecipient *out)
         }
         else if (i->first == "amount")
         {
-            if(!i->second.isEmpty())
+            if (!i->second.isEmpty())
             {
-                if(!GenesisUnits::parse(GenesisUnits::GENX, i->second, &rv.amount))
+                if (!GenesisUnits::parse(GenesisUnits::GENX, i->second, &rv.amount))
                 {
                     return false;
                 }
@@ -242,7 +242,7 @@ bool parseGenesisURI(const QUrl &uri, SendCoinsRecipient *out)
         if (fShouldReturnFalse)
             return false;
     }
-    if(out)
+    if (out)
     {
         *out = rv;
     }
@@ -255,7 +255,7 @@ bool parseGenesisURI(QString uri, SendCoinsRecipient *out)
     //
     //    Cannot handle this later, because genesis:// will cause Qt to see the part after // as host,
     //    which will lower-case it (and thus invalidate the address).
-    if(uri.startsWith("genesis://", Qt::CaseInsensitive))
+    if (uri.startsWith("genesis://", Qt::CaseInsensitive))
     {
         uri.replace(0, 10, "genesis:");
     }
@@ -306,7 +306,7 @@ QString HtmlEscape(const QString& str, bool fMultiLine)
 #else
     QString escaped = str.toHtmlEscaped();
 #endif
-    if(fMultiLine)
+    if (fMultiLine)
     {
         escaped = escaped.replace("\n", "<br>\n");
     }
@@ -320,11 +320,11 @@ QString HtmlEscape(const std::string& str, bool fMultiLine)
 
 void copyEntryData(QAbstractItemView *view, int column, int role)
 {
-    if(!view || !view->selectionModel())
+    if (!view || !view->selectionModel())
         return;
     QModelIndexList selection = view->selectionModel()->selectedRows(column);
 
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
     {
         // Copy first item
         setClipboard(selection.at(0).data(role).toString());
@@ -333,7 +333,7 @@ void copyEntryData(QAbstractItemView *view, int column, int role)
 
 QList<QModelIndex> getEntryData(QAbstractItemView *view, int column)
 {
-    if(!view || !view->selectionModel())
+    if (!view || !view->selectionModel())
         return QList<QModelIndex>();
     return view->selectionModel()->selectedRows(column);
 }
@@ -344,7 +344,7 @@ QString getSaveFileName(QWidget *parent, const QString &caption, const QString &
 {
     QString selectedFilter;
     QString myDir;
-    if(dir.isEmpty()) // Default to user documents location
+    if (dir.isEmpty()) // Default to user documents location
     {
 #if QT_VERSION < 0x050000
         myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
@@ -362,26 +362,26 @@ QString getSaveFileName(QWidget *parent, const QString &caption, const QString &
     /* Extract first suffix from filter pattern "Description (*.foo)" or "Description (*.foo *.bar ...) */
     QRegExp filter_re(".* \\(\\*\\.(.*)[ \\)]");
     QString selectedSuffix;
-    if(filter_re.exactMatch(selectedFilter))
+    if (filter_re.exactMatch(selectedFilter))
     {
         selectedSuffix = filter_re.cap(1);
     }
 
     /* Add suffix if needed */
     QFileInfo info(result);
-    if(!result.isEmpty())
+    if (!result.isEmpty())
     {
-        if(info.suffix().isEmpty() && !selectedSuffix.isEmpty())
+        if (info.suffix().isEmpty() && !selectedSuffix.isEmpty())
         {
             /* No suffix specified, add selected suffix */
-            if(!result.endsWith("."))
+            if (!result.endsWith("."))
                 result.append(".");
             result.append(selectedSuffix);
         }
     }
 
     /* Return selected suffix if asked to */
-    if(selectedSuffixOut)
+    if (selectedSuffixOut)
     {
         *selectedSuffixOut = selectedSuffix;
     }
@@ -394,7 +394,7 @@ QString getOpenFileName(QWidget *parent, const QString &caption, const QString &
 {
     QString selectedFilter;
     QString myDir;
-    if(dir.isEmpty()) // Default to user documents location
+    if (dir.isEmpty()) // Default to user documents location
     {
 #if QT_VERSION < 0x050000
         myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
@@ -409,12 +409,12 @@ QString getOpenFileName(QWidget *parent, const QString &caption, const QString &
     /* Directly convert path to native OS path separators */
     QString result = QDir::toNativeSeparators(QFileDialog::getOpenFileName(parent, caption, myDir, filter, &selectedFilter));
 
-    if(selectedSuffixOut)
+    if (selectedSuffixOut)
     {
         /* Extract first suffix from filter pattern "Description (*.foo)" or "Description (*.foo *.bar ...) */
         QRegExp filter_re(".* \\(\\*\\.(.*)[ \\)]");
         QString selectedSuffix;
-        if(filter_re.exactMatch(selectedFilter))
+        if (filter_re.exactMatch(selectedFilter))
         {
             selectedSuffix = filter_re.cap(1);
         }
@@ -425,7 +425,7 @@ QString getOpenFileName(QWidget *parent, const QString &caption, const QString &
 
 Qt::ConnectionType blockingGUIThreadConnection()
 {
-    if(QThread::currentThread() != qApp->thread())
+    if (QThread::currentThread() != qApp->thread())
     {
         return Qt::BlockingQueuedConnection;
     }
@@ -521,11 +521,11 @@ ToolTipToRichTextFilter::ToolTipToRichTextFilter(int _size_threshold, QObject *p
 
 bool ToolTipToRichTextFilter::eventFilter(QObject *obj, QEvent *evt)
 {
-    if(evt->type() == QEvent::ToolTipChange)
+    if (evt->type() == QEvent::ToolTipChange)
     {
         QWidget *widget = static_cast<QWidget*>(obj);
         QString tooltip = widget->toolTip();
-        if(tooltip.size() > size_threshold && !tooltip.startsWith("<qt") && !Qt::mightBeRichText(tooltip))
+        if (tooltip.size() > size_threshold && !tooltip.startsWith("<qt") && !Qt::mightBeRichText(tooltip))
         {
             // Envelop with <qt></qt> to make sure Qt detects this as rich text
             // Escape the current message as HTML and replace \n by <br>
@@ -838,7 +838,7 @@ LSSharedFileListItemRef findStartupItemInList(LSSharedFileListRef list, CFURLRef
         CFURLRef currentItemURL = nullptr;
 
 #if defined(MAC_OS_X_VERSION_MAX_ALLOWED) && MAC_OS_X_VERSION_MAX_ALLOWED >= 10100
-        if(&LSSharedFileListItemCopyResolvedURL)
+        if (&LSSharedFileListItemCopyResolvedURL)
             currentItemURL = LSSharedFileListItemCopyResolvedURL(item, resolutionFlags, nullptr);
 #if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && MAC_OS_X_VERSION_MIN_REQUIRED < 10100
         else
@@ -848,7 +848,7 @@ LSSharedFileListItemRef findStartupItemInList(LSSharedFileListRef list, CFURLRef
         LSSharedFileListItemResolve(item, resolutionFlags, &currentItemURL, nullptr);
 #endif
 
-        if(currentItemURL) {
+        if (currentItemURL) {
             if (CFEqual(currentItemURL, findUrl)) {
                 // found
                 CFRelease(listSnapshot);
@@ -887,11 +887,11 @@ bool SetStartOnSystemStartup(bool fAutoStart)
     LSSharedFileListRef loginItems = LSSharedFileListCreate(nullptr, kLSSharedFileListSessionLoginItems, nullptr);
     LSSharedFileListItemRef foundItem = findStartupItemInList(loginItems, genesisAppUrl);
 
-    if(fAutoStart && !foundItem) {
+    if (fAutoStart && !foundItem) {
         // add genesis app to startup item list
         LSSharedFileListInsertItemURL(loginItems, kLSSharedFileListItemBeforeFirst, nullptr, nullptr, genesisAppUrl, nullptr, nullptr);
     }
-    else if(!fAutoStart && foundItem) {
+    else if (!fAutoStart && foundItem) {
         // remove item
         LSSharedFileListItemRemove(loginItems, foundItem);
     }
@@ -1024,23 +1024,23 @@ QString formatNiceTimeOffset(qint64 secs)
     const int DAY_IN_SECONDS = 24*60*60;
     const int WEEK_IN_SECONDS = 7*24*60*60;
     const int YEAR_IN_SECONDS = 31556952; // Average length of year in Gregorian calendar
-    if(secs < 60)
+    if (secs < 60)
     {
         timeBehindText = QObject::tr("%n second(s)","",secs);
     }
-    else if(secs < 2*HOUR_IN_SECONDS)
+    else if (secs < 2*HOUR_IN_SECONDS)
     {
         timeBehindText = QObject::tr("%n minute(s)","",secs/60);
     }
-    else if(secs < 2*DAY_IN_SECONDS)
+    else if (secs < 2*DAY_IN_SECONDS)
     {
         timeBehindText = QObject::tr("%n hour(s)","",secs/HOUR_IN_SECONDS);
     }
-    else if(secs < 2*WEEK_IN_SECONDS)
+    else if (secs < 2*WEEK_IN_SECONDS)
     {
         timeBehindText = QObject::tr("%n day(s)","",secs/DAY_IN_SECONDS);
     }
-    else if(secs < YEAR_IN_SECONDS)
+    else if (secs < YEAR_IN_SECONDS)
     {
         timeBehindText = QObject::tr("%n week(s)","",secs/WEEK_IN_SECONDS);
     }
@@ -1055,11 +1055,11 @@ QString formatNiceTimeOffset(qint64 secs)
 
 QString formatBytes(uint64_t bytes)
 {
-    if(bytes < 1024)
+    if (bytes < 1024)
         return QString(QObject::tr("%1 B")).arg(bytes);
-    if(bytes < 1024 * 1024)
+    if (bytes < 1024 * 1024)
         return QString(QObject::tr("%1 KB")).arg(bytes / 1024);
-    if(bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024)
         return QString(QObject::tr("%1 MB")).arg(bytes / 1024 / 1024);
 
     return QString(QObject::tr("%1 GB")).arg(bytes / 1024 / 1024 / 1024);

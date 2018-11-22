@@ -109,7 +109,7 @@ void WalletModel::updateStatus()
 {
     EncryptionStatus newEncryptionStatus = getEncryptionStatus();
 
-    if(cachedEncryptionStatus != newEncryptionStatus)
+    if (cachedEncryptionStatus != newEncryptionStatus)
         Q_EMIT encryptionStatusChanged(newEncryptionStatus);
 }
 
@@ -119,13 +119,13 @@ void WalletModel::pollBalanceChanged()
     // periodical polls if the core is holding the locks for a longer time -
     // for example, during a wallet rescan.
     TRY_LOCK(cs_main, lockMain);
-    if(!lockMain)
+    if (!lockMain)
         return;
     TRY_LOCK(wallet->cs_wallet, lockWallet);
-    if(!lockWallet)
+    if (!lockWallet)
         return;
 
-    if(fForceCheckBalanceChanged || chainActive.Height() != cachedNumBlocks)
+    if (fForceCheckBalanceChanged || chainActive.Height() != cachedNumBlocks)
     {
         fForceCheckBalanceChanged = false;
 
@@ -133,7 +133,7 @@ void WalletModel::pollBalanceChanged()
         cachedNumBlocks = chainActive.Height();
 
         checkBalanceChanged();
-        if(transactionTableModel)
+        if (transactionTableModel)
             transactionTableModel->updateConfirmations();
     }
 }
@@ -153,7 +153,7 @@ void WalletModel::checkBalanceChanged()
         newWatchImmatureBalance = getWatchImmatureBalance();
     }
 
-    if(cachedBalance != newBalance || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance ||
+    if (cachedBalance != newBalance || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance ||
         cachedWatchOnlyBalance != newWatchOnlyBalance || cachedWatchUnconfBalance != newWatchUnconfBalance || cachedWatchImmatureBalance != newWatchImmatureBalance)
     {
         cachedBalance = newBalance;
@@ -176,7 +176,7 @@ void WalletModel::updateTransaction()
 void WalletModel::updateAddressBook(const QString &address, const QString &label,
         bool isMine, const QString &purpose, int status)
 {
-    if(addressTableModel)
+    if (addressTableModel)
         addressTableModel->updateEntry(address, label, isMine, purpose, status);
 }
 
@@ -198,7 +198,7 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
     QList<SendCoinsRecipient> recipients = transaction.getRecipients();
     std::vector<CRecipient> vecSend;
 
-    if(recipients.empty())
+    if (recipients.empty())
     {
         return OK;
     }
@@ -235,11 +235,11 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
         }
         else
         {   // User-entered genesis address / amount:
-            if(!validateAddress(rcp.address))
+            if (!validateAddress(rcp.address))
             {
                 return InvalidAddress;
             }
-            if(rcp.amount <= 0)
+            if (rcp.amount <= 0)
             {
                 return InvalidAmount;
             }
@@ -253,14 +253,14 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
             total += rcp.amount;
         }
     }
-    if(setAddress.size() != nAddresses)
+    if (setAddress.size() != nAddresses)
     {
         return DuplicateAddress;
     }
 
     CAmount nBalance = getBalance(&coinControl);
 
-    if(total > nBalance)
+    if (total > nBalance)
     {
         return AmountExceedsBalance;
     }
@@ -281,9 +281,9 @@ WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransact
         if (fSubtractFeeFromAmount && fCreated)
             transaction.reassignAmounts(nChangePosRet);
 
-        if(!fCreated)
+        if (!fCreated)
         {
-            if(!fSubtractFeeFromAmount && (total + nFeeRequired) > nBalance)
+            if (!fSubtractFeeFromAmount && (total + nFeeRequired) > nBalance)
             {
                 return SendCoinsReturn(AmountWithFeeExceedsBalance);
             }
@@ -331,7 +331,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran
 
         CReserveKey *keyChange = transaction.getPossibleKeyChange();
         CValidationState state;
-        if(!wallet->CommitTransaction(*newTx, *keyChange, g_connman.get(), state))
+        if (!wallet->CommitTransaction(*newTx, *keyChange, g_connman.get(), state))
             return SendCoinsReturn(TransactionCommitFailed, QString::fromStdString(state.GetRejectReason()));
 
         CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
@@ -394,11 +394,11 @@ RecentRequestsTableModel *WalletModel::getRecentRequestsTableModel()
 
 WalletModel::EncryptionStatus WalletModel::getEncryptionStatus() const
 {
-    if(!wallet->IsCrypted())
+    if (!wallet->IsCrypted())
     {
         return Unencrypted;
     }
-    else if(wallet->IsLocked())
+    else if (wallet->IsLocked())
     {
         return Locked;
     }
@@ -410,7 +410,7 @@ WalletModel::EncryptionStatus WalletModel::getEncryptionStatus() const
 
 bool WalletModel::setWalletEncrypted(bool encrypted, const SecureString &passphrase)
 {
-    if(encrypted)
+    if (encrypted)
     {
         // Encrypt
         return wallet->EncryptWallet(passphrase);
@@ -424,7 +424,7 @@ bool WalletModel::setWalletEncrypted(bool encrypted, const SecureString &passphr
 
 bool WalletModel::setWalletLocked(bool locked, const SecureString &passPhrase)
 {
-    if(locked)
+    if (locked)
     {
         // Lock
         return wallet->Lock();
@@ -522,7 +522,7 @@ void WalletModel::unsubscribeFromCoreSignals()
 WalletModel::UnlockContext WalletModel::requestUnlock()
 {
     bool was_locked = getEncryptionStatus() == Locked;
-    if(was_locked)
+    if (was_locked)
     {
         // Request UI to unlock wallet
         Q_EMIT requireUnlock();
@@ -542,7 +542,7 @@ WalletModel::UnlockContext::UnlockContext(WalletModel *_wallet, bool _valid, boo
 
 WalletModel::UnlockContext::~UnlockContext()
 {
-    if(valid && relock)
+    if (valid && relock)
     {
         wallet->setWalletLocked(true);
     }
@@ -703,7 +703,7 @@ bool WalletModel::bumpFee(uint256 hash)
     }
 
     WalletModel::UnlockContext ctx(requestUnlock());
-    if(!ctx.isValid())
+    if (!ctx.isValid())
     {
         return false;
     }

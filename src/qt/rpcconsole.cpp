@@ -317,10 +317,10 @@ bool RPCConsole::RPCParseCommandLine(std::string &strResult, const std::string &
                     }
                     break;
                 case ' ': case ',': case '\t':
-                    if(state == STATE_EATING_SPACES_IN_ARG && curarg.empty() && ch == ',')
+                    if (state == STATE_EATING_SPACES_IN_ARG && curarg.empty() && ch == ',')
                         throw std::runtime_error("Invalid Syntax");
 
-                    else if(state == STATE_ARGUMENT) // Space ends argument
+                    else if (state == STATE_ARGUMENT) // Space ends argument
                     {
                         add_to_current_stack(curarg);
                         curarg.clear();
@@ -354,7 +354,7 @@ bool RPCConsole::RPCParseCommandLine(std::string &strResult, const std::string &
                 curarg += ch; state = STATE_ARGUMENT;
                 break;
             case STATE_ESCAPE_DOUBLEQUOTED: // '\' in double-quoted text
-                if(ch != '"' && ch != '\\') curarg += '\\'; // keep '\' for everything but the quote and '\' itself
+                if (ch != '"' && ch != '\\') curarg += '\\'; // keep '\' for everything but the quote and '\' itself
                 curarg += ch; state = STATE_DOUBLEQUOTED;
                 break;
         }
@@ -392,7 +392,7 @@ void RPCExecutor::request(const QString &command)
         std::string executableCommand = command.toStdString() + "\n";
 
         // Catch the console-only-help command before RPC call is executed and reply with help text as-if a RPC reply.
-        if(executableCommand == "help-console\n")
+        if (executableCommand == "help-console\n")
         {
             Q_EMIT reply(RPCConsole::CMD_REPLY, QString(("\n"
                 "This console accepts RPC commands using the standard syntax.\n"
@@ -415,7 +415,7 @@ void RPCExecutor::request(const QString &command)
                 "   example:    getblock(getblockhash(0),true)[tx][0]\n\n")));
             return;
         }
-        if(!RPCConsole::RPCExecuteCommandLine(result, executableCommand))
+        if (!RPCConsole::RPCExecuteCommandLine(result, executableCommand))
         {
             Q_EMIT reply(RPCConsole::CMD_ERROR, QString("Parse error: unbalanced ' or \""));
             return;
@@ -510,18 +510,18 @@ RPCConsole::~RPCConsole()
 
 bool RPCConsole::eventFilter(QObject* obj, QEvent *event)
 {
-    if(event->type() == QEvent::KeyPress) // Special key handling
+    if (event->type() == QEvent::KeyPress) // Special key handling
     {
         QKeyEvent *keyevt = static_cast<QKeyEvent*>(event);
         int key = keyevt->key();
         Qt::KeyboardModifiers mod = keyevt->modifiers();
         switch(key)
         {
-        case Qt::Key_Up: if(obj == ui->lineEdit) { browseHistory(-1); return true; } break;
-        case Qt::Key_Down: if(obj == ui->lineEdit) { browseHistory(1); return true; } break;
+        case Qt::Key_Up: if (obj == ui->lineEdit) { browseHistory(-1); return true; } break;
+        case Qt::Key_Down: if (obj == ui->lineEdit) { browseHistory(1); return true; } break;
         case Qt::Key_PageUp: /* pass paging keys to messages widget */
         case Qt::Key_PageDown:
-            if(obj == ui->lineEdit)
+            if (obj == ui->lineEdit)
             {
                 QApplication::postEvent(ui->messagesWidget, new QKeyEvent(*keyevt));
                 return true;
@@ -530,7 +530,7 @@ bool RPCConsole::eventFilter(QObject* obj, QEvent *event)
         case Qt::Key_Return:
         case Qt::Key_Enter:
             // forward these events to lineEdit
-            if(obj == autoCompleter->popup()) {
+            if (obj == autoCompleter->popup()) {
                 QApplication::postEvent(ui->lineEdit, new QKeyEvent(*keyevt));
                 return true;
             }
@@ -538,7 +538,7 @@ bool RPCConsole::eventFilter(QObject* obj, QEvent *event)
         default:
             // Typing in messages widget brings focus to line edit, and redirects key there
             // Exclude most combinations and keys that emit no text, except paste shortcuts
-            if(obj == ui->messagesWidget && (
+            if (obj == ui->messagesWidget && (
                   (!mod && !keyevt->text().isEmpty() && key != Qt::Key_Tab) ||
                   ((mod & Qt::ControlModifier) && key == Qt::Key_V) ||
                   ((mod & Qt::ShiftModifier) && key == Qt::Key_Insert)))
@@ -735,7 +735,7 @@ void RPCConsole::setFontSize(int newSize)
 void RPCConsole::clear(bool clearHistory)
 {
     ui->messagesWidget->clear();
-    if(clearHistory)
+    if (clearHistory)
     {
         history.clear();
         historyPtr = 0;
@@ -785,7 +785,7 @@ void RPCConsole::clear(bool clearHistory)
 
 void RPCConsole::keyPressEvent(QKeyEvent *event)
 {
-    if(windowType() != Qt::Widget && event->key() == Qt::Key_Escape)
+    if (windowType() != Qt::Widget && event->key() == Qt::Key_Escape)
     {
         close();
     }
@@ -799,7 +799,7 @@ void RPCConsole::message(int category, const QString &message, bool html)
     out += "<table><tr><td class=\"time\" width=\"65\">" + timeString + "</td>";
     out += "<td class=\"icon\" width=\"32\"><img src=\"" + categoryClass(category) + "\"></td>";
     out += "<td class=\"message " + categoryClass(category) + "\" valign=\"middle\">";
-    if(html)
+    if (html)
         out += message;
     else
         out += GUIUtil::HtmlEscape(message, false);
@@ -813,7 +813,7 @@ void RPCConsole::updateNetworkState()
     connections += tr("In:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_IN)) + " / ";
     connections += tr("Out:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_OUT)) + ")";
 
-    if(!clientModel->getNetworkActive()) {
+    if (!clientModel->getNetworkActive()) {
         connections += " (" + tr("Network activity disabled") + ")";
     }
 
@@ -855,7 +855,7 @@ void RPCConsole::on_lineEdit_returnPressed()
 {
     QString cmd = ui->lineEdit->text();
 
-    if(!cmd.isEmpty())
+    if (!cmd.isEmpty())
     {
         std::string strFilteredCmd;
         try {
@@ -901,12 +901,12 @@ void RPCConsole::browseHistory(int offset)
     }
 
     historyPtr += offset;
-    if(historyPtr < 0)
+    if (historyPtr < 0)
         historyPtr = 0;
-    if(historyPtr > history.size())
+    if (historyPtr > history.size())
         historyPtr = history.size();
     QString cmd;
-    if(historyPtr < history.size())
+    if (historyPtr < history.size())
         cmd = history.at(historyPtr);
     else if (!cmdBeforeBrowsing.isNull()) {
         cmd = cmdBeforeBrowsing;
@@ -1142,7 +1142,7 @@ void RPCConsole::showBanTableContextMenu(const QPoint& point)
 
 void RPCConsole::disconnectSelectedNode()
 {
-    if(!g_connman)
+    if (!g_connman)
         return;
     
     // Get selected peer addresses
@@ -1152,7 +1152,7 @@ void RPCConsole::disconnectSelectedNode()
         // Get currently selected peer address
         NodeId id = nodes.at(i).data().toLongLong();
         // Find the node, disconnect it and clear the selected node
-        if(g_connman->DisconnectNode(id))
+        if (g_connman->DisconnectNode(id))
             clearSelectedNode();
     }
 }
@@ -1171,12 +1171,12 @@ void RPCConsole::banSelectedNode(int bantime)
 
 	// Get currently selected peer address
 	int detailNodeRow = clientModel->getPeerTableModel()->getRowByNodeId(id);
-	if(detailNodeRow < 0)
+	if (detailNodeRow < 0)
 	    return;
 
 	// Find possible nodes, ban it and clear the selected node
 	const CNodeCombinedStats *stats = clientModel->getPeerTableModel()->getNodeStats(detailNodeRow);
-	if(stats) {
+	if (stats) {
 	    g_connman->Ban(stats->nodeStats.addr, BanReasonManuallyAdded, bantime);
 	}
     }

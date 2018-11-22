@@ -85,7 +85,7 @@ OptionsDialog::OptionsDialog(QWidget *parent, bool enableWallet) :
         QLocale locale(langStr);
 
         /** check if the locale name consists of 2 parts (language_country) */
-        if(langStr.contains("_"))
+        if (langStr.contains("_"))
         {
 #if QT_VERSION >= 0x040800
             /** display language strings as "native language - native country (locale name)", e.g. "Deutsch - Deutschland (de)" */
@@ -135,7 +135,7 @@ void OptionsDialog::setModel(OptionsModel *_model)
 {
     this->model = _model;
 
-    if(_model)
+    if (_model)
     {
         /* check if client restart is needed and show persistent message */
         if (_model->isRestartRequired())
@@ -159,6 +159,7 @@ void OptionsDialog::setModel(OptionsModel *_model)
     connect(ui->databaseCache, SIGNAL(valueChanged(int)), this, SLOT(showRestartWarning()));
     connect(ui->threadsScriptVerif, SIGNAL(valueChanged(int)), this, SLOT(showRestartWarning()));
     /* Wallet */
+    connect(ui->showMasternodesTab, SIGNAL(clicked(bool)), this, SLOT(showRestartWarning()));
     connect(ui->spendZeroConfChange, SIGNAL(clicked(bool)), this, SLOT(showRestartWarning()));
     /* Network */
     connect(ui->allowIncoming, SIGNAL(clicked(bool)), this, SLOT(showRestartWarning()));
@@ -177,6 +178,7 @@ void OptionsDialog::setMapper()
     mapper->addMapping(ui->databaseCache, OptionsModel::DatabaseCache);
 
     /* Wallet */
+    mapper->addMapping(ui->showMasternodesTab, OptionsModel::ShowMasternodesTab);
     mapper->addMapping(ui->spendZeroConfChange, OptionsModel::SpendZeroConfChange);
     mapper->addMapping(ui->coinControlFeatures, OptionsModel::CoinControlFeatures);
 
@@ -212,14 +214,14 @@ void OptionsDialog::setOkButtonState(bool fState)
 
 void OptionsDialog::on_resetButton_clicked()
 {
-    if(model)
+    if (model)
     {
         // confirmation dialog
         QMessageBox::StandardButton btnRetVal = QMessageBox::question(this, tr("Confirm options reset"),
             tr("Client restart required to activate changes.") + "<br><br>" + tr("Client will be shut down. Do you want to proceed?"),
             QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
 
-        if(btnRetVal == QMessageBox::Cancel)
+        if (btnRetVal == QMessageBox::Cancel)
             return;
 
         /* reset all options and close GUI */
@@ -254,7 +256,7 @@ void OptionsDialog::on_cancelButton_clicked()
 
 void OptionsDialog::on_hideTrayIcon_stateChanged(int fState)
 {
-    if(fState)
+    if (fState)
     {
         ui->minimizeToTray->setChecked(false);
         ui->minimizeToTray->setEnabled(false);
@@ -269,7 +271,7 @@ void OptionsDialog::showRestartWarning(bool fPersistent)
 {
     ui->statusLabel->setStyleSheet("QLabel { color: red; }");
 
-    if(fPersistent)
+    if (fPersistent)
     {
         ui->statusLabel->setText(tr("Client restart required to activate changes."));
     }
