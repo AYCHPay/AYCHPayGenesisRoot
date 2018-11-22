@@ -29,12 +29,12 @@
 SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) : QSplashScreen(pixmap, f)
 {
     // set reference point, paddings
-    int paddingLeftCol2         = 232;
-    int paddingTopCol2          = 200;
-    int line1 = 0;
-    int line2 = 13;
-    int line3 = 26;
-    int line4 = 39;
+    // int paddingLeftCol2         = 232;
+    // int paddingTopCol2          = 200;
+    // int line1 = 0;
+    // int line2 = 13;
+    // int line3 = 26;
+    // int line4 = 39;
 
     float fontFactor            = 1.0;
 
@@ -49,7 +49,7 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) : QSplashSc
 
     // load the bitmap for writing some text over it
     QPixmap newPixmap;
-//    if(GetBoolArg("-testnet")) {
+//    if (GetBoolArg("-testnet")) {
 //        newPixmap     = QPixmap(":/images/splash_testnet");
 //    }
 //    else {
@@ -141,7 +141,7 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) : QSplashSc
 //    // if the version string is to long, reduce size
 //    fm = pixPaint.fontMetrics();
 //    int versionTextWidth  = fm.width(versionText);
-//    if(versionTextWidth > titleTextWidth+paddingRight-10) {
+//    if (versionTextWidth > titleTextWidth+paddingRight-10) {
 //        pixPaint.setFont(QFont(font, 10*fontFactor));
 //        titleVersionVSpace -= 5;
 //    }
@@ -157,7 +157,7 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) : QSplashSc
 //    }
 //
 //    // draw additional text if special network
-//    if(!titleAddText.isEmpty()) {
+//    if (!titleAddText.isEmpty()) {
 //        QFont boldFont = QFont(font, 10*fontFactor);
 //        boldFont.setWeight(QFont::Bold);
 //        pixPaint.setFont(boldFont);

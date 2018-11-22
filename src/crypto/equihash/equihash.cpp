@@ -443,7 +443,9 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
             if (cancelled(FinalColliding)) throw solver_cancelled;
         }
     } else
-        //LogPrint(BCLog::POW, "[POW] - List is empty\n");
+    {
+        //LogPrint(BCLog::POW, "- List is empty\n");
+    }
 
     return false;
 }

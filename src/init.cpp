@@ -11,6 +11,7 @@
 
 #include <addrman.h>
 #include <amount.h>
+#include <base58.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <checkpoints.h>
@@ -24,6 +25,7 @@
 #include <miner.h>
 #include <netbase.h>
 #include <net.h>
+#include <masternodes/netfulfilledman.h>
 #include <net_processing.h>
 #include <policy/feerate.h>
 #include <policy/fees.h>
@@ -47,6 +49,16 @@
 #include <wallet/init.h>
 #endif
 #include <warnings.h>
+
+#include <masternodes/activemasternode.h>
+#include <masternodes/flat-database.h>
+#include <masternodes/governance.h>
+#include <masternodes/masternode-payments.h>
+#include <masternodes/masternode-sync.h>
+#include <masternodes/masternodeman.h>
+#include <masternodes/masternodeconfig.h>
+#include <masternodes/messagesigner.h>
+
 #include <stdint.h>
 #include <stdio.h>
 #include <memory>
@@ -199,6 +211,18 @@ void Shutdown()
     if (g_connman) g_connman->Stop();
     peerLogic.reset();
     g_connman.reset();
+  
+    // STORE DATA CACHES INTO SERIALIZED DAT FILES
+    if (!fLiteMode) {
+        CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
+        flatdb1.Dump(mnodeman);
+        CFlatDB<CMasternodePayments> flatdb2("mnpayments.dat", "magicMasternodePaymentsCache");
+        flatdb2.Dump(mnpayments);
+        CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
+        flatdb3.Dump(governance);
+        CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
+        flatdb4.Dump(netfulfilledman);
+    }
 
     StopTorControl();
 
@@ -375,7 +399,7 @@ std::string HelpMessage(HelpMessageMode mode)
 #endif
     strUsage += HelpMessageOpt("-prune=<n>", strprintf(_("Reduce storage requirements by enabling pruning (deleting) of old blocks. This allows the pruneblockchain RPC to be called to delete specific blocks, and enables automatic pruning of old blocks if a target size in MiB is provided. This mode is incompatible with -txindex and -rescan. "
             "Warning: Reverting this setting requires re-downloading the entire blockchain. "
-            "(default: 0 = disable pruning blocks, 1 = allow manual pruning via RPC, >=%u = automatically prune block files to stay under the specified target size in MiB)"), MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024));
+            "(default: 0 = disable pruning blocks, 1 = allow manual pruning via RPC, >%u = automatically prune block files to stay under the specified target size in MiB)"), MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024));
     strUsage += HelpMessageOpt("-reindex-chainstate", _("Rebuild chain state from the currently indexed blocks"));
     strUsage += HelpMessageOpt("-reindex", _("Rebuild chain state and block index from the blk*.dat files on disk"));
 #ifndef WIN32
@@ -481,6 +505,13 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-shrinkdebugfile", _("Shrink debug.log file on client startup (default: 1 when no -debug)"));
 
     AppendParamsHelpMessages(strUsage, showDebug);
+    strUsage += HelpMessageOpt("-litemode=<n>", strprintf(_("Disable all Genesis Masternode specific functionality (Masternodes, Governance) (0-1, default: %u)"), 0));
+
+    strUsage += HelpMessageGroup(_("Masternode options:"));
+    strUsage += HelpMessageOpt("-masternode=<n>", strprintf(_("Enable the client to act as a masternode (0-1, default: %u)"), 0));
+    strUsage += HelpMessageOpt("-mnconf=<file>", strprintf(_("Specify masternode configuration file (default: %s)"), "masternode.conf"));
+    strUsage += HelpMessageOpt("-mnconflock=<n>", strprintf(_("Lock masternodes from masternode configuration file (default: %u)"), 1));
+    strUsage += HelpMessageOpt("-masternodeprivkey=<n>", _("Set the masternode private key"));
 
     strUsage += HelpMessageGroup(_("Node relay options:"));
     if (showDebug) {
@@ -498,7 +529,10 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-whitelistforcerelay", strprintf(_("Force relay of transactions from whitelisted peers even if they violate local relay policy (default: %d)"), DEFAULT_WHITELISTFORCERELAY));
 
     strUsage += HelpMessageGroup(_("Block creation options:"));
+    if (showDebug)
+        strUsage += HelpMessageOpt("-blockmaxsize=<n>", "Set maximum BIP141 block weight to this * 4. Deprecated, use blockmaxweight");
     strUsage += HelpMessageOpt("-blockmaxweight=<n>", strprintf(_("Set maximum BIP141 block weight (default: %d)"), DEFAULT_BLOCK_MAX_WEIGHT));
+    strUsage += HelpMessageOpt("-blockmaxsize=<n>", _("Set maximum BIP141 block weight to this * 4. Deprecated, use blockmaxweight"));
     strUsage += HelpMessageOpt("-blockmintxfee=<amt>", strprintf(_("Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)"), CURRENCY_UNIT, FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)));
     if (showDebug)
         strUsage += HelpMessageOpt("-blockversion=<n>", "Override block version to test forking scenarios");
@@ -707,7 +741,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
  */
 bool InitSanityCheck(void)
 {
-    if(!ECC_InitSanityCheck()) {
+    if (!ECC_InitSanityCheck()) {
         InitError("Elliptic curve cryptography sanity check failure. Aborting.");
         return false;
     }
@@ -752,6 +786,17 @@ void InitParameterInteraction()
     if (gArgs.IsArgSet("-whitebind")) {
         if (gArgs.SoftSetBoolArg("-listen", true))
             LogPrintf("%s: parameter interaction: -whitebind set -> setting -listen=1\n", __func__);
+    }
+  
+    if (gArgs.GetBoolArg("-masternode", false)) {
+        // masternodes MUST accept connections from outside
+        gArgs.ForceSetArg("-listen", "1");
+        LogPrintf("%s: parameter interaction: -masternode=1 -> setting -listen=1\n", __func__);
+        if (gArgs.GetArg("-maxconnections", DEFAULT_MAX_PEER_CONNECTIONS) < DEFAULT_MAX_PEER_CONNECTIONS) {
+            // masternodes MUST be able to handle at least DEFAULT_MAX_PEER_CONNECTIONS connections
+            gArgs.ForceSetArg("-maxconnections", itostr(DEFAULT_MAX_PEER_CONNECTIONS));
+            LogPrintf("%s: parameter interaction: -masternode=1 -> setting -maxconnections=%d\n", __func__, DEFAULT_MAX_PEER_CONNECTIONS);
+        }
     }
 
     if (gArgs.IsArgSet("-connect")) {
@@ -801,6 +846,24 @@ void InitParameterInteraction()
     if (gArgs.GetBoolArg("-whitelistforcerelay", DEFAULT_WHITELISTFORCERELAY)) {
         if (gArgs.SoftSetBoolArg("-whitelistrelay", true))
             LogPrintf("%s: parameter interaction: -whitelistforcerelay=1 -> setting -whitelistrelay=1\n", __func__);
+    }
+    
+    if (gArgs.IsArgSet("-blockmaxsize")) {
+        unsigned int max_size = gArgs.GetArg("-blockmaxsize", 0);
+        if (gArgs.SoftSetArg("blockmaxweight", strprintf("%d", max_size * WITNESS_SCALE_FACTOR))) {
+            LogPrintf("%s: parameter interaction: -blockmaxsize=%d -> setting -blockmaxweight=%d (-blockmaxsize is deprecated!)\n", __func__, max_size, max_size * WITNESS_SCALE_FACTOR);
+        } else {
+            LogPrintf("%s: Ignoring blockmaxsize setting which is overridden by blockmaxweight", __func__);
+        }
+    }
+
+    if (gArgs.IsArgSet("-blockmaxsize")) {
+        unsigned int max_size = gArgs.GetArg("-blockmaxsize", 0);
+        if (gArgs.SoftSetArg("blockmaxweight", strprintf("%d", max_size * WITNESS_SCALE_FACTOR))) {
+            LogPrintf("%s: parameter interaction: -blockmaxsize=%d -> setting -blockmaxweight=%d (-blockmaxsize is deprecated!)\n", __func__, max_size, max_size * WITNESS_SCALE_FACTOR);
+        } else {
+            LogPrintf("%s: Ignoring blockmaxsize setting which is overridden by blockmaxweight", __func__);
+        }
     }
 }
 
@@ -1642,6 +1705,65 @@ bool AppInitMain()
     } else {
         fHaveGenesis = true;
     }
+  
+    // ********************************************************* Step 11a: setup masternodes
+    fMasternodeMode = gArgs.GetBoolArg("-masternode", false);
+    // TODO: masternode should have no wallet
+
+    //lite mode disables all Genesis Masternode specific functionality
+    fLiteMode = gArgs.GetBoolArg("-litemode", false);
+
+    if (fLiteMode) {
+        InitWarning(_("You are starting in lite mode, all Genesis Masternode specific functionality is disabled."));
+    }
+
+    if ((!fLiteMode && fTxIndex == false)
+       && chainparams.NetworkIDString() != CBaseChainParams::REGTEST) { // TODO remove this when pruning is fixed. See https://github.com/dashpay/dash/pull/1817 and https://github.com/dashpay/dash/pull/1743
+        return InitError(_("Transaction index can't be disabled in full mode. Either start with -litemode command line switch or enable transaction index."));
+    }
+
+    if (fLiteMode && fMasternodeMode) {
+        return InitError(_("You can not start a masternode in lite mode."));
+     }
+
+    if (fMasternodeMode) {
+        LogPrintf("MASTERNODE:\n");
+
+        std::string strMasterNodePrivKey = gArgs.GetArg("-masternodeprivkey", "");
+        if (!strMasterNodePrivKey.empty()) {
+            if (!CMessageSigner::GetKeysFromSecret(strMasterNodePrivKey, activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode))
+                return InitError(_("Invalid masternodeprivkey. Please see documenation."));
+
+            LogPrintf("  pubKeyMasternode: %s\n", EncodeDestination(GetScriptForDestination(WitnessV0KeyHash(activeMasternode.pubKeyMasternode.GetID()))));
+        } else {
+            return InitError(_("You must specify a masternodeprivkey in the configuration. Please see documentation for help."));
+        }
+    }
+
+#ifdef ENABLE_WALLET
+    LogPrintf("Using masternode config file %s\n", GetMasternodeConfigFile().string());
+  
+    if (gArgs.GetBoolArg("-mnconflock", true) && (masternodeConfig.getCount() > 0)) {
+        LogPrintf("Locking Masternodes:\n");
+        uint256 mnTxHash;
+        uint32_t outputIndex;
+        for (const auto& mne : masternodeConfig.getEntries()) {
+            mnTxHash.SetHex(mne.getTxHash());
+            outputIndex = (uint32_t)atoi(mne.getOutputIndex());
+            COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+            MasternodeLock(outpoint);
+            LogPrintf("  %s %s - locked successfully\n", mne.getTxHash(), mne.getOutputIndex());
+        }
+    }
+#endif // ENABLE_WALLET
+
+    //lite mode disables all Masternode related functionality
+    fLiteMode = gArgs.GetBoolArg("-litemode", false);
+    if (fMasternodeMode && fLiteMode){
+        return InitError("You can not start a masternode in litemode");
+    }
+
+    LogPrintf("fLiteMode %d\n", fLiteMode);
 
     if (gArgs.IsArgSet("-blocknotify"))
         uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
@@ -1664,10 +1786,63 @@ bool AppInitMain()
         }
         uiInterface.NotifyBlockTip.disconnect(BlockNotifyGenesisWait);
     }
+    
+    // ********************************************************* Step 11b: Load cache data
 
+    // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
+
+    if (!fLiteMode) {
+        fs::path pathDB = GetDataDir();
+        std::string strDBName;
+
+        strDBName = "mncache.dat";
+        uiInterface.InitMessage(_("Loading masternode cache..."));
+        CFlatDB<CMasternodeMan> flatdb1(strDBName, "magicMasternodeCache");
+        if (!flatdb1.Load(mnodeman)) {
+            return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
+        }
+        
+        if (mnodeman.size()) {
+            strDBName = "mnpayments.dat";
+            uiInterface.InitMessage(_("Loading masternode payment cache..."));
+            CFlatDB<CMasternodePayments> flatdb2(strDBName, "magicMasternodePaymentsCache");
+            if (!flatdb2.Load(mnpayments)) {
+                return InitError(_("Failed to load masternode payments cache from") + "\n" + (pathDB / strDBName).string());
+            }
+
+            strDBName = "governance.dat";
+            uiInterface.InitMessage(_("Loading governance cache..."));
+            CFlatDB<CGovernanceManager> flatdb3(strDBName, "magicGovernanceCache");
+            if (!flatdb3.Load(governance)) {
+                return InitError(_("Failed to load governance cache from") + "\n" + (pathDB / strDBName).string());
+            }
+            governance.InitOnLoad();
+        } else {
+            uiInterface.InitMessage(_("Masternode cache is empty, skipping payments and governance cache..."));
+        }
+
+        strDBName = "netfulfilled.dat";
+        uiInterface.InitMessage(_("Loading fulfilled requests cache..."));
+        CFlatDB<CNetFulfilledRequestManager> flatdb4(strDBName, "magicFulfilledCache");
+        if (!flatdb4.Load(netfulfilledman)) {
+            return InitError(_("Failed to load fulfilled requests cache from") + "\n" + (pathDB / strDBName).string());
+        }
+    }
+    
     if (ShutdownRequested()) {
         return false;
     }
+  
+    // ********************************************************* Step 11c: update block tip in Genesis Masternode modules
+
+    // force UpdatedBlockTip to initialize nCachedBlockHeight for MN payments and budgets
+    // but don't call it directly to prevent triggering of other listeners like zmq etc.
+    // GetMainSignals().UpdatedBlockTip(chainActive.Tip());
+    peerLogic->InitializeCurrentBlockTip(chainActive.Tip());
+  
+    // ********************************************************* Step 11d: start mac-ps-<smth> threads
+
+    threadGroup.create_thread(boost::bind(&ThreadCheckMasternode, boost::ref(*g_connman)));
 
     // ********************************************************* Step 11: start node
 
@@ -1693,6 +1868,7 @@ bool AppInitMain()
     connOptions.nLocalServices = nLocalServices;
     connOptions.nMaxConnections = nMaxConnections;
     connOptions.nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, connOptions.nMaxConnections);
+    connOptions.nMaxMasternodeOutbound = std::min(MAX_OUTBOUND_MASTERNODE_CONNECTIONS, connOptions.nMaxConnections);
     connOptions.nMaxAddnode = MAX_ADDNODE_CONNECTIONS;
     connOptions.nMaxFeeler = 1;
     connOptions.nBestHeight = chain_active_height;
@@ -1755,4 +1931,57 @@ bool AppInitMain()
 #endif
 
     return true;
+}
+
+void ThreadCheckMasternode(CConnman& connman)
+{
+    if (fLiteMode) return; // disable all Genesis Masternode specific functionality
+
+    static bool fOneThread;
+    if (fOneThread) return;
+    fOneThread = true;
+
+    // Make this thread recognisable as the PrivateSend thread
+    RenameThread("genesis-mn");
+
+    unsigned int nTick = 0;
+
+    while (true)
+    {
+        MilliSleep(1000);
+
+        // try to sync from all available nodes, one step at a time
+        masternodeSync.ProcessTick(connman);
+
+        if (masternodeSync.IsBlockchainSynced() && !ShutdownRequested()) {
+
+            nTick++;
+
+            // make sure to check all masternodes first
+            mnodeman.Check();
+            
+            mnodeman.ProcessPendingMnbRequests(connman);
+            mnodeman.ProcessPendingMnvRequests(connman);
+
+            // check if we should activate or ping every few minutes,
+            // slightly postpone first run to give net thread a chance to connect to some peers
+            if (nTick % Params().GetConsensus().nMasternodeMinMnpSeconds == 15)
+                activeMasternode.ManageState(connman);
+
+            if (nTick % 60 == 0) {
+                netfulfilledman.CheckAndRemove();
+                mnodeman.ProcessMasternodeConnections(connman);
+                mnodeman.CheckAndRemove(connman);
+                mnodeman.WarnMasternodeDaemonUpdates();
+                mnpayments.CheckAndRemove();
+            }
+            if (fMasternodeMode && (nTick % (60 * 5) == 0)) {
+                mnodeman.DoFullVerificationStep(connman);
+            }
+
+            if (nTick % (60 * 5) == 0) {
+                governance.DoMaintenance(connman);
+            }
+        }
+    }
 }

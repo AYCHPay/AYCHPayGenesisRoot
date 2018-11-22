@@ -387,7 +387,7 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
         LOCK(cs_wallet);
         for (const MasterKeyMap::value_type& pMasterKey : mapMasterKeys)
         {
-            if(!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
+            if (!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
             if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, _vMasterKey))
                 continue; // try another master key
@@ -410,7 +410,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
         CKeyingMaterial _vMasterKey;
         for (MasterKeyMap::value_type& pMasterKey : mapMasterKeys)
         {
-            if(!crypter.SetKeyFromPassphrase(strOldWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
+            if (!crypter.SetKeyFromPassphrase(strOldWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
             if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, _vMasterKey))
                 return false;
@@ -1755,7 +1755,7 @@ CAmount CWalletTx::GetDebit(const isminefilter& filter) const
         return 0;
 
     CAmount debit = 0;
-    if(filter & ISMINE_SPENDABLE)
+    if (filter & ISMINE_SPENDABLE)
     {
         if (fDebitCached)
             debit += nDebitCached;
@@ -1766,9 +1766,9 @@ CAmount CWalletTx::GetDebit(const isminefilter& filter) const
             debit += nDebitCached;
         }
     }
-    if(filter & ISMINE_WATCH_ONLY)
+    if (filter & ISMINE_WATCH_ONLY)
     {
-        if(fWatchDebitCached)
+        if (fWatchDebitCached)
             debit += nWatchDebitCached;
         else
         {
@@ -2272,6 +2272,222 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const
     }
 }
 
+void CWallet::AvailableMNCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const CCoinControl *coinControl, const CAmount &nMinimumAmount, const CAmount &nMaximumAmount, const CAmount &nMinimumSumAmount, const uint64_t nMaximumCount, const int nMinDepth, const int nMaxDepth) const
+{
+    vCoins.clear();
+
+    {
+        LOCK2(cs_main, cs_wallet);
+
+        CAmount nTotal = 0;
+
+        for (const auto& entry : mapWallet)
+        {
+            const uint256& wtxid = entry.first;
+            const CWalletTx* pcoin = &entry.second;
+
+            if (!CheckFinalTx(*pcoin->tx))
+                continue;
+
+            if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
+                continue;
+
+            int nDepth = pcoin->GetDepthInMainChain();
+            if (nDepth < 0)
+                continue;
+
+            // We should not consider coins which aren't at least in our mempool
+            // It's possible for these to be conflicted via ancestors which we may never be able to detect
+            if (nDepth == 0 && !pcoin->InMempool())
+                continue;
+
+            bool safeTx = pcoin->IsTrusted();
+
+            // We should not consider coins from transactions that are replacing
+            // other transactions.
+            //
+            // Example: There is a transaction A which is replaced by bumpfee
+            // transaction B. In this case, we want to prevent creation of
+            // a transaction B' which spends an output of B.
+            //
+            // Reason: If transaction A were initially confirmed, transactions B
+            // and B' would no longer be valid, so the user would have to create
+            // a new transaction C to replace B'. However, in the case of a
+            // one-block reorg, transactions B' and C might BOTH be accepted,
+            // when the user only wanted one of them. Specifically, there could
+            // be a 1-block reorg away from the chain where transactions A and C
+            // were accepted to another chain where B, B', and C were all
+            // accepted.
+            if (nDepth == 0 && pcoin->mapValue.count("replaces_txid")) {
+                safeTx = false;
+            }
+
+            // Similarly, we should not consider coins from transactions that
+            // have been replaced. In the example above, we would want to prevent
+            // creation of a transaction A' spending an output of A, because if
+            // transaction B were initially confirmed, conflicting with A and
+            // A', we wouldn't want to the user to create a transaction D
+            // intending to replace A', but potentially resulting in a scenario
+            // where A, A', and D could all be accepted (instead of just B and
+            // D, or just A and A' like the user would want).
+            if (nDepth == 0 && pcoin->mapValue.count("replaced_by_txid")) {
+                safeTx = false;
+            }
+
+            if (fOnlySafe && !safeTx) {
+                continue;
+            }
+
+            if (nDepth < nMinDepth || nDepth > nMaxDepth)
+                continue;
+
+            for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++) {
+                if (pcoin->tx->vout[i].nValue < nMinimumAmount || pcoin->tx->vout[i].nValue > nMaximumAmount)
+                    continue;
+
+                if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs && !coinControl->IsSelected(COutPoint(entry.first, i)))
+                    continue;
+
+                if (IsLockedCoin(entry.first, i))
+                    continue;
+
+                if (IsSpent(wtxid, i))
+                    continue;
+
+                isminetype mine = IsMine(pcoin->tx->vout[i]);
+
+                if (mine == ISMINE_NO) {
+                    continue;
+                }
+                
+                // TODO use function above in combination with masternodes instead of a seperated function
+                if (pcoin->tx->vout[i].nValue < 2500000000000)
+                    continue;
+
+                bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || (coinControl && coinControl->fAllowWatchOnly && (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO);
+                bool fSolvableIn = (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO;
+
+                vCoins.push_back(COutput(pcoin, i, nDepth, fSpendableIn, fSolvableIn, safeTx));
+
+                // Checks the sum amount of all UTXO's.
+                if (nMinimumSumAmount != MAX_MONEY) {
+                    nTotal += pcoin->tx->vout[i].nValue;
+
+                    if (nTotal >= nMinimumSumAmount) {
+                        return;
+                    }
+                }
+
+                // Checks the maximum number of UTXO's.
+                if (nMaximumCount > 0 && vCoins.size() >= nMaximumCount) {
+                    return;
+                }
+            }
+        }
+    }
+}
+
+// Masternodes
+bool CWallet::GetMasternodeOutpointAndKeys(COutPoint& outpointRet, CPubKey& pubKeyRet, CKey& keyRet, std::string strTxHash, std::string strOutputIndex)
+{
+    // wait for reindex and/or import to finish
+    if (fImporting || fReindex) return false;
+
+    // Find possible candidates
+    std::vector<COutput> vPossibleCoins;
+    AvailableMNCoins(vPossibleCoins, true, NULL, false);
+    if (vPossibleCoins.empty()) {
+        LogPrintf("CWallet::GetMasternodeOutpointAndKeys -- Could not locate any valid masternode vin\n");
+        return false;
+    }
+
+    if (strTxHash.empty()) // No output specified, select the first one
+        return GetOutpointAndKeysFromOutput(vPossibleCoins[0], outpointRet, pubKeyRet, keyRet);
+
+    // Find specific vin
+    uint256 txHash = uint256S(strTxHash);
+    int nOutputIndex = atoi(strOutputIndex.c_str());
+
+    for (COutput& out : vPossibleCoins)
+        if (out.tx->GetHash() == txHash && out.i == nOutputIndex) // found it!
+            return GetOutpointAndKeysFromOutput(out, outpointRet, pubKeyRet, keyRet);
+
+    LogPrintf("CWallet::GetMasternodeOutpointAndKeys -- Could not locate specified masternode vin\n");
+    return false;
+}
+
+bool CWallet::GetOutpointAndKeysFromOutput(const COutput& out, COutPoint& outpointRet, CPubKey& pubKeyRet, CKey& keyRet)
+{
+    // wait for reindex and/or import to finish
+    if (fImporting || fReindex) return false;
+
+    CScript pubScript;
+
+    outpointRet = COutPoint(out.tx->GetHash(), out.i);
+    pubScript = out.tx->tx->vout[out.i].scriptPubKey; // the inputs PubKey
+
+    CTxDestination address;
+    ExtractDestination(pubScript, address);
+    
+    CKeyID keyID;
+    for (CWalletRef pwallet : vpwallets) {
+        keyID = GetKeyForDestination(*pwallet, address);
+        
+        LogPrintf("pwallet loop");
+
+        if (!pwallet->GetPubKey(keyID, pubKeyRet)) {
+            LogPrintf("CWallet::GetOutpointAndKeysFromOutput -- Address does not refer to a key\n");
+            continue;
+        }
+
+        if (!pwallet->GetKey(keyID, keyRet)) {
+            LogPrintf("CWallet::GetOutpointAndKeysFromOutput -- Private key for address is not known\n");
+            continue;
+        }
+        
+        LogPrintf("pubkey: %s\n", EncodeDestination(GetDestinationForKey(keyRet.GetPubKey(), OUTPUT_TYPE_P2SH_SEGWIT)));
+        LogPrintf("address: %s\n", EncodeDestination(address));
+        
+        return true;
+    }
+    
+    return false;
+}
+
+bool CWallet::GetBudgetSystemCollateralTX(CTransactionRef& tx, uint256 hash, CAmount amount)
+{
+    CWalletTx wtx;
+    if (GetBudgetSystemCollateralTX(wtx, hash, amount)){
+        // tx = (CTransactionRef)wtx;
+        return true;
+    }
+    return false;
+}
+
+bool CWallet::GetBudgetSystemCollateralTX(CWalletTx& tx, uint256 hash, CAmount amount)
+{
+    // make our change address
+    CReserveKey reservekey(this);
+
+    CScript scriptChange;
+    scriptChange << OP_RETURN << ToByteVector(hash);
+
+    CAmount nFeeRet = 0;
+    int nChangePosRet = -1;
+    std::string strFail = "";
+    std::vector< CRecipient > vecSend;
+    vecSend.push_back((CRecipient){scriptChange, amount, false});
+
+    CCoinControl coinControl;
+    bool success = CreateTransaction(vecSend, tx, reservekey, nFeeRet, nChangePosRet, strFail, coinControl, true);
+    if (!success){
+        LogPrintf("CWallet::GetBudgetSystemCollateralTX -- Error: %s\n", strFail);
+        return false;
+    }
+
+    return true;
+}
+
 std::map<CTxDestination, std::vector<COutput>> CWallet::ListCoins() const
 {
     // TODO: Add AssertLockHeld(cs_wallet) here.
@@ -2565,7 +2781,7 @@ bool CWallet::SignTransaction(CMutableTransaction &tx)
     int nIn = 0;
     for (const auto& input : tx.vin) {
         std::map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(input.prevout.hash);
-        if(mi == mapWallet.end() || input.prevout.n >= mi->second.tx->vout.size()) {
+        if (mi == mapWallet.end() || input.prevout.n >= mi->second.tx->vout.size()) {
             return false;
         }
         const CScript& scriptPubKey = mi->second.tx->vout[input.prevout.n].scriptPubKey;
@@ -3354,7 +3570,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t& nIndex, CKeyPool& keypool, bool fRe
         std::set<int64_t>& setKeyPool = fReturningInternal ? setInternalKeyPool : setExternalKeyPool;
 
         // Get the oldest key
-        if(setKeyPool.empty())
+        if (setKeyPool.empty())
             return;
 
         CWalletDB walletdb(*dbw);
@@ -3475,7 +3691,7 @@ std::map<CTxDestination, CAmount> CWallet::GetAddressBalances()
                 CTxDestination addr;
                 if (!IsMine(pcoin->tx->vout[i]))
                     continue;
-                if(!ExtractDestination(pcoin->tx->vout[i].scriptPubKey, addr))
+                if (!ExtractDestination(pcoin->tx->vout[i].scriptPubKey, addr))
                     continue;
 
                 CAmount n = IsSpent(walletEntry.first, i) ? 0 : pcoin->tx->vout[i].nValue;
@@ -3507,9 +3723,9 @@ std::set< std::set<CTxDestination> > CWallet::GetAddressGroupings()
             for (CTxIn txin : pcoin->tx->vin)
             {
                 CTxDestination address;
-                if(!IsMine(txin)) /* If this input isn't mine, ignore it */
+                if (!IsMine(txin)) /* If this input isn't mine, ignore it */
                     continue;
-                if(!ExtractDestination(mapWallet[txin.prevout.hash].tx->vout[txin.prevout.n].scriptPubKey, address))
+                if (!ExtractDestination(mapWallet[txin.prevout.hash].tx->vout[txin.prevout.n].scriptPubKey, address))
                     continue;
                 grouping.insert(address);
                 any_mine = true;
@@ -3522,7 +3738,7 @@ std::set< std::set<CTxDestination> > CWallet::GetAddressGroupings()
                    if (IsChange(txout))
                    {
                        CTxDestination txoutAddr;
-                       if(!ExtractDestination(txout.scriptPubKey, txoutAddr))
+                       if (!ExtractDestination(txout.scriptPubKey, txoutAddr))
                            continue;
                        grouping.insert(txoutAddr);
                    }
@@ -3539,7 +3755,7 @@ std::set< std::set<CTxDestination> > CWallet::GetAddressGroupings()
             if (IsMine(txout))
             {
                 CTxDestination address;
-                if(!ExtractDestination(txout.scriptPubKey, address))
+                if (!ExtractDestination(txout.scriptPubKey, address))
                     continue;
                 grouping.insert(address);
                 groupings.insert(grouping);
@@ -3846,12 +4062,12 @@ bool CWallet::LoadDestData(const CTxDestination &dest, const std::string &key, c
 bool CWallet::GetDestData(const CTxDestination &dest, const std::string &key, std::string *value) const
 {
     std::map<CTxDestination, CAddressBookData>::const_iterator i = mapAddressBook.find(dest);
-    if(i != mapAddressBook.end())
+    if (i != mapAddressBook.end())
     {
         CAddressBookData::StringMap::const_iterator j = i->second.destdata.find(key);
-        if(j != i->second.destdata.end())
+        if (j != i->second.destdata.end())
         {
-            if(value)
+            if (value)
                 *value = j->second;
             return true;
         }

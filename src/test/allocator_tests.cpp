@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(arena_tests)
         if (s & 0x80000000) {
             b.free(addr[idx]);
             addr[idx] = 0;
-        } else if(!addr[idx]) {
+        } else if (!addr[idx]) {
             addr[idx] = b.alloc((s >> 16) & 2047);
         }
         bool lsb = s & 1;

@@ -144,7 +144,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     UniValue txs(UniValue::VARR);
     for(const auto& tx : block.vtx)
     {
-        if(txDetails)
+        if (txDetails)
         {
             UniValue objTx(UniValue::VOBJ);
             TxToUniv(*tx, uint256(), objTx, true, RPCSerializationFlags());
@@ -207,7 +207,7 @@ UniValue getbestblockhash(const JSONRPCRequest& request)
 
 void RPCNotifyBlockChange(bool ibd, const CBlockIndex * pindex)
 {
-    if(pindex) {
+    if (pindex) {
         std::lock_guard<std::mutex> lock(cs_blockchange);
         latestblock.hash = pindex->GetBlockHash();
         latestblock.height = pindex->nHeight;
@@ -241,7 +241,7 @@ UniValue waitfornewblock(const JSONRPCRequest& request)
     {
         std::unique_lock<std::mutex> lock(cs_blockchange);
         block = latestblock;
-        if(timeout)
+        if (timeout)
             cond_blockchange.wait_for(lock, std::chrono::milliseconds(timeout), [&block]{return latestblock.height != block.height || latestblock.hash != block.hash || !IsRPCRunning(); });
         else
             cond_blockchange.wait(lock, [&block]{return latestblock.height != block.height || latestblock.hash != block.hash || !IsRPCRunning(); });
@@ -282,7 +282,7 @@ UniValue waitforblock(const JSONRPCRequest& request)
     CUpdatedBlock block;
     {
         std::unique_lock<std::mutex> lock(cs_blockchange);
-        if(timeout)
+        if (timeout)
             cond_blockchange.wait_for(lock, std::chrono::milliseconds(timeout), [&hash]{return latestblock.hash == hash || !IsRPCRunning();});
         else
             cond_blockchange.wait(lock, [&hash]{return latestblock.hash == hash || !IsRPCRunning(); });
@@ -325,7 +325,7 @@ UniValue waitforblockheight(const JSONRPCRequest& request)
     CUpdatedBlock block;
     {
         std::unique_lock<std::mutex> lock(cs_blockchange);
-        if(timeout)
+        if (timeout)
             cond_blockchange.wait_for(lock, std::chrono::milliseconds(timeout), [&height]{return latestblock.height >= height || !IsRPCRunning();});
         else
             cond_blockchange.wait(lock, [&height]{return latestblock.height >= height || !IsRPCRunning(); });
@@ -785,7 +785,7 @@ UniValue getblock(const JSONRPCRequest& request)
 
     int verbosity = 1;
     if (!request.params[1].isNull()) {
-        if(request.params[1].isNum())
+        if (request.params[1].isNum())
             verbosity = request.params[1].get_int();
         else
             verbosity = request.params[1].get_bool() ? 1 : 0;

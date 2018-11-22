@@ -25,6 +25,7 @@
 #include <qt/paymentserver.h>
 #include <qt/walletmodel.h>
 #endif
+#include <masternodes/masternodeconfig.h>
 
 #include <init.h>
 #include <rpc/server.h>
@@ -103,7 +104,7 @@ static QString GetLangTerritory()
     QString lang_territory = QLocale::system().name();
     // 2) Language from QSettings
     QString lang_territory_qsettings = settings.value("language", "").toString();
-    if(!lang_territory_qsettings.isEmpty())
+    if (!lang_territory_qsettings.isEmpty())
         lang_territory = lang_territory_qsettings;
     // 3) -lang command line argument
     lang_territory = QString::fromStdString(gArgs.GetArg("-lang", lang_territory.toStdString()));
@@ -351,7 +352,7 @@ GenesisApplication::GenesisApplication(int &argc, char **argv):
 
 GenesisApplication::~GenesisApplication()
 {
-    if(coreThread)
+    if (coreThread)
     {
         qDebug() << __func__ << ": Stopping thread";
         Q_EMIT stopThread();
@@ -408,7 +409,7 @@ void GenesisApplication::createSplashScreen(const NetworkStyle *networkStyle)
 
 void GenesisApplication::startThread()
 {
-    if(coreThread)
+    if (coreThread)
         return;
     coreThread = new QThread(this);
     GenesisOfficial *executor = new GenesisOfficial();
@@ -472,7 +473,7 @@ void GenesisApplication::initializeResult(bool success)
     qDebug() << __func__ << ": Initialization result: " << success;
     // Set exit result.
     returnValue = success ? EXIT_SUCCESS : EXIT_FAILURE;
-    if(success)
+    if (success)
     {
         // Log this only after AppInitMain finishes, as then logging setup is guaranteed complete
         qWarning() << "Platform customization:" << platformStyle->getName();
@@ -499,7 +500,7 @@ void GenesisApplication::initializeResult(bool success)
 #endif
 
         // If -min option passed, start window minimized.
-        if(gArgs.GetBoolArg("-min", false))
+        if (gArgs.GetBoolArg("-min", false))
         {
             window->showMinimized();
         }
@@ -663,6 +664,12 @@ int main(int argc, char *argv[])
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
 
 #ifdef ENABLE_WALLET
+    /// 7a. parse masternode.conf
+    std::string strErr;
+    if (!masternodeConfig.read(strErr)) {
+        QMessageBox::critical(0, QObject::tr(PACKAGE_NAME), QObject::tr("Error reading masternode configuration file: %1").arg(strErr.c_str()));
+        return EXIT_FAILURE;
+    }
     /// 8. URI IPC sending
     // - Do this early as we don't want to bother initializing if we are just calling IPC
     // - Do this *after* setting up the data directory, as the data directory hash is used in the name

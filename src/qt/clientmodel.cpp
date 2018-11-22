@@ -20,6 +20,9 @@
 #include <util.h>
 #include <warnings.h>
 
+#include <masternodes/masternodeman.h>
+#include <masternodes/masternode-sync.h>
+
 #include <stdint.h>
 
 #include <QDebug>
@@ -34,6 +37,7 @@ ClientModel::ClientModel(OptionsModel *_optionsModel, QObject *parent) :
     QObject(parent),
     optionsModel(_optionsModel),
     peerTableModel(0),
+    cachedMasternodeCountString(""),
     banTableModel(0),
     pollTimer(0)
 {
@@ -44,6 +48,11 @@ ClientModel::ClientModel(OptionsModel *_optionsModel, QObject *parent) :
     pollTimer = new QTimer(this);
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     pollTimer->start(MODEL_UPDATE_DELAY);
+      
+    pollMnTimer = new QTimer(this);
+    connect(pollMnTimer, SIGNAL(timeout()), this, SLOT(updateMnTimer()));
+    // no need to update as frequent as data for balances/txes/blocks
+    pollMnTimer->start(MODEL_UPDATE_DELAY * 4);
 
     subscribeToCoreSignals();
 }
@@ -57,16 +66,28 @@ int ClientModel::getNumConnections(unsigned int flags) const
 {
     CConnman::NumConnections connections = CConnman::CONNECTIONS_NONE;
 
-    if(flags == CONNECTIONS_IN)
+    if (flags == CONNECTIONS_IN)
         connections = CConnman::CONNECTIONS_IN;
     else if (flags == CONNECTIONS_OUT)
         connections = CConnman::CONNECTIONS_OUT;
     else if (flags == CONNECTIONS_ALL)
         connections = CConnman::CONNECTIONS_ALL;
 
-    if(g_connman)
+    if (g_connman)
          return g_connman->GetNodeCount(connections);
     return 0;
+}
+
+QString ClientModel::getMasternodeCountString() const
+{
+    // return tr("Total: %1 (PS compatible: %2 / Enabled: %3) (IPv4: %4, IPv6: %5, TOR: %6)").arg(QString::number((int)mnodeman.size()))
+    return tr("Total: %1 (PS compatible: %2 / Enabled: %3)")
+            .arg(QString::number((int)mnodeman.size()))
+            .arg(QString::number((int)mnodeman.CountEnabled())) // TODO recheck this because it contained privatesend reference
+            .arg(QString::number((int)mnodeman.CountEnabled()));
+            // .arg(QString::number((int)mnodeman.CountByIP(NET_IPV4)))
+            // .arg(QString::number((int)mnodeman.CountByIP(NET_IPV6)))
+            // .arg(QString::number((int)mnodeman.CountByIP(NET_TOR)));
 }
 
 int ClientModel::getNumBlocks() const
@@ -103,14 +124,14 @@ int64_t ClientModel::getHeaderTipTime() const
 
 quint64 ClientModel::getTotalBytesRecv() const
 {
-    if(!g_connman)
+    if (!g_connman)
         return 0;
     return g_connman->GetTotalBytesRecv();
 }
 
 quint64 ClientModel::getTotalBytesSent() const
 {
-    if(!g_connman)
+    if (!g_connman)
         return 0;
     return g_connman->GetTotalBytesSent();
 }
@@ -152,6 +173,18 @@ void ClientModel::updateTimer()
     // the following calls will acquire the required lock
     Q_EMIT mempoolSizeChanged(getMempoolSize(), getMempoolDynamicUsage());
     Q_EMIT bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
+}
+
+void ClientModel::updateMnTimer()
+{
+    QString newMasternodeCountString = getMasternodeCountString();
+
+    if (cachedMasternodeCountString != newMasternodeCountString)
+    {
+        cachedMasternodeCountString = newMasternodeCountString;
+
+        Q_EMIT strMasternodesChanged(cachedMasternodeCountString);
+    }
 }
 
 void ClientModel::updateNumConnections(int numConnections)
@@ -313,6 +346,12 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const CB
     }
 }
 
+static void NotifyAdditionalDataSyncProgressChanged(ClientModel *clientmodel, double nSyncProgress)
+{
+    QMetaObject::invokeMethod(clientmodel, "additionalDataSyncProgressChanged", Qt::QueuedConnection,
+                              Q_ARG(double, nSyncProgress));
+}
+
 void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
@@ -323,6 +362,7 @@ void ClientModel::subscribeToCoreSignals()
     uiInterface.BannedListChanged.connect(boost::bind(BannedListChanged, this));
     uiInterface.NotifyBlockTip.connect(boost::bind(BlockTipChanged, this, _1, _2, false));
     uiInterface.NotifyHeaderTip.connect(boost::bind(BlockTipChanged, this, _1, _2, true));
+    uiInterface.NotifyAdditionalDataSyncProgressChanged.connect(boost::bind(NotifyAdditionalDataSyncProgressChanged, this, _1));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()
@@ -335,4 +375,5 @@ void ClientModel::unsubscribeFromCoreSignals()
     uiInterface.BannedListChanged.disconnect(boost::bind(BannedListChanged, this));
     uiInterface.NotifyBlockTip.disconnect(boost::bind(BlockTipChanged, this, _1, _2, false));
     uiInterface.NotifyHeaderTip.disconnect(boost::bind(BlockTipChanged, this, _1, _2, true));
+    uiInterface.NotifyAdditionalDataSyncProgressChanged.disconnect(boost::bind(NotifyAdditionalDataSyncProgressChanged, this, _1));
 }

@@ -70,7 +70,7 @@ void ReceiveCoinsDialog::setModel(WalletModel *_model)
 {
     this->model = _model;
 
-    if(_model && _model->getOptionsModel())
+    if (_model && _model->getOptionsModel())
     {
         _model->getRecentRequestsTableModel()->sort(RecentRequestsTableModel::Date, Qt::DescendingOrder);
         connect(_model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
@@ -127,7 +127,7 @@ void ReceiveCoinsDialog::accept()
 
 void ReceiveCoinsDialog::updateDisplayUnit()
 {
-    if(model && model->getOptionsModel())
+    if (model && model->getOptionsModel())
     {
         ui->reqAmount->setDisplayUnit(model->getOptionsModel()->getDisplayUnit());
     }
@@ -135,7 +135,7 @@ void ReceiveCoinsDialog::updateDisplayUnit()
 
 void ReceiveCoinsDialog::on_receiveButton_clicked()
 {
-    if(!model || !model->getOptionsModel() || !model->getAddressTableModel() || !model->getRecentRequestsTableModel())
+    if (!model || !model->getOptionsModel() || !model->getAddressTableModel() || !model->getRecentRequestsTableModel())
         return;
 
     QString address;
@@ -184,7 +184,7 @@ void ReceiveCoinsDialog::recentRequestsView_selectionChanged(const QItemSelectio
 
 void ReceiveCoinsDialog::on_showRequestButton_clicked()
 {
-    if(!model || !model->getRecentRequestsTableModel() || !ui->recentRequestsView->selectionModel())
+    if (!model || !model->getRecentRequestsTableModel() || !ui->recentRequestsView->selectionModel())
         return;
     QModelIndexList selection = ui->recentRequestsView->selectionModel()->selectedRows();
 
@@ -195,10 +195,10 @@ void ReceiveCoinsDialog::on_showRequestButton_clicked()
 
 void ReceiveCoinsDialog::on_removeRequestButton_clicked()
 {
-    if(!model || !model->getRecentRequestsTableModel() || !ui->recentRequestsView->selectionModel())
+    if (!model || !model->getRecentRequestsTableModel() || !ui->recentRequestsView->selectionModel())
         return;
     QModelIndexList selection = ui->recentRequestsView->selectionModel()->selectedRows();
-    if(selection.empty())
+    if (selection.empty())
         return;
     // correct for selection mode ContiguousSelection
     QModelIndex firstIndex = selection.at(0);
@@ -231,10 +231,10 @@ void ReceiveCoinsDialog::keyPressEvent(QKeyEvent *event)
 
 QModelIndex ReceiveCoinsDialog::selectedRow()
 {
-    if(!model || !model->getRecentRequestsTableModel() || !ui->recentRequestsView->selectionModel())
+    if (!model || !model->getRecentRequestsTableModel() || !ui->recentRequestsView->selectionModel())
         return QModelIndex();
     QModelIndexList selection = ui->recentRequestsView->selectionModel()->selectedRows();
-    if(selection.empty())
+    if (selection.empty())
         return QModelIndex();
     // correct for selection mode ContiguousSelection
     QModelIndex firstIndex = selection.at(0);

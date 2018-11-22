@@ -106,7 +106,7 @@ std::string HexStr(const T itbegin, const T itend, bool fSpaces=false)
     for(T it = itbegin; it < itend; ++it)
     {
         unsigned char val = (unsigned char)(*it);
-        if(fSpaces && it != itbegin)
+        if (fSpaces && it != itbegin)
             rv.push_back(' ');
         rv.push_back(hexmap[val>>4]);
         rv.push_back(hexmap[val&15]);

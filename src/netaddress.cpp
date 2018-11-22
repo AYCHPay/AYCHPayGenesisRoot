@@ -611,7 +611,7 @@ CSubNet::CSubNet(const CNetAddr &addr, int32_t mask)
     const int astartofs = network.IsIPv4() ? 12 : 0;
 
     int32_t n = mask;
-    if(n >= 0 && n <= (128 - astartofs*8)) // Only valid if in range of bits of address
+    if (n >= 0 && n <= (128 - astartofs*8)) // Only valid if in range of bits of address
     {
         n += astartofs*8;
         // Clear bits [n..127]

@@ -76,11 +76,14 @@ endif
 # Genesis Official #
 GENESIS_CORE_H = \
   addrdb.h \
+  masternodes/activemasternode.h \
   addrman.h \
   base58.h \
   bech32.h \
   bloom.h \
   blockencodings.h \
+  masternodes/cachemap.h \
+  masternodes/cachemultimap.h \
   chain.h \
   chainparams.h \
   chainparamsbase.h \
@@ -100,6 +103,14 @@ GENESIS_CORE_H = \
   core_memusage.h \
   cuckoocache.h \
   fs.h \
+  masternodes/governance.h \
+  masternodes/governance-classes.h \
+  masternodes/governance-exceptions.h \
+  masternodes/governance-object.h \
+  masternodes/governance-validators.h \
+  masternodes/governance-vote.h \
+  masternodes/governance-votedb.h \
+  masternodes/flat-database.h \
   httprpc.h \
   httpserver.h \
   indirectmap.h \
@@ -108,13 +119,20 @@ GENESIS_CORE_H = \
   keystore.h \
   dbwrapper.h \
   limitedmap.h \
+  masternodes/masternode.h \
+  masternodes/masternode-payments.h \
+  masternodes/masternode-sync.h \
+  masternodes/masternodeman.h \
+  masternodes/masternodeconfig.h \
   memusage.h \
   merkleblock.h \
+  masternodes/messagesigner.h \
   miner.h \
   net.h \
   net_processing.h \
   netaddress.h \
   netbase.h \
+  masternodes/netfulfilledman.h \
   netmessagemaker.h \
   noui.h \
   policy/feerate.h \
@@ -187,6 +205,7 @@ libgenesis_util_a-clientversion.$(OBJEXT): obj/build.h
 libgenesis_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(GENESIS_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libgenesis_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libgenesis_server_a_SOURCES = \
+  masternodes/activemasternode.cpp \
   addrdb.cpp \
   addrman.cpp \
   bloom.cpp \
@@ -198,9 +217,22 @@ libgenesis_server_a_SOURCES = \
   httpserver.cpp \
   init.cpp \
   dbwrapper.cpp \
+  masternodes/governance.cpp \
+  masternodes/governance-classes.cpp \
+  masternodes/governance-object.cpp \
+  masternodes/governance-validators.cpp \
+  masternodes/governance-vote.cpp \
+  masternodes/governance-votedb.cpp \
+  masternodes/masternode.cpp \
+  masternodes/masternode-payments.cpp \
+  masternodes/masternode-sync.cpp \
+  masternodes/masternodeconfig.cpp \
+  masternodes/masternodeman.cpp \
   merkleblock.cpp \
+  masternodes/messagesigner.cpp \
   miner.cpp \
   net.cpp \
+  masternodes/netfulfilledman.cpp \
   net_processing.cpp \
   noui.cpp \
   policy/fees.cpp \
@@ -209,6 +241,8 @@ libgenesis_server_a_SOURCES = \
   pow.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
+  rpc/masternodes/masternode.cpp \
+  rpc/masternodes/governance.cpp \
   rpc/mining.cpp \
   rpc/misc.cpp \
   rpc/net.cpp \
@@ -242,6 +276,8 @@ endif
 libgenesis_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(GENESIS_INCLUDES)
 libgenesis_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libgenesis_wallet_a_SOURCES = \
+  rpc/misc.cpp \
+  script/ismine.cpp \
   wallet/crypter.cpp \
   wallet/db.cpp \
   wallet/feebumper.cpp \

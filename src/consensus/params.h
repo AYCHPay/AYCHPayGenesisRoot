@@ -135,6 +135,36 @@ struct Params {
             return false;
         }
     }
+
+    // Masternodes
+    int nMasternodePaymentsStartBlock;
+	int nGovernanceBlockOffset;
+    int nGovernanceMinQuorum; // Min absolute vote count to trigger an action
+    int nGovernanceFilterElements;
+    int nMasternodeMinimumConfirmations;
+    int nMasternodeCollateral;
+    int nFulfilledRequestExpireTime;
+    // Previously static values                         // Defaults for mainnet:
+    int nMasternodeCheckSeconds;                        // 5
+    int nMasternodeMinMnbSeconds;                       // 5 * 60
+    int nMasternodeMinMnpSeconds;                       // 10 * 60
+    int nMasternodeSentinelPingMaxSeconds;              // 60 * 60
+    int nMasternodeExpirationSeconds;                   // 120 * 60
+    int nMasternodeNewStartRequiredSeconds;             // 180 * 60
+    int nMasternodePoseBanMaxScore;                     // 5
+    int nMasternodeSignHashThreshold;                   // 600000
+    // Masternode maturity configuration
+    int nMasternodeMaturityBlockMultiplier;             // 1440 (Blocks per day)
+    int nMasternodeMaturityThreshold;                   // 336
+    int nMasternodeMaturitySecondariesMaxCount;         // floor(nMasternodeMaturityBlockMultiplier / 10)
+    float aMasternodeMaturiySecondariesMinAmount;       // 0.5
+    // Block subsidy definition(s)
+    int nBlockRewardTotal;                              // 660
+    float nBlockRewardMasternode;                       // 20%
+    float nBlockRewardFounders;                         // 10% combined
+    float nBlockRewardGiveaways;                        // 5%
+    float nBlockRewardInfrastructure;                   // 5%
+    float nBlockRewardFinder;                           // 60%
 };
 } // namespace Consensus
 

@@ -34,6 +34,10 @@
 // Application startup time (used for uptime calculation)
 int64_t GetStartupTime();
 
+// Masternode features
+extern bool fMasternodeMode;
+extern bool fLiteMode;
+
 static const bool DEFAULT_LOGTIMEMICROS = false;
 static const bool DEFAULT_LOGIPS        = false;
 static const bool DEFAULT_LOGTIMESTAMPS = true;
@@ -104,6 +108,8 @@ namespace BCLog {
         COINDB      = (1 << 18),
         QT          = (1 << 19),
         LEVELDB     = (1 << 20),
+        MN          = (1 << 21),
+        GOV         = (1 << 22),
         BLOCKVALID  = (1 << 29),
         POW         = (1 << 30),
         ALL         = ~(uint32_t)0,
@@ -188,6 +194,7 @@ fs::path GetDefaultDataDir();
 const fs::path &GetDataDir(bool fNetSpecific = true);
 void ClearDatadirCache();
 fs::path GetConfigFile(const std::string& confPath);
+fs::path GetMasternodeConfigFile();
 #ifndef WIN32
 fs::path GetPidFile();
 void CreatePidFile(const fs::path &path, pid_t pid);
@@ -349,5 +356,32 @@ std::unique_ptr<T> MakeUnique(Args&&... args)
 {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
+
+/**
+ * @brief Converts version strings to 4-byte unsigned integer
+ * @param strVersion version in "x.x.x" format (decimal digits only)
+ * @return 4-byte unsigned integer, most significant byte is always 0
+ * Throws std::bad_cast if format doesn\t match.
+ */
+uint32_t StringVersionToInt(const std::string& strVersion);
+
+
+/**
+ * @brief Converts version as 4-byte unsigned integer to string
+ * @param nVersion 4-byte unsigned integer, most significant byte is always 0
+ * @return version string in "x.x.x" format (last 3 bytes as version parts)
+ * Throws std::bad_cast if format doesn\t match.
+ */
+std::string IntVersionToString(uint32_t nVersion);
+
+
+/**
+ * @brief Copy of the IntVersionToString, that returns "Invalid version" string
+ * instead of throwing std::bad_cast
+ * @param nVersion 4-byte unsigned integer, most significant byte is always 0
+ * @return version string in "x.x.x" format (last 3 bytes as version parts)
+ * or "Invalid version" if can't cast the given value
+ */
+std::string SafeIntVersionToString(uint32_t nVersion);
 
 #endif // GENESIS_UTIL_H

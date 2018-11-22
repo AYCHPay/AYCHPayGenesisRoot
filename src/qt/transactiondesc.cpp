@@ -144,19 +144,19 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx, TransactionReco
         for (const CTxIn& txin : wtx.tx->vin)
         {
             isminetype mine = wallet->IsMine(txin);
-            if(fAllFromMe > mine) fAllFromMe = mine;
+            if (fAllFromMe > mine) fAllFromMe = mine;
         }
 
         isminetype fAllToMe = ISMINE_SPENDABLE;
         for (const CTxOut& txout : wtx.tx->vout)
         {
             isminetype mine = wallet->IsMine(txout);
-            if(fAllToMe > mine) fAllToMe = mine;
+            if (fAllToMe > mine) fAllToMe = mine;
         }
 
         if (fAllFromMe)
         {
-            if(fAllFromMe & ISMINE_WATCH_ONLY)
+            if (fAllFromMe & ISMINE_WATCH_ONLY)
                 strHTML += "<b>" + tr("From") + ":</b> " + tr("watch-only") + "<br>";
 
             //
@@ -179,16 +179,16 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx, TransactionReco
                         if (wallet->mapAddressBook.count(address) && !wallet->mapAddressBook[address].name.empty())
                             strHTML += GUIUtil::HtmlEscape(wallet->mapAddressBook[address].name) + " ";
                         strHTML += GUIUtil::HtmlEscape(EncodeDestination(address));
-                        if(toSelf == ISMINE_SPENDABLE)
+                        if (toSelf == ISMINE_SPENDABLE)
                             strHTML += " (own address)";
-                        else if(toSelf & ISMINE_WATCH_ONLY)
+                        else if (toSelf & ISMINE_WATCH_ONLY)
                             strHTML += " (watch-only)";
                         strHTML += "<br>";
                     }
                 }
 
                 strHTML += "<b>" + tr("Debit") + ":</b> " + GenesisUnits::formatHtmlWithUnit(unit, -txout.nValue) + "<br>";
-                if(toSelf)
+                if (toSelf)
                     strHTML += "<b>" + tr("Credit") + ":</b> " + GenesisUnits::formatHtmlWithUnit(unit, txout.nValue) + "<br>";
             }
 
@@ -266,10 +266,10 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx, TransactionReco
     {
         strHTML += "<hr><br>" + tr("Debug information") + "<br><br>";
         for (const CTxIn& txin : wtx.tx->vin)
-            if(wallet->IsMine(txin))
+            if (wallet->IsMine(txin))
                 strHTML += "<b>" + tr("Debit") + ":</b> " + GenesisUnits::formatHtmlWithUnit(unit, -wallet->GetDebit(txin, ISMINE_ALL)) + "<br>";
         for (const CTxOut& txout : wtx.tx->vout)
-            if(wallet->IsMine(txout))
+            if (wallet->IsMine(txout))
                 strHTML += "<b>" + tr("Credit") + ":</b> " + GenesisUnits::formatHtmlWithUnit(unit, wallet->GetCredit(txout, ISMINE_ALL)) + "<br>";
 
         strHTML += "<br><b>" + tr("Transaction") + ":</b><br>";
@@ -283,7 +283,7 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx, TransactionReco
             COutPoint prevout = txin.prevout;
 
             Coin prev;
-            if(pcoinsTip->GetCoin(prevout, prev))
+            if (pcoinsTip->GetCoin(prevout, prev))
             {
                 {
                     strHTML += "<li>";

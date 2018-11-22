@@ -106,11 +106,11 @@ public:
         int upperIndex = (upper - cachedWallet.begin());
         bool inModel = (lower != upper);
 
-        if(status == CT_UPDATED)
+        if (status == CT_UPDATED)
         {
-            if(showTransaction && !inModel)
+            if (showTransaction && !inModel)
                 status = CT_NEW; /* Not in model, but want to show, treat as new */
-            if(!showTransaction && inModel)
+            if (!showTransaction && inModel)
                 status = CT_DELETED; /* In model, but want to hide, treat as deleted */
         }
 
@@ -121,17 +121,17 @@ public:
         switch(status)
         {
         case CT_NEW:
-            if(inModel)
+            if (inModel)
             {
                 qWarning() << "TransactionTablePriv::updateWallet: Warning: Got CT_NEW, but transaction is already in model";
                 break;
             }
-            if(showTransaction)
+            if (showTransaction)
             {
                 LOCK2(cs_main, wallet->cs_wallet);
                 // Find transaction in wallet
                 std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(hash);
-                if(mi == wallet->mapWallet.end())
+                if (mi == wallet->mapWallet.end())
                 {
                     qWarning() << "TransactionTablePriv::updateWallet: Warning: Got CT_NEW, but transaction is not in wallet";
                     break;
@@ -139,7 +139,7 @@ public:
                 // Added -- insert at the right position
                 QList<TransactionRecord> toInsert =
                         TransactionRecord::decomposeTransaction(wallet, mi->second);
-                if(!toInsert.isEmpty()) /* only if something to insert */
+                if (!toInsert.isEmpty()) /* only if something to insert */
                 {
                     parent->beginInsertRows(QModelIndex(), lowerIndex, lowerIndex+toInsert.size()-1);
                     int insert_idx = lowerIndex;
@@ -153,7 +153,7 @@ public:
             }
             break;
         case CT_DELETED:
-            if(!inModel)
+            if (!inModel)
             {
                 qWarning() << "TransactionTablePriv::updateWallet: Warning: Got CT_DELETED, but transaction is not in model";
                 break;
@@ -181,7 +181,7 @@ public:
 
     TransactionRecord *index(int idx)
     {
-        if(idx >= 0 && idx < cachedWallet.size())
+        if (idx >= 0 && idx < cachedWallet.size())
         {
             TransactionRecord *rec = &cachedWallet[idx];
 
@@ -193,14 +193,14 @@ public:
             //  update the status of this transaction from the wallet. Otherwise,
             // simply re-use the cached status.
             TRY_LOCK(cs_main, lockMain);
-            if(lockMain)
+            if (lockMain)
             {
                 TRY_LOCK(wallet->cs_wallet, lockWallet);
-                if(lockWallet && rec->statusUpdateNeeded())
+                if (lockWallet && rec->statusUpdateNeeded())
                 {
                     std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(rec->hash);
 
-                    if(mi != wallet->mapWallet.end())
+                    if (mi != wallet->mapWallet.end())
                     {
                         rec->updateStatus(mi->second);
                     }
@@ -216,7 +216,7 @@ public:
         {
             LOCK2(cs_main, wallet->cs_wallet);
             std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(rec->hash);
-            if(mi != wallet->mapWallet.end())
+            if (mi != wallet->mapWallet.end())
             {
                 return TransactionDesc::toHTML(wallet, mi->second, rec, unit);
             }
@@ -228,7 +228,7 @@ public:
     {
         LOCK2(cs_main, wallet->cs_wallet);
         std::map<uint256, CWalletTx>::iterator mi = wallet->mapWallet.find(rec->hash);
-        if(mi != wallet->mapWallet.end())
+        if (mi != wallet->mapWallet.end())
         {
             std::string strHex = EncodeHexTx(*mi->second.tx);
             return QString::fromStdString(strHex);
@@ -336,7 +336,7 @@ QString TransactionTableModel::formatTxStatus(const TransactionRecord *wtx) cons
 
 QString TransactionTableModel::formatTxDate(const TransactionRecord *wtx) const
 {
-    if(wtx->time)
+    if (wtx->time)
     {
         return GUIUtil::dateTimeStr(wtx->time);
     }
@@ -350,11 +350,11 @@ QString TransactionTableModel::lookupAddress(const std::string &address, bool to
 {
     QString label = walletModel->getAddressTableModel()->labelForAddress(QString::fromStdString(address));
     QString description;
-    if(!label.isEmpty())
+    if (!label.isEmpty())
     {
         description += label;
     }
-    if(label.isEmpty() || tooltip)
+    if (label.isEmpty() || tooltip)
     {
         description += QString(" (") + QString::fromStdString(address) + QString(")");
     }
@@ -432,7 +432,7 @@ QVariant TransactionTableModel::addressColor(const TransactionRecord *wtx) const
     case TransactionRecord::Generated:
         {
         QString label = walletModel->getAddressTableModel()->labelForAddress(QString::fromStdString(wtx->address));
-        if(label.isEmpty())
+        if (label.isEmpty())
             return COLOR_BAREADDRESS;
         } break;
     case TransactionRecord::SendToSelf:
@@ -446,9 +446,9 @@ QVariant TransactionTableModel::addressColor(const TransactionRecord *wtx) const
 QString TransactionTableModel::formatTxAmount(const TransactionRecord *wtx, bool showUnconfirmed, GenesisUnits::SeparatorStyle separators) const
 {
     QString str = GenesisUnits::format(walletModel->getOptionsModel()->getDisplayUnit(), wtx->credit + wtx->debit, false, separators);
-    if(showUnconfirmed)
+    if (showUnconfirmed)
     {
-        if(!wtx->status.countsForBalance)
+        if (!wtx->status.countsForBalance)
         {
             str = QString("[") + str + QString("]");
         }
@@ -503,7 +503,7 @@ QVariant TransactionTableModel::txWatchonlyDecoration(const TransactionRecord *w
 QString TransactionTableModel::formatTooltip(const TransactionRecord *rec) const
 {
     QString tooltip = formatTxStatus(rec) + QString("\n") + formatTxType(rec);
-    if(rec->type==TransactionRecord::RecvFromOther || rec->type==TransactionRecord::SendToOther ||
+    if (rec->type==TransactionRecord::RecvFromOther || rec->type==TransactionRecord::SendToOther ||
        rec->type==TransactionRecord::SendToAddress || rec->type==TransactionRecord::RecvWithAddress)
     {
         tooltip += QString(" ") + formatTxToAddress(rec, true);
@@ -513,7 +513,7 @@ QString TransactionTableModel::formatTooltip(const TransactionRecord *rec) const
 
 QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return QVariant();
     TransactionRecord *rec = static_cast<TransactionRecord*>(index.internalPointer());
 
@@ -572,20 +572,20 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         return column_alignments[index.column()];
     case Qt::ForegroundRole:
         // Use the "danger" color for abandoned transactions
-        if(rec->status.status == TransactionStatus::Abandoned)
+        if (rec->status.status == TransactionStatus::Abandoned)
         {
             return COLOR_TX_STATUS_DANGER;
         }
         // Non-confirmed (but not immature) as transactions are grey
-        if(!rec->status.countsForBalance && rec->status.status != TransactionStatus::Immature)
+        if (!rec->status.countsForBalance && rec->status.status != TransactionStatus::Immature)
         {
             return COLOR_UNCONFIRMED;
         }
-        if(index.column() == Amount && (rec->credit+rec->debit) < 0)
+        if (index.column() == Amount && (rec->credit+rec->debit) < 0)
         {
             return COLOR_NEGATIVE;
         }
-        if(index.column() == ToAddress)
+        if (index.column() == ToAddress)
         {
             return addressColor(rec);
         }
@@ -622,12 +622,12 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
             details.append(" ");
             details.append(formatTxStatus(rec));
             details.append(". ");
-            if(!formatTxType(rec).isEmpty()) {
+            if (!formatTxType(rec).isEmpty()) {
                 details.append(formatTxType(rec));
                 details.append(" ");
             }
-            if(!rec->address.empty()) {
-                if(txLabel.isEmpty())
+            if (!rec->address.empty()) {
+                if (txLabel.isEmpty())
                     details.append(tr("(no label)") + " ");
                 else {
                     details.append("(");
@@ -653,9 +653,9 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
 
 QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if(orientation == Qt::Horizontal)
+    if (orientation == Qt::Horizontal)
     {
-        if(role == Qt::DisplayRole)
+        if (role == Qt::DisplayRole)
         {
             return columns[section];
         }
@@ -688,7 +688,7 @@ QModelIndex TransactionTableModel::index(int row, int column, const QModelIndex 
 {
     Q_UNUSED(parent);
     TransactionRecord *data = priv->index(row);
-    if(data)
+    if (data)
     {
         return createIndex(row, column, priv->index(row));
     }

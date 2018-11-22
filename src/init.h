@@ -10,6 +10,7 @@
 
 class CScheduler;
 class CWallet;
+class CConnman;
 
 namespace boost
 {
@@ -66,5 +67,7 @@ enum HelpMessageMode {
 std::string HelpMessage(HelpMessageMode mode);
 /** Returns licensing information (for -version) */
 std::string LicenseInfo();
+
+void ThreadCheckMasternode(CConnman& connman);
 
 #endif // GENESIS_INIT_H

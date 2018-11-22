@@ -207,7 +207,7 @@ TransactionView::TransactionView(const PlatformStyle *platformStyle, QWidget *pa
 void TransactionView::setModel(WalletModel *_model)
 {
     this->model = _model;
-    if(_model)
+    if (_model)
     {
         transactionProxyModel = new TransactionFilterProxy(this);
         transactionProxyModel->setSourceModel(_model->getTransactionTableModel());
@@ -263,7 +263,7 @@ void TransactionView::setModel(WalletModel *_model)
 
 void TransactionView::chooseDate(int idx)
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     QDate current = QDate::currentDate();
     dateRangeWidget->setVisible(false);
@@ -311,7 +311,7 @@ void TransactionView::chooseDate(int idx)
 
 void TransactionView::chooseType(int idx)
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     transactionProxyModel->setTypeFilter(
         typeWidget->itemData(idx).toInt());
@@ -319,7 +319,7 @@ void TransactionView::chooseType(int idx)
 
 void TransactionView::chooseWatchonly(int idx)
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     transactionProxyModel->setWatchOnlyFilter(
         (TransactionFilterProxy::WatchOnlyFilter)watchOnlyWidget->itemData(idx).toInt());
@@ -327,14 +327,14 @@ void TransactionView::chooseWatchonly(int idx)
 
 void TransactionView::changedSearch()
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     transactionProxyModel->setSearchString(search_widget->text());
 }
 
 void TransactionView::changedAmount()
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     CAmount amount_parsed = 0;
     if (GenesisUnits::parse(model->getOptionsModel()->getDisplayUnit(), amountWidget->text(), &amount_parsed)) {
@@ -374,7 +374,7 @@ void TransactionView::exportClicked()
     writer.addColumn(GenesisUnits::getAmountColumnTitle(model->getOptionsModel()->getDisplayUnit()), 0, TransactionTableModel::FormattedAmountRole);
     writer.addColumn(tr("ID"), 0, TransactionTableModel::TxIDRole);
 
-    if(!writer.write()) {
+    if (!writer.write()) {
         Q_EMIT message(tr("Exporting Failed"), tr("There was an error trying to save the transaction history to %1.").arg(filename),
             CClientUIInterface::MSG_ERROR);
     }
@@ -397,7 +397,7 @@ void TransactionView::contextualMenu(const QPoint &point)
     abandonAction->setEnabled(model->transactionCanBeAbandoned(hash));
     bumpFeeAction->setEnabled(model->transactionCanBeBumped(hash));
 
-    if(index.isValid())
+    if (index.isValid())
     {
         contextMenu->popup(transactionView->viewport()->mapToGlobal(point));
     }
@@ -405,7 +405,7 @@ void TransactionView::contextualMenu(const QPoint &point)
 
 void TransactionView::abandonTx()
 {
-    if(!transactionView || !transactionView->selectionModel())
+    if (!transactionView || !transactionView->selectionModel())
         return;
     QModelIndexList selection = transactionView->selectionModel()->selectedRows(0);
 
@@ -423,7 +423,7 @@ void TransactionView::abandonTx()
 
 void TransactionView::bumpFee()
 {
-    if(!transactionView || !transactionView->selectionModel())
+    if (!transactionView || !transactionView->selectionModel())
         return;
     QModelIndexList selection = transactionView->selectionModel()->selectedRows(0);
 
@@ -471,16 +471,16 @@ void TransactionView::copyTxPlainText()
 
 void TransactionView::editLabel()
 {
-    if(!transactionView->selectionModel() ||!model)
+    if (!transactionView->selectionModel() ||!model)
         return;
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
     {
         AddressTableModel *addressBook = model->getAddressTableModel();
-        if(!addressBook)
+        if (!addressBook)
             return;
         QString address = selection.at(0).data(TransactionTableModel::AddressRole).toString();
-        if(address.isEmpty())
+        if (address.isEmpty())
         {
             // If this transaction has no associated address, exit
             return;
@@ -488,7 +488,7 @@ void TransactionView::editLabel()
         // Is address in address book? Address book can miss address when a transaction is
         // sent from outside the UI.
         int idx = addressBook->lookupAddress(address);
-        if(idx != -1)
+        if (idx != -1)
         {
             // Edit sending / receiving address
             QModelIndex modelIdx = addressBook->index(idx, 0, QModelIndex());
@@ -517,10 +517,10 @@ void TransactionView::editLabel()
 
 void TransactionView::showDetails()
 {
-    if(!transactionView->selectionModel())
+    if (!transactionView->selectionModel())
         return;
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
     {
         TransactionDescDialog *dlg = new TransactionDescDialog(selection.at(0));
         dlg->setAttribute(Qt::WA_DeleteOnClose);
@@ -530,10 +530,10 @@ void TransactionView::showDetails()
 
 void TransactionView::openThirdPartyTxUrl(QString url)
 {
-    if(!transactionView || !transactionView->selectionModel())
+    if (!transactionView || !transactionView->selectionModel())
         return;
     QModelIndexList selection = transactionView->selectionModel()->selectedRows(0);
-    if(!selection.isEmpty())
+    if (!selection.isEmpty())
          QDesktopServices::openUrl(QUrl::fromUserInput(url.replace("%s", selection.at(0).data(TransactionTableModel::TxHashRole).toString())));
 }
 
@@ -575,7 +575,7 @@ QWidget *TransactionView::createDateRangeWidget()
 
 void TransactionView::dateRangeChanged()
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     transactionProxyModel->setDateRange(
             QDateTime(dateFrom->date()),
@@ -584,7 +584,7 @@ void TransactionView::dateRangeChanged()
 
 void TransactionView::focusTransaction(const QModelIndex &idx)
 {
-    if(!transactionProxyModel)
+    if (!transactionProxyModel)
         return;
     QModelIndex targetIdx = transactionProxyModel->mapFromSource(idx);
     transactionView->scrollTo(targetIdx);
