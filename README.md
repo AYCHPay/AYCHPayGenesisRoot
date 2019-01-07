@@ -1,4 +1,5 @@
-![GenX Logo](https://i.imgur.com/DAh8pFI.png "Genesis")
+![GenX Logo](https://wiki.genesisnetwork.io/images/thumb/7/75/BrandBlueBlue.png/750px-BrandBlueBlue.png "Genesis")
+
 Genesis Official
 &middot;
 [![Github License](https://img.shields.io/npm/l/express.svg)](https://github.com/genesisofficial/genesis/blob/master/COPYING)
@@ -30,7 +31,11 @@ Genesis Official
 * [Website](https://genesisnetwork.io/)
 * [Forums](https://genesisnetwork.io/forum/)
 * [Discord](https://discord.gg/8hSjExc)
+* [Telegram](https://t.me/genxnetwork)
 * [Twitter](https://twitter.com/genx_network)
+* [Facebook](https://www.facebook.com/genxnetwork/)
+* [LinkedIn](https://www.linkedin.com/company/genesisnetwork/)
+
 
 
 ## Development Process
