@@ -1,10 +1,11 @@
 # Copyright (c) 2016 The Zcash developers
 # Copyright (c) 2017 The BTCGPU developers
+# Copyright (c) 2019 The Genesis Official developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 package=libsodium
-$(package)_version=1.0.15
+$(package)_version=1.0.17
 $(package)_download_path=https://download.libsodium.org/libsodium/releases/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=fb6a9e879a2f674592e4328c5d9f79f082405ee4bb05cb6e679b90afe9e178f4
