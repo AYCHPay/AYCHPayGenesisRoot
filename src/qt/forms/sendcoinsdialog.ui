@@ -84,7 +84,7 @@
              </font>
             </property>
             <property name="styleSheet">
-             <string notr="true">font-weight:bold; color: #e4e642;</string>
+             <string notr="true">font-weight:bold; color: #1EA1EF;</string>
             </property>
             <property name="text">
              <string>Coin Control Features</string>
