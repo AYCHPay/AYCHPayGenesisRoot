@@ -82,7 +82,12 @@ struct Params {
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
-    // Params for Zawy's LWMA difficulty adjustment algorithm.
+    /** Coin maturity settings */
+    /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
+    int64_t nCoinbaseMaturity; 
+    /** Minimum Number of tx confirmations before a tx is considered confirmed */ 
+    int64_t nTxMinConfirmations; 
+    /** Params for Zawy's LWMA difficulty adjustment algorithm. */
     int64_t nZawyLwmaAveragingWindow;
 
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
