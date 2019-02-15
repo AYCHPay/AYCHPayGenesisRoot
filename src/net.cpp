@@ -1194,11 +1194,7 @@ void CConnman::ThreadSocketHandler()
                     pnode->CloseSocketDisconnect();
 
                     // hold in disconnected pool until all refs are released
-                    if (pnode->fInbound)
-                        pnode->Release();
-                    if (pnode->fMasternode)
-                        pnode->Release();
-
+                    pnode->Release();
                     vNodesDisconnected.push_back(pnode);
                 }
             }
@@ -2547,6 +2543,11 @@ void CConnman::MarkAddressGood(const CAddress& addr)
     addrman.Good(addr);
 }
 
+void CConnman::AddNewAddress(const CAddress& addr, const CAddress& addrFrom, int64_t nTimePenalty)
+{
+    addrman.Add(addr, addrFrom, nTimePenalty);
+}
+
 void CConnman::AddNewAddresses(const std::vector<CAddress>& vAddr, const CAddress& addrFrom, int64_t nTimePenalty)
 {
     addrman.Add(vAddr, addrFrom, nTimePenalty);
@@ -2848,6 +2849,9 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn
 CNode::~CNode()
 {
     CloseSocket(hSocket);
+
+    if (pfilter)
+        pfilter.reset();
 }
 
 void CNode::AskFor(const CInv& inv)
