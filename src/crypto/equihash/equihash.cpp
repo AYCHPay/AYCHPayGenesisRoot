@@ -748,9 +748,9 @@ bool Equihash<N,K>::IsValidSolution(const eh_HashState& base_state, std::vector<
         for (size_t i = 0; i < X.size(); i += 2) {
             if (!HasCollision(X[i], X[i+1], CollisionByteLength)) {
                 // Most likely means that they are using the wrong pers string....
-                // LogPrintf("Invalid solution: invalid collision length between StepRows\n");
-                // LogPrintf("X[i]   = %s\n", X[i].GetHex(hashLen));
-                // LogPrintf("X[i+1] = %s\n", X[i+1].GetHex(hashLen));
+                LogPrintf("Invalid solution: invalid collision length between StepRows\n");
+                LogPrintf("X[i]   = %s\n", X[i].GetHex(hashLen));
+                LogPrintf("X[i+1] = %s\n", X[i+1].GetHex(hashLen));
                 return false;
             }
             if (X[i+1].IndicesBefore(X[i], hashLen, lenIndices)) {
