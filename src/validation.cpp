@@ -751,7 +751,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         pool.ApplyDelta(hash, nModifiedFees);
 
         // Keep track of transactions that spend a coinbase, which we re-scan
-        // during reorgs to ensure COINBASE_MATURITY is still met.
+        // during reorgs to ensure Params().GetConsensus().nCoinbaseMaturity is still met.
         bool fSpendsCoinbase = false;
         for (const CTxIn &txin : tx.vin) {
             const Coin &coin = view.AccessCoin(txin.prevout);
@@ -1202,7 +1202,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
     {
         subsidy = 0;
     }
-    else if (nHeight > 0 && nHeight <= COINBASE_MATURITY)
+    else if (nHeight > 0 && nHeight <= Params().GetConsensus().nCoinbaseMaturity)
     {
         // There are no mature blocks yet...
         subsidy = BLOCK_REWARD_MAX;
@@ -1251,11 +1251,11 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
     {
         // A normal block... pre-masternodes
         // Get the most recent confirmed block's hash
-        auto lookupBlockHeight = nHeight - COINBASE_MATURITY;
+        auto lookupBlockHeight = nHeight - Params().GetConsensus().nCoinbaseMaturity;
         CBlockIndex* pblockindex = chainActive[lookupBlockHeight];
         assert(pblockindex != nullptr);
         uint256  confirmedHash = pblockindex->GetBlockHash();
-        //LogPrintf("Confirmed Hash for block %i: %s \n", nHeight - COINBASE_MATURITY, confirmedHash.GetHex());
+        //LogPrintf("Confirmed Hash for block %i: %s \n", nHeight - Params().GetConsensus().nCoinbaseMaturity, confirmedHash.GetHex());
         // Get a sum of the significant bytes
         // 7 23 3 2 27 4
         unsigned int total = 0;
@@ -3171,15 +3171,16 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     {
         if (CheckEquihashSolution(&block, Params(), "GENX_PoW"))
         {
-            // LogPrintf("CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
+            LogPrintf("CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
         }
-        else if (IsInitialBlockDownload() && CheckEquihashSolution(&block, Params(), "SafeCash"))
+        //else if (IsInitialBlockDownload() && CheckEquihashSolution(&block, Params(), "SafeCash"))
+        else if (CheckEquihashSolution(&block, Params(), "SafeCash"))
         {
-            // LogPrintf("CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
+            LogPrintf("CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
         }
         else if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
         {
-            // LogPrintf("Skipping genesis block\n");
+            LogPrintf("Skipping genesis block\n");
         }
         else
         {
@@ -3658,7 +3659,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // not process unrequested blocks.
     bool fTooFarAhead = (pindex->nHeight > int(chainActive.Height() + MIN_BLOCKS_TO_KEEP));
     // We don't have enough blocks to generate the random reward... yet
-    bool fTooFarAheadOfProcessing = (pindex->nHeight > int(chainActive.Height() + COINBASE_MATURITY)); 
+    bool fTooFarAheadOfProcessing = (pindex->nHeight > int(chainActive.Height() + Params().GetConsensus().nCoinbaseMaturity)); 
 
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a

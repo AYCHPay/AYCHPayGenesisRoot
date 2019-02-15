@@ -113,6 +113,10 @@ public:
         // LWMA
         consensus.nZawyLwmaAveragingWindow = 90;
 
+        // Maturity
+        consensus.nCoinbaseMaturity = 100;
+        consensus.nTxMinConfirmations = 6;
+
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
@@ -304,6 +308,10 @@ public:
         // LWMA
         consensus.nZawyLwmaAveragingWindow = 90;
 
+        // Maturity
+        consensus.nCoinbaseMaturity = 5;
+        consensus.nTxMinConfirmations = 1;
+
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
@@ -361,8 +369,8 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("testnet1.genesisnetwork.io", true);
-        vSeeds.emplace_back("testnet2.genesisnetwork.io", true);
+        //vSeeds.emplace_back("testnet1.genesisnetwork.io", true);
+        //vSeeds.emplace_back("testnet2.genesisnetwork.io", true);
 
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 125);// 
@@ -394,7 +402,7 @@ public:
 
         // Switch at block
         fGenX_SwitchAtBlock = 3;
-        fGenX_EnforceAtBlock = 1;
+        fGenX_EnforceAtBlock = 4;
 
         // Founders Addresses: 
         vFounderAddress = 
@@ -420,7 +428,7 @@ public:
 
         // Masternodes
         consensus.nMasternodeCollateral = 1;
-        consensus.nMasternodePaymentsStartBlock = 120;
+        consensus.nMasternodePaymentsStartBlock = 15;
 		consensus.nGovernanceBlockOffset = 1; 
         consensus.nGovernanceMinQuorum = 1;
         consensus.nGovernanceFilterElements = 500;
@@ -481,6 +489,10 @@ public:
 
         // LWMA
         consensus.nZawyLwmaAveragingWindow = 90;
+
+        // Maturity
+        consensus.nCoinbaseMaturity = 1;
+        consensus.nTxMinConfirmations = 1;
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x00");
