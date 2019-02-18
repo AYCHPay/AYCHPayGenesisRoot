@@ -374,7 +374,7 @@ double TxConfirmStats::EstimateMedianVal(int confTarget, double sufficientTxVal,
         failBucket.leftMempool = failNum;
     }
 
-    LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] %d %s%.0f%% decay %.5f: feerate: %g from (%g - %g) %.2f%% %.1f/(%.1f %d mem %.1f out) Fail: (%g - %g) %.2f%% %.1f/(%.1f %d mem %.1f out)\n",
+    LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] %d %s%.0f%% decay %.5f: feerate: %g from (%g - %g) %.2f%% %.1f/(%.1f %d mem %.1f out) Fail: (%g - %g) %.2f%% %.1f/(%.1f %d mem %.1f out)\n",
              confTarget, requireGreater ? ">" : "<", 100.0 * successBreakPoint, decay,
              median, passBucket.start, passBucket.end,
              100 * passBucket.withinTarget / (passBucket.totalConfirmed + passBucket.inMempool + passBucket.leftMempool),
@@ -455,7 +455,7 @@ void TxConfirmStats::Read(CAutoFile& filein, int nFileVersion, size_t numBuckets
     // to match the number of confirms and buckets
     resizeInMemoryCounters(numBuckets);
 
-    LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Reading estimates: %u buckets counting confirms up to %u blocks\n",
+    LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Reading estimates: %u buckets counting confirms up to %u blocks\n",
              numBuckets, maxConfirms);
 }
 
@@ -474,7 +474,7 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
     if (nBestSeenHeight == 0)  // the BlockPolicyEstimator hasn't seen any blocks yet
         blocksAgo = 0;
     if (blocksAgo < 0) {
-        LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy error, blocks ago is negative for mempool tx\n");
+        LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, blocks ago is negative for mempool tx\n");
         return;  //This can't happen because we call this with our best seen height, no entries can have higher
     }
 
@@ -482,7 +482,7 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
         if (oldUnconfTxs[bucketindex] > 0) {
             oldUnconfTxs[bucketindex]--;
         } else {
-            LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy error, mempool tx removed from >25 blocks,bucketIndex=%u already\n",
+            LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, mempool tx removed from >25 blocks,bucketIndex=%u already\n",
                      bucketindex);
         }
     }
@@ -491,7 +491,7 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
         if (unconfTxs[blockIndex][bucketindex] > 0) {
             unconfTxs[blockIndex][bucketindex]--;
         } else {
-            LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy error, mempool tx removed from blockIndex=%u,bucketIndex=%u already\n",
+            LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, mempool tx removed from blockIndex=%u,bucketIndex=%u already\n",
                      blockIndex, bucketindex);
         }
     }
@@ -552,7 +552,7 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo
     unsigned int txHeight = entry.GetHeight();
     uint256 hash = entry.GetTx().GetHash();
     if (mapMemPoolTxs.count(hash)) {
-        LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy error mempool tx %s already being tracked\n",
+        LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error mempool tx %s already being tracked\n",
                  hash.ToString().c_str());
         return;
     }
@@ -599,7 +599,7 @@ bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxM
     if (blocksToConfirm <= 0) {
         // This can't happen because we don't process transactions from a block with a height
         // lower than our greatest seen height
-        LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy error Transaction had negative blocksToConfirm\n");
+        LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error Transaction had negative blocksToConfirm\n");
         return false;
     }
 
@@ -649,11 +649,11 @@ void CBlockPolicyEstimator::processBlock(unsigned int nBlockHeight,
 
     if (firstRecordedHeight == 0 && countedTxs > 0) {
         firstRecordedHeight = nBestSeenHeight;
-        LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy first recorded height %u\n", firstRecordedHeight);
+        LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy first recorded height %u\n", firstRecordedHeight);
     }
 
 
-    LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Blockpolicy estimates updated by %u of %u block txs, since last block %u of %u tracked, mempool map size %u, max target %u from %s\n",
+    LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy estimates updated by %u of %u block txs, since last block %u of %u tracked, mempool map size %u, max target %u from %s\n",
              countedTxs, entries.size(), trackedTxs, trackedTxs + untrackedTxs, mapMemPoolTxs.size(),
              MaxUsableEstimate(), HistoricalBlockSpan() > BlockSpan() ? "historical" : "current");
 
@@ -915,7 +915,7 @@ bool CBlockPolicyEstimator::Write(CAutoFile& fileout) const
         longStats->Write(fileout);
     }
     catch (const std::exception&) {
-        LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] CBlockPolicyEstimator::Write(): unable to write policy estimator data (non-fatal)\n");
+        LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] CBlockPolicyEstimator::Write(): unable to write policy estimator data (non-fatal)\n");
         return false;
     }
     return true;
@@ -936,7 +936,7 @@ bool CBlockPolicyEstimator::Read(CAutoFile& filein)
         filein >> nFileBestSeenHeight;
 
         if (nVersionRequired < 149900) {
-            LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] %s: incompatible old fee estimation data (non-fatal). Version: %d\n", __func__, nVersionRequired);
+            LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] %s: incompatible old fee estimation data (non-fatal). Version: %d\n", __func__, nVersionRequired);
         } else { // New format introduced in 149900
             unsigned int nFileHistoricalFirst, nFileHistoricalBest;
             filein >> nFileHistoricalFirst >> nFileHistoricalBest;
@@ -975,7 +975,7 @@ bool CBlockPolicyEstimator::Read(CAutoFile& filein)
         }
     }
     catch (const std::exception& e) {
-        LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] CBlockPolicyEstimator::Read(): unable to read policy estimator data (non-fatal): %s\n",e.what());
+        LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] CBlockPolicyEstimator::Read(): unable to read policy estimator data (non-fatal): %s\n",e.what());
         return false;
     }
     return true;
@@ -990,7 +990,7 @@ void CBlockPolicyEstimator::FlushUnconfirmed(CTxMemPool& pool) {
         removeTx(txid, false);
     }
     int64_t endclear = GetTimeMicros();
-    LogPrint(BCLog::ESTIMATEFEE, "[ESTIMATEFEE] Recorded %u unconfirmed txs from mempool in %gs\n",txids.size(), (endclear - startclear)*0.000001);
+    LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] Recorded %u unconfirmed txs from mempool in %gs\n",txids.size(), (endclear - startclear)*0.000001);
 }
 
 FeeFilterRounder::FeeFilterRounder(const CFeeRate& minIncrementalFee)
