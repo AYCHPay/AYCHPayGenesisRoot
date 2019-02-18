@@ -114,7 +114,7 @@ CMasternode::CollateralStatus CMasternode::CheckCollateral(const COutPoint& outp
         return COLLATERAL_UTXO_NOT_FOUND;
     }
 
-    if (coin.out.nValue != Params().GetConsensus().nMasternodeCollateral * COIN) {
+    if (coin.out.nValue != Params().GetConsensus().nMasternodeCollateral) {
         return COLLATERAL_INVALID_AMOUNT;
     }
 

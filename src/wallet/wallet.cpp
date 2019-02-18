@@ -2361,7 +2361,7 @@ void CWallet::AvailableMNCoins(std::vector<COutput> &vCoins, bool fOnlySafe, con
                 }
                 
                 // TODO use function above in combination with masternodes instead of a seperated function
-                if (pcoin->tx->vout[i].nValue < 2500000000000)
+                if (pcoin->tx->vout[i].nValue != Params().GetConsensus().nMasternodeCollateral)
                     continue;
 
                 bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || (coinControl && coinControl->fAllowWatchOnly && (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO);
