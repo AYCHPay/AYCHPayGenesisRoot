@@ -10,6 +10,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <amount.h>
 
 /** Genesis Values */
 static const int BLOCK_REWARD_MAX = 1000;
