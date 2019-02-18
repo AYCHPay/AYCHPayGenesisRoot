@@ -42,7 +42,7 @@
          <item>
           <widget class="QLabel" name="databaseCacheLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>	
            <property name="text">
             <string>Size of &amp;database cache</string>
@@ -61,7 +61,7 @@
          <item>
           <widget class="QLabel" name="databaseCacheUnitLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>MB</string>
@@ -91,7 +91,7 @@
          <item>
           <widget class="QLabel" name="threadsScriptVerifLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>Number of script &amp;verification threads</string>
@@ -230,7 +230,7 @@
          <item>
           <widget class="QLabel" name="proxyIpLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>Proxy &amp;IP:</string>
@@ -265,7 +265,7 @@
          <item>
           <widget class="QLabel" name="proxyPortLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>&amp;Port:</string>
@@ -317,7 +317,7 @@
          <item>
           <widget class="QLabel" name="proxyActiveNets">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>Used for reaching peers via:</string>
@@ -343,7 +343,7 @@
          <item>
           <widget class="QLabel" name="proxyReachIPv4Label">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>IPv4</string>
@@ -369,7 +369,7 @@
          <item>
           <widget class="QLabel" name="proxyReachIPv6Label">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>IPv6</string>
@@ -395,7 +395,7 @@
          <item>
           <widget class="QLabel" name="proxyReachTorLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>Tor</string>
@@ -435,7 +435,7 @@
          <item>
           <widget class="QLabel" name="proxyIpTorLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>Proxy &amp;IP:</string>
@@ -470,7 +470,7 @@
          <item>
           <widget class="QLabel" name="proxyPortTorLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>&amp;Port:</string>
@@ -592,7 +592,7 @@
          <item>
           <widget class="QLabel" name="langLabel">
 		  <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="text">
             <string>User Interface &amp;language:</string>
@@ -619,7 +619,7 @@
          <item>
           <widget class="QLabel" name="unitLabel">
 		  <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>	
            <property name="text">
             <string>&amp;Unit to show amounts in:</string>
@@ -646,7 +646,7 @@
          <item>
           <widget class="QLabel" name="thirdPartyTxUrlsLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			  
            <property name="toolTip">
             <string>Third party URLs (e.g. a block explorer) that appear in the transactions tab as context menu items. %s in the URL is replaced by transaction hash. Multiple URLs are separated by vertical bar |.</string>
@@ -693,7 +693,7 @@
         <item>
          <widget class="QLabel" name="overriddenByCommandLineInfoLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>			 
           <property name="text">
            <string>Active command-line options that override above options:</string>
@@ -721,7 +721,7 @@
       <item>
        <widget class="QLabel" name="overriddenByCommandLineLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>		   
         <property name="text">
          <string/>
@@ -785,7 +785,7 @@
      <item>
       <widget class="QLabel" name="statusLabel">
 		    <property name="styleSheet">
-             <string notr="true">QLabel { color: #2c2b3b; }</string>
+             <string notr="true">QLabel { color: #000; }</string>
             </property>		  
        <property name="minimumSize">
         <size>
