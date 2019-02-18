@@ -249,7 +249,7 @@ public:
         };
 
         // Masternodes
-        consensus.nMasternodeCollateral = 750000;
+        consensus.nMasternodeCollateral = 750000 * COIN;
         consensus.nMasternodePaymentsStartBlock = 300000;
 		consensus.nGovernanceBlockOffset = 1; // One block after the bonus block
         consensus.nGovernanceMinQuorum = 10;
@@ -427,7 +427,7 @@ public:
         };
 
         // Masternodes
-        consensus.nMasternodeCollateral = 1;
+        consensus.nMasternodeCollateral = 1 * COIN;
         consensus.nMasternodePaymentsStartBlock = 21;
 		consensus.nGovernanceBlockOffset = 1; 
         consensus.nGovernanceMinQuorum = 1;
@@ -593,7 +593,7 @@ public:
         };
 
         // Masternodes
-        consensus.nMasternodeCollateral = 1;
+        consensus.nMasternodeCollateral = 1 * COIN;
         consensus.nMasternodePaymentsStartBlock = 0;
 		consensus.nGovernanceBlockOffset = 1;
         consensus.nGovernanceMinQuorum = 1;

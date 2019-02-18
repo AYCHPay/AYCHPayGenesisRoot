@@ -147,7 +147,7 @@ struct Params {
     int nGovernanceMinQuorum; // Min absolute vote count to trigger an action
     int nGovernanceFilterElements;
     int nMasternodeMinimumConfirmations;
-    int nMasternodeCollateral;
+    CAmount nMasternodeCollateral;
     int nFulfilledRequestExpireTime;
     // Previously static values                         // Defaults for mainnet:
     int nMasternodeCheckSeconds;                        // 5
