@@ -231,6 +231,7 @@ void CActiveMasternode::ManageStateRemote()
             LogPrint(BCLog::MN, "CActiveMasternode::ManageStateRemote -- STARTED!\n");
             outpoint = infoMn.outpoint;
             service = infoMn.addr;
+            activationBlockHeight = infoMn.activationBlockHeight;
             fPingerEnabled = true;
             nState = ACTIVE_MASTERNODE_STARTED;
         }

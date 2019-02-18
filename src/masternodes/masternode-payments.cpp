@@ -143,8 +143,8 @@ void FillBlockPayments(CMutableTransaction& txNew, int nBlockHeight, CAmount blo
         return;
     }
 
-    // FILL BLOCK PAYEE WITH PRIMARY MASTERNODE PAYMENT OTHERWISE
-    mnpayments.FillBlockPayee(txNew, nBlockHeight, blockReward, vtxoutMasternodeRet);
+    // FILL BLOCK PAYEE WITH MASTERNODE PAYMENT OTHERWISE
+    mnpayments.FillBlockPayees(txNew, nBlockHeight, blockReward, vtxoutMasternodeRet);
     //LogPrint(BCLog::MN, "FillBlockPayments -- nBlockHeight %d blockReward %lld vtxoutMasternodeRet %s txNew %s", nBlockHeight, blockReward, vtxoutMasternodeRet.ToString(), txNew.GetHash());
 }
 
@@ -199,40 +199,87 @@ bool CMasternodePayments::UpdateLastVote(const CMasternodePaymentVote& vote)
 *   Fill Masternode ONLY payment block
 */
 
-void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int nBlockHeight, CAmount blockReward, std::vector<CTxOut>& vtxoutMasternodeRet) const
+void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlockHeight, CAmount blockReward, std::vector<CTxOut>& vtxoutMasternodeRet) const
 {
     // make sure it's not filled yet
     vtxoutMasternodeRet.clear();
     
     // Primary payee
     CScript payee;
-    if (!GetBlockPayee(nBlockHeight, payee)) {
+    int primaryPayeeActivationHeight;
+    std::vector<CScript> secondaryPayees;
+    std::vector<masternode_info_t> secondaryMnInfoRet;
+
+    if (!GetBlockPayees(nBlockHeight, payee, primaryPayeeActivationHeight)) {
         // no masternode detected...
         int nCount = 0;
         masternode_info_t mnInfo;
-        if (!mnodeman.GetNextMasternodeInQueueForPayment(nBlockHeight, true, nCount, mnInfo)) {
+
+        if (!mnodeman.GetNextMasternodesInQueueForPayment(nBlockHeight, true, nCount, mnInfo, secondaryMnInfoRet)) {
             // ...and we can't calculate it on our own
-            LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayee -- Failed to detect masternode to pay\n");
+            LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayees -- Failed to detect masternode to pay\n");
             return;
         }
         // fill payee with locally calculated winner and hope for the best
         payee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
+        // Calculate the primaryPayeeActivationHeight for this locally calculated winner...
+        primaryPayeeActivationHeight = mnInfo.activationBlockHeight;
     }
 
-    // Secondary payees
-
-
+    /* Yay me... I found a primary */
     // GET MASTERNODE PAYMENT VARIABLES SETUP
-    CAmount masternodePayment = GetMasternodePayment(nBlockHeight, blockReward);
-
-    // split reward between miner ...
-    txNew.vout[0].nValue -= masternodePayment;
-    // ... and masternode(s)
-    CTxOut masternodePaymentTx = CTxOut(masternodePayment, payee);
+    CAmount primaryMasternodePayment = GetMasternodePayments(nBlockHeight, primaryPayeeActivationHeight, blockReward);
+    CAmount secondaryPaymentTotal = blockReward - primaryMasternodePayment;
+    // Add the primary masternode payment
+    CTxOut masternodePaymentTx = CTxOut(primaryMasternodePayment, payee);
     vtxoutMasternodeRet.push_back(masternodePaymentTx);
     txNew.vout.push_back(masternodePaymentTx);
+    LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayees -- Masternode payment %lld to %s\n", primaryMasternodePayment, EncodeDestination(CScriptID(payee)));
 
-    LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayee -- Masternode payment %lld to %s\n", masternodePayment, EncodeDestination(CScriptID(payee)));
+    // Work on secondaries...
+    if ((int)secondaryMnInfoRet.size() == 0)
+    {
+        int nCount = 0;
+        masternode_info_t mnInfo;
+        if (!mnodeman.GetNextMasternodesInQueueForPayment(nBlockHeight, true, nCount, mnInfo, secondaryMnInfoRet)) {
+            // ...and we can't calculate it on our own
+            LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayees -- Failed to detect secondary masternode to pay\n");
+            return;
+        }
+    }
+
+    // Populate the secondary payees
+    if ((int)secondaryMnInfoRet.size() > 0)
+    {
+        for(int i=0; i< (int)secondaryMnInfoRet.size(); ++i)
+        {
+            secondaryPayees.push_back(GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(secondaryMnInfoRet[i].pubKeyCollateralAddress.GetID())))));
+        }
+        // Now, calculate how much each secondary will get
+        int secondariesCount = (int)secondaryPayees.size();
+        if ((int)secondaryPayees.size() > 0)
+        {
+            CAmount secondariesPaymentChange = secondaryPaymentTotal % secondariesCount;
+            // make the division equal
+            secondaryPaymentTotal -= secondariesPaymentChange;
+            CAmount secondaryItemPayment = secondaryPaymentTotal / secondariesCount;
+            for(int i=0; i< (int)secondaryPayees.size(); ++i)
+            {
+                // Add the primary masternode payment
+                CAmount amountToPaySecondary = secondaryItemPayment;
+                if (i == 0)
+                {
+                    // Add the change to the first payment
+                    amountToPaySecondary += secondariesPaymentChange;
+                }
+                CTxOut masternodeSecondaryPaymentTx = CTxOut(secondaryItemPayment, secondaryPayees[i]);
+                vtxoutMasternodeRet.push_back(masternodeSecondaryPaymentTx);
+                txNew.vout.push_back(masternodeSecondaryPaymentTx);
+                LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayees -- Secondary Masternode payment %lld to %s\n", amountToPaySecondary, EncodeDestination(CScriptID(secondaryPayees[i])));
+            }
+        }
+    }
+    LogPrint(BCLog::MN, "CMasternodePayments::FillBlockPayees -- Found %n secondary masternodes to pay\n", (int)secondaryPayees.size());
 }
 
 int CMasternodePayments::GetMinMasternodePaymentsProto() const {
@@ -423,12 +470,12 @@ bool CMasternodePaymentVote::Sign()
     return true;
 }
 
-bool CMasternodePayments::GetBlockPayee(int nBlockHeight, CScript& payeeRet) const
+bool CMasternodePayments::GetBlockPayees(int nBlockHeight, CScript& payeeRet, int& activationHeightRet) const
 {
     LOCK(cs_mapMasternodeBlocks);
 
     auto it = mapMasternodeBlocksPrimary.find(nBlockHeight);
-    return it != mapMasternodeBlocksPrimary.end() && it->second.GetBestPayee(payeeRet);
+    return it != mapMasternodeBlocksPrimary.end() && it->second.GetBestPayee(payeeRet, activationHeightRet);
 }
 
 // Is this masternode scheduled to get paid soon?
@@ -440,12 +487,13 @@ bool CMasternodePayments::IsScheduled(const masternode_info_t& mnInfo, int nNotB
     if (!masternodeSync.IsMasternodeListSynced()) return false;
 
     CScript mnpayee;
+    int activationBlockHeight;
     mnpayee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
 
     CScript payee;
     for(int64_t h = nCachedBlockHeight; h <= nCachedBlockHeight + 8; h++){
         if (h == nNotBlockHeight) continue;
-        if (GetBlockPayee(h, payee) && mnpayee == payee) {
+        if (GetBlockPayees(h, payee, activationBlockHeight) && mnpayee == payee) {
             return true;
         }
     }
@@ -493,11 +541,11 @@ void CMasternodeBlockPayees::AddPayee(const CMasternodePaymentVote& vote)
             return;
         }
     }
-    CMasternodePayee payeeNew(vote.payee, nVoteHash);
+    CMasternodePayee payeeNew(vote.payee, vote.activationBlockHeight, nVoteHash);
     vecPayees.push_back(payeeNew);
 }
 
-bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet) const
+bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBlockHeightRet) const
 {
     LOCK(cs_vecPayees);
 
@@ -506,10 +554,12 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet) const
         return false;
     }
 
+    // primary
     int nVotes = -1;
     for (const auto& payee : vecPayees) {
         if (payee.GetVoteCount() > nVotes) {
             payeeRet = payee.GetPayee();
+            activationBlockHeightRet = payee.GetActivationHeight();
             nVotes = payee.GetVoteCount();
         }
     }
@@ -538,7 +588,8 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransactionRef& txNew, in
     int nMaxSignatures = 0;
     std::string strPayeesPossible = "";
 
-    CAmount nMasternodePayment = GetMasternodePayment(nBlockHeight, blockReward);
+    int activationHeight = 0;
+    CAmount nMasternodePayment = GetMasternodePayments(nBlockHeight, activationHeight, blockReward);
 
     //require at least MNPAYMENTS_SIGNATURES_REQUIRED signatures
 
@@ -719,17 +770,18 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
     // pay to the oldest MN that still had no payment but its input is old enough and it was active long enough
     int nCount = 0;
     masternode_info_t mnInfo;
+    std::vector<masternode_info_t> secondaryMnInfoRet;
 
-    if (!mnodeman.GetNextMasternodeInQueueForPayment(nBlockHeight, true, nCount, mnInfo)) {
+    if (!mnodeman.GetNextMasternodesInQueueForPayment(nBlockHeight, true, nCount, mnInfo, secondaryMnInfoRet)) {
         LogPrint(BCLog::MN, "CMasternodePayments::ProcessBlock -- ERROR: Failed to find masternode to pay\n");
         return false;
     }
 
-    LogPrintf("CMasternodePayments::ProcessBlock -- Masternode found by GetNextMasternodeInQueueForPayment(): %s\n", mnInfo.outpoint.ToStringShort());
+    LogPrintf("CMasternodePayments::ProcessBlock -- Masternode found by GetNextMasternodesInQueueForPayment(): %s\n", mnInfo.outpoint.ToStringShort());
 
     CScript payee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
 
-    CMasternodePaymentVote voteNew(activeMasternode.outpoint, nBlockHeight, payee);
+    CMasternodePaymentVote voteNew(activeMasternode.outpoint, nBlockHeight, payee, activeMasternode.activationBlockHeight);
 
     CTxDestination address1;
     ExtractDestination(payee, address1);

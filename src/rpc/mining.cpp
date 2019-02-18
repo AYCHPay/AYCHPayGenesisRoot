@@ -591,8 +591,9 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
 
     // when enforcement is on we need information about a masternode payee or otherwise our block is going to be orphaned by the network
     CScript payee;
+    int payeeActivationHeight;
     if (!masternodeSync.IsWinnersListSynced()
-        && !mnpayments.GetBlockPayee(chainActive.Height() + 1, payee))
+        && !mnpayments.GetBlockPayees(chainActive.Height() + 1, payee, payeeActivationHeight))
             throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is downloading masternode winners...");
 
     // next bock is a governanceblock and we need governance info to correctly construct it

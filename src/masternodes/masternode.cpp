@@ -35,6 +35,7 @@ CMasternode::CMasternode(const CMasternode& other) :
     lastPing(other.lastPing),
     vchSig(other.vchSig),
     nCollateralMinConfBlockHash(other.nCollateralMinConfBlockHash),
+    nCollateralMinConfBlockHeight(other.nCollateralMinConfBlockHeight),
     nBlockLastPaidPrimary(other.nBlockLastPaidPrimary),
     nBlockLastPaidSecondary(other.nBlockLastPaidSecondary),
     nPoSeBanScore(other.nPoSeBanScore),
@@ -175,10 +176,10 @@ void CMasternode::Check(bool fForce)
     int nActiveStatePrev = nActiveState;
     bool fOurMasternode = fMasternodeMode && activeMasternode.pubKeyMasternode == pubKeyMasternode;
 
-                   // masternode doesn't meet payment protocol requirements ...
+    // masternode doesn't meet payment protocol requirements ...
     bool fRequireUpdate = nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
-                   // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
-                   (fOurMasternode && nProtocolVersion < PROTOCOL_VERSION);
+    // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
+            (fOurMasternode && nProtocolVersion < PROTOCOL_VERSION);
 
     if (fRequireUpdate) {
         nActiveState = MASTERNODE_UPDATE_REQUIRED;
@@ -364,8 +365,9 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
             {
                 continue;
             }
-
-            CAmount nMasternodePayment = GetMasternodePayment(pindexActive->nHeight, block.vtx[0]->GetValueOut());
+            
+            int activationHeight = 0;
+            CAmount nMasternodePayment = GetMasternodePayments(pindexActive->nHeight, activationHeight, block.vtx[0]->GetValueOut());
 
             for (const auto& txout : block.vtx[0]->vout)
             {
@@ -634,6 +636,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
 
     // remember the block hash when collateral for this masternode had minimum required confirmations
     nCollateralMinConfBlockHash = pRequiredConfIndex->GetBlockHash();
+    nCollateralMinConfBlockHeight = pRequiredConfIndex->nHeight;
 
     return true;
 }

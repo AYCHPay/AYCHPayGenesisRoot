@@ -50,16 +50,19 @@ class CMasternodePayee
 {
 private:
     CScript scriptPubKey;
+    int activationBlockHeight; // this is the block at which the payment reached the minimum number of confirms
     std::vector<uint256> vecVoteHashes;
 
 public:
     CMasternodePayee() :
         scriptPubKey(),
+        activationBlockHeight(0),
         vecVoteHashes()
         {}
 
-    CMasternodePayee(CScript payee, uint256 hashIn) :
+    CMasternodePayee(CScript payee, int activationHeight, uint256 hashIn) :
         scriptPubKey(payee),
+        activationBlockHeight(activationHeight),
         vecVoteHashes()
     {
         vecVoteHashes.push_back(hashIn);
@@ -70,10 +73,12 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(*(CScriptBase*)(&scriptPubKey));
+        READWRITE(activationBlockHeight);
         READWRITE(vecVoteHashes);
     }
 
     CScript GetPayee() const { return scriptPubKey; }
+    int GetActivationHeight() const { return activationBlockHeight; }
 
     void AddVoteHash(uint256 hashIn) { vecVoteHashes.push_back(hashIn); }
     std::vector<uint256> GetVoteHashes() const { return vecVoteHashes; }
@@ -105,7 +110,7 @@ public:
     }
 
     void AddPayee(const CMasternodePaymentVote& vote);
-    bool GetBestPayee(CScript& payeeRet) const;
+    bool GetBestPayee(CScript& payeeRet, int& activationBlockHeightRet) const;
     bool HasPayeeWithVotes(const CScript& payeeIn, int nVotesReq) const;
 
     bool IsTransactionValid(const CTransactionRef& txNew, int nBlockHeight, CAmount blockReward) const;
@@ -121,19 +126,22 @@ public:
 
     int nBlockHeight;
     CScript payee;
+    int activationBlockHeight;
     std::vector<unsigned char> vchSig;
 
     CMasternodePaymentVote() :
         masternodeOutpoint(),
         nBlockHeight(0),
         payee(),
+        activationBlockHeight(0),
         vchSig()
         {}
 
-    CMasternodePaymentVote(COutPoint outpoint, int nBlockHeight, CScript payee) :
+    CMasternodePaymentVote(COutPoint outpoint, int nBlockHeight, CScript payee, int activationHeight) :
         masternodeOutpoint(outpoint),
         nBlockHeight(nBlockHeight),
         payee(payee),
+        activationBlockHeight(activationHeight),
         vchSig()
         {}
 
@@ -144,6 +152,7 @@ public:
         // using new format directly
         READWRITE(masternodeOutpoint);
         READWRITE(nBlockHeight);
+        READWRITE(activationBlockHeight);
         READWRITE(*(CScriptBase*)(&payee));
         if (!(s.GetType() & SER_GETHASH)) {
             READWRITE(vchSig);
@@ -245,7 +254,7 @@ public:
     void RequestLowDataPaymentBlocks(CNode* pnode, CConnman& connman) const;
     void CheckAndRemove();
 
-    bool GetBlockPayee(int nBlockHeight, CScript& payeeRet) const;
+    bool GetBlockPayees(int nBlockHeight, CScript& payeeRet, int& activationHeightRet) const;
     bool IsTransactionValid(const CTransactionRef& txNew, int nBlockHeight, CAmount blockReward) const;
     bool IsScheduled(const masternode_info_t& mnInfo, int nNotBlockHeight) const;
 
@@ -254,7 +263,7 @@ public:
     int GetMinMasternodePaymentsProto() const;
     void ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman& connman);
     std::string GetRequiredPaymentsString(int nBlockHeight) const;
-    void FillBlockPayee(CMutableTransaction& txNew, int nBlockHeight, CAmount blockReward, std::vector<CTxOut>& vtxoutMasternodeRet) const;
+    void FillBlockPayees(CMutableTransaction& txNew, int nBlockHeight, CAmount blockReward, std::vector<CTxOut>& vtxoutMasternodeRet) const;
     std::string ToString() const;
 
     int GetBlockCount() const { return mapMasternodeBlocksPrimary.size(); }

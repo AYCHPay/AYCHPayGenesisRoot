@@ -52,6 +52,7 @@ public:
 
     // Initialized while registering Masternode
     COutPoint outpoint;
+    int activationBlockHeight;
     CService service;
 
     int nState; // should be one of ACTIVE_MASTERNODE_XXXX
@@ -64,6 +65,7 @@ public:
           pubKeyMasternode(),
           keyMasternode(),
           outpoint(),
+          activationBlockHeight(0),
           service(),
           nState(ACTIVE_MASTERNODE_INITIAL)
     {}

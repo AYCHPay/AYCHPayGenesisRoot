@@ -457,10 +457,33 @@ int GetUTXOConfirmations(const COutPoint& outpoint)
     return (nPrevoutHeight > -1 && chainActive.Tip()) ? chainActive.Height() - nPrevoutHeight + 1 : -1;
 }
 
-CAmount GetMasternodePayment(int nHeight, CAmount blockValue)
+CAmount GetMasternodePayments(int nHeight, int activationHeight, CAmount blockValue)
 {
-    CAmount ret = blockValue * Params().GetConsensus().nBlockRewardMasternode; 
-    return ret;
+    CAmount totalReward = blockValue * Params().GetConsensus().nBlockRewardMasternode;
+    int blockAge = nHeight - activationHeight;
+    int thresholdAge = Params().GetConsensus().nMasternodeMaturityThreshold * Params().GetConsensus().nMasternodeMaturityBlockMultiplier;
+    CAmount minimumSecondaryDeduction = (Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount * Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount) * COIN;
+    CAmount minimumPrimaryPayment = Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount * COIN;
+    CAmount allowedPayment = totalReward - minimumSecondaryDeduction;
+    if (blockAge >= thresholdAge)
+    {
+        // This masternode has matured completely
+        return allowedPayment;
+    }
+    else
+    {
+        // This masternode must only be paid according to its maturity level
+        CAmount proratedPayment = ceil(allowedPayment / thresholdAge);
+        // Doing it this way makes the transition smooth-ish and avoids creating dust (<1 genx)
+        if ((proratedPayment + minimumPrimaryPayment) < (minimumPrimaryPayment * 2))
+        {
+            return minimumPrimaryPayment + proratedPayment;
+        }
+        else
+        {
+            return proratedPayment;            
+        }
+    }
 }
 
 // TODO replace by newer function
@@ -1298,7 +1321,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
     CAmount nGovernanceBlockPart = 0;
     if (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == consensusParams.nGovernanceBlockOffset)
     {
-        nGovernanceBlockPart = subsidy - consensusParams.nBlockRewardTotal;
+        nGovernanceBlockPart = consensusParams.nBlockRewardTotal * consensusParams.nBlockRewardMasternode;
     }
     return fGovernanceBlockPartOnly ? nGovernanceBlockPart :  nSubsidy;
 }
@@ -1849,8 +1872,9 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
             nVersion |= VersionBitsMask(params, (Consensus::DeploymentPos)i);
 
             CScript payee;
+            int payeeActivationHeight;
             masternode_info_t mnInfo;
-            if (!mnpayments.GetBlockPayee(pindexPrev->nHeight + 1, payee)) {
+            if (!mnpayments.GetBlockPayees(pindexPrev->nHeight + 1, payee, payeeActivationHeight)) {
                 // no votes for this block
                 continue;
             }
