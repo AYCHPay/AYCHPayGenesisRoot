@@ -141,7 +141,7 @@ public:
             return CCoinsViewBacked::GetCoin(outpoint, coin);
         } catch(const std::runtime_error& e) {
             uiInterface.ThreadSafeMessageBox(_("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
-            LogPrintf("Error reading from database: %s\n", e.what());
+            LogPrint(BCLog::LEVELDB, "[LevelDB] Error reading from database: %s\n", e.what());
             // Starting the shutdown sequence and returning false to the caller would be
             // interpreted as 'entry not found' (as opposed to unable to read data), and
             // could lead to invalid interpretation. Just exit immediately, as we can't
@@ -171,7 +171,7 @@ void Interrupt()
 
 void Shutdown()
 {
-    LogPrintf("%s: In progress...\n", __func__);
+    LogPrint(BCLog::LEVELDB, "[LevelDB] %s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
     if (!lockShutdown)
@@ -219,7 +219,7 @@ void Shutdown()
         if (!est_fileout.IsNull())
             ::feeEstimator.Write(est_fileout);
         else
-            LogPrintf("%s: Failed to write fee estimates to %s\n", __func__, est_path.string());
+            LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] %s: Failed to write fee estimates to %s\n", __func__, est_path.string());
         fFeeEstimatesInitialized = false;
     }
 
@@ -323,7 +323,7 @@ void OnRPCStopped()
     uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
     RPCNotifyBlockChange(false, nullptr);
     cvBlockChange.notify_all();
-    LogPrint(BCLog::RPC, "RPC stopped.\n");
+    LogPrint(BCLog::RPC, "[RPC] Stopped.\n");
 }
 
 std::string HelpMessage(HelpMessageMode mode)
@@ -645,13 +645,13 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             FILE *file = OpenBlockFile(pos, true);
             if (!file)
                 break; // This error is logged in OpenBlockFile
-            LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
+            LogPrint(BCLog::REINDEX, "[Reindex] Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
             LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
         pblocktree->WriteReindexing(false);
         fReindex = false;
-        LogPrintf("Reindexing finished\n");
+        LogPrint(BCLog::REINDEX, "[Reindex] Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
         LoadGenesisBlock(chainparams);
     }
@@ -1038,14 +1038,14 @@ bool AppInitParameterInteraction()
     }
     nPruneTarget = (uint64_t) nPruneArg * 1024 * 1024;
     if (nPruneArg == 1) {  // manual pruning: -prune=1
-        LogPrintf("Block pruning enabled.  Use RPC call pruneblockchain(height) to manually prune block and undo files.\n");
+        LogPrint(BCLog::PRUNE, "[Prune] Block pruning enabled. Use RPC call pruneblockchain(height) to manually prune block and undo files.\n");
         nPruneTarget = std::numeric_limits<uint64_t>::max();
         fPruneMode = true;
     } else if (nPruneTarget) {
         if (nPruneTarget < MIN_DISK_SPACE_FOR_BLOCK_FILES) {
             return InitError(strprintf(_("Prune configured below the minimum of %d MiB.  Please use a higher number."), MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024));
         }
-        LogPrintf("Prune configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
+        LogPrint(BCLog::PRUNE, "[Prune] Configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
         fPruneMode = true;
     }
 
@@ -1530,7 +1530,7 @@ bool AppInitMain()
                 if (!is_coinsview_empty) {
                     uiInterface.InitMessage(_("Verifying blocks..."));
                     if (fHavePruned && gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS) > MIN_BLOCKS_TO_KEEP) {
-                        LogPrintf("Prune: pruned datadir may not have more than %d blocks; only checking available blocks",
+                        LogPrint(BCLog::PRUNE, "[Prune] Pruned datadir may not have more than %d blocks; only checking available blocks",
                             MIN_BLOCKS_TO_KEEP);
                     }
 
@@ -1572,7 +1572,7 @@ bool AppInitMain()
                     fReindex = true;
                     fRequestShutdown = false;
                 } else {
-                    LogPrintf("Aborted block database rebuild. Exiting.\n");
+                    LogPrint(BCLog::REINDEX, "[Reindex] Aborted block database rebuild. Exiting.\n");
                     return false;
                 }
             } else {
@@ -1613,7 +1613,7 @@ bool AppInitMain()
     // if pruning, unset the service bit and perform the initial blockstore prune
     // after any wallet rescanning has taken place.
     if (fPruneMode) {
-        LogPrintf("Unsetting NODE_NETWORK on prune mode\n");
+        LogPrint(BCLog::PRUNE, "[Prune] Unsetting NODE_NETWORK on prune mode\n");
         nLocalServices = ServiceFlags(nLocalServices & ~NODE_NETWORK);
         if (!fReindex) {
             uiInterface.InitMessage(_("Pruning blockstore..."));
