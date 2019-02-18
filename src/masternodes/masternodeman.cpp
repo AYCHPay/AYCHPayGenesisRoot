@@ -33,6 +33,7 @@ struct CompareLastPaidBlock
     }
 };
 
+
 struct CompareScoreMN
 {
     bool operator()(const std::pair<arith_uint256, const CMasternode*>& t1,
@@ -364,6 +365,29 @@ int CMasternodeMan::CountEnabled(int nProtocolVersion)
     return nCount;
 }
 
+int CMasternodeMan::CountCollateralisedAtHeight(int blockHeight)
+{
+    return CountCollateralisedAtHeight(mnpayments.GetMinMasternodePaymentsProto(), blockHeight, true);
+}
+
+int CMasternodeMan::CountCollateralisedAtHeight(int nProtocolVersion, int blockHeight, bool onlyEnabled)
+{
+    LOCK(cs);
+    int nCount = 0;
+    nProtocolVersion = nProtocolVersion == -1 ? mnpayments.GetMinMasternodePaymentsProto() : nProtocolVersion;
+
+    for (const auto& mnpair : mapMasternodes) {
+        if (mnpair.second.activationBlockHeight > blockHeight) continue;
+        if (onlyEnabled && !mnpair.second.IsEnabled())
+        {
+            continue;
+        }
+        nCount++;
+    }
+
+    return nCount;
+}
+
 /* Only IPv4 masternodes are allowed in 12.1, saving this for later
 int CMasternodeMan::CountByIP(int nNetworkType)
 {
@@ -476,12 +500,12 @@ bool CMasternodeMan::Has(const COutPoint& outpoint)
 //
 // Deterministically select the oldest/best masternode to pay on the network
 //
-bool CMasternodeMan::GetNextMasternodeInQueueForPayment(bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet)
+bool CMasternodeMan::GetNextMasternodesInQueueForPayment(bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet, std::vector<masternode_info_t>& vSecondaryMnInfoRet)
 {
-    return GetNextMasternodeInQueueForPayment(nCachedBlockHeight, fFilterSigTime, nCountRet, mnInfoRet);
+    return GetNextMasternodesInQueueForPayment(nCachedBlockHeight, fFilterSigTime, nCountRet, mnInfoRet, vSecondaryMnInfoRet);
 }
 
-bool CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet)
+bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet, std::vector<masternode_info_t>& vSecondaryMnInfoRet)
 {
     mnInfoRet = masternode_info_t();
     nCountRet = 0;
@@ -495,6 +519,7 @@ bool CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool f
     LOCK2(cs_main,cs);
 
     std::vector<std::pair<int, const CMasternode*> > vecMasternodeLastPaid;
+    std::vector<std::pair<int, const CMasternode*> > vecMasternodeLastPaidSecondary;
 
     /*
         Make a vector with all of the last paid times
@@ -502,6 +527,7 @@ bool CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool f
 
     int nMnCount = CountMasternodes();
 
+    // Primary
     for (const auto& mnpair : mapMasternodes) {
         if (!mnpair.second.IsValidForPayment()) continue;
 
@@ -520,18 +546,43 @@ bool CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool f
         vecMasternodeLastPaid.push_back(std::make_pair(mnpair.second.GetLastPaidBlockPrimary(), &mnpair.second));
     }
 
+    // Secondaries
+    for (const auto& mnpair : mapMasternodes) {
+        if (!mnpair.second.IsValidForPayment()) continue;
+
+        //check protocol version
+        if (mnpair.second.nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto()) continue;
+
+        // it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
+        // skip this check for secondaries
+        //if (mnpayments.IsScheduled(mnpair.second, nBlockHeight)) continue;
+
+        //it's too new, wait for a cycle
+        if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*2.6*60) > GetAdjustedTime()) continue;
+
+        //make sure it has at least as many confirmations as there are masternodes
+        if (GetUTXOConfirmations(mnpair.first) < nMnCount) continue;
+
+        // Add it to the secondaries list as well, but use the lastpaid secondary as the first term
+        vecMasternodeLastPaidSecondary.push_back(std::make_pair(mnpair.second.GetLastPaidBlockSecondary(), &mnpair.second));
+    }
+
     nCountRet = (int)vecMasternodeLastPaid.size();
 
     //when the network is in the process of upgrading, don't penalize nodes that recently restarted
     if (fFilterSigTime && nCountRet < nMnCount/3)
-        return GetNextMasternodeInQueueForPayment(nBlockHeight, false, nCountRet, mnInfoRet);
+        return GetNextMasternodesInQueueForPayment(nBlockHeight, false, nCountRet, mnInfoRet, vSecondaryMnInfoRet);
 
     // Sort them low to high
+    // First primaries
     sort(vecMasternodeLastPaid.begin(), vecMasternodeLastPaid.end(), CompareLastPaidBlock());
+    // then secondaries (the logic remains the same, but the input is different)
+    sort(vecMasternodeLastPaidSecondary.begin(), vecMasternodeLastPaidSecondary.end(), CompareLastPaidBlock());
 
+    // Calcualte the primary
     uint256 blockHash;
-    if (!GetBlockHash(blockHash, nBlockHeight - 101)) {
-        LogPrint(BCLog::MN, "CMasternode::GetNextMasternodeInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - 101);
+    if (!GetBlockHash(blockHash, nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1))) {
+        LogPrint(BCLog::MN, "CMasternode::GetNextMasternodesInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1));
         return false;
     }
     // Look at 1/10 of the oldest nodes (by last payment), calculate their scores and pay the best one
@@ -554,6 +605,31 @@ bool CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool f
     if (pBestMasternode) {
         mnInfoRet = pBestMasternode->GetInfo();
     }
+
+    // Now calculate the secondaries
+    int secondariesToGet = Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount;
+    size_t sampleSize = 0;
+    if ((int)vecMasternodeLastPaidSecondary.size() >= secondariesToGet)
+    {
+        sampleSize = secondariesToGet;
+    }
+    else
+    {
+        sampleSize = vecMasternodeLastPaidSecondary.size();
+    }
+    // copy sampleSize items to the output
+    for(int i=0; i<sampleSize; ++i){
+        const CMasternode *pBestSecondaryMasternode = vecMasternodeLastPaidSecondary[i].second;
+        if (pBestSecondaryMasternode)
+        {
+            // make sure we do not add the primary to the secondaries list...
+            if (pBestSecondaryMasternode !=  pBestMasternode)
+            {
+                vSecondaryMnInfoRet.push_back(pBestSecondaryMasternode->GetInfo());
+            }
+        }        
+    }
+
     return mnInfoRet.fInfoValid;
 }
 

@@ -153,6 +153,10 @@ public:
     /// Count enabled Masternodes filtered by nProtocolVersion.
     /// Masternode nProtocolVersion should match or be above the one specified in param here.
     int CountEnabled(int nProtocolVersion = -1);
+    // Count the number of masternodes collateralised (paid for) at a certain block height (for the sake of secondary payments only)
+    int CountCollateralisedAtHeight(int nProtocolVersion, int blockHeight, bool onlyEnabled);
+    // Same as above, but using defaults
+    int CountCollateralisedAtHeight(int blockHeight);
 
     /// Count Masternodes by network type - NET_IPV4, NET_IPV6, NET_TOR
     // int CountByIP(int nNetworkType);
@@ -167,10 +171,10 @@ public:
     bool GetMasternodeInfo(const CPubKey& pubKeyMasternode, masternode_info_t& mnInfoRet);
     bool GetMasternodeInfo(const CScript& payee, masternode_info_t& mnInfoRet);
 
-    /// Find an entry in the masternode list that is next to be paid
-    bool GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet);
+    /// Find an entry in the masternode list that is next to be paid as a primary
+    bool GetNextMasternodesInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet, std::vector<masternode_info_t>& vSecondaryMnInfoRet);
     /// Same as above but use current block height
-    bool GetNextMasternodeInQueueForPayment(bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet);
+    bool GetNextMasternodesInQueueForPayment(bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet, std::vector<masternode_info_t>& vSecondaryMnInfoRet);
 
     /// Find a random entry
     masternode_info_t FindRandomNotInVec(const std::vector<COutPoint> &vecToExclude, int nProtocolVersion = -1);

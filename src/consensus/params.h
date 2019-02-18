@@ -160,16 +160,16 @@ struct Params {
     int nMasternodeSignHashThreshold;                   // 600000
     // Masternode maturity configuration
     int nMasternodeMaturityBlockMultiplier;             // 1440 (Blocks per day)
-    int nMasternodeMaturityThreshold;                   // 336
-    int nMasternodeMaturitySecondariesMaxCount;         // floor(nMasternodeMaturityBlockMultiplier / 10)
-    float aMasternodeMaturiySecondariesMinAmount;       // 0.5
+    int nMasternodeMaturityThreshold;                   // 336 Days (28 * 12)
+    int nMasternodeMaturitySecondariesMaxCount;         // the max number of secondary masternodes to pay
+    double aMasternodeMaturiySecondariesMinAmount;      // the minimum amount to pay a secondary masternode
     // Block subsidy definition(s)
     int nBlockRewardTotal;                              // 660
-    float nBlockRewardMasternode;                       // 20%
-    float nBlockRewardFounders;                         // 10% combined
-    float nBlockRewardGiveaways;                        // 5%
-    float nBlockRewardInfrastructure;                   // 5%
-    float nBlockRewardFinder;                           // 60%
+    double nBlockRewardMasternode;                       // 20%
+    double nBlockRewardFounders;                         // 10% combined
+    double nBlockRewardGiveaways;                        // 5%
+    double nBlockRewardInfrastructure;                   // 5%
+    double nBlockRewardFinder;                           // 60%
 };
 } // namespace Consensus
 

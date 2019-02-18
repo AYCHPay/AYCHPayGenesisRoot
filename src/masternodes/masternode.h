@@ -155,6 +155,7 @@ struct masternode_info_t
     CService addr{};
     CPubKey pubKeyCollateralAddress{};
     CPubKey pubKeyMasternode{};
+    int activationBlockHeight{};
 
     int64_t nLastDsq = 0; //the dsq count from the last dsq broadcast of this node
     int64_t nTimeLastChecked = 0;
@@ -198,6 +199,7 @@ public:
     std::vector<unsigned char> vchSig{};
 
     uint256 nCollateralMinConfBlockHash{};
+    int nCollateralMinConfBlockHeight{};
     int nBlockLastPaidPrimary{};
     int nBlockLastPaidSecondary{};
     int nPoSeBanScore{};
@@ -247,6 +249,7 @@ public:
         READWRITE(nTimeLastPaidSecondary);
         READWRITE(nActiveState);
         READWRITE(nCollateralMinConfBlockHash);
+        READWRITE(nCollateralMinConfBlockHeight);
         READWRITE(nBlockLastPaidPrimary);
         READWRITE(nBlockLastPaidSecondary);
         READWRITE(nProtocolVersion);
@@ -340,6 +343,7 @@ public:
         lastPing = from.lastPing;
         vchSig = from.vchSig;
         nCollateralMinConfBlockHash = from.nCollateralMinConfBlockHash;
+        nCollateralMinConfBlockHeight = from.nCollateralMinConfBlockHeight;
         nBlockLastPaidPrimary = from.nBlockLastPaidPrimary;
         nBlockLastPaidSecondary = from.nBlockLastPaidSecondary;
         nPoSeBanScore = from.nPoSeBanScore;

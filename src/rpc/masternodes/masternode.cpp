@@ -107,7 +107,9 @@ UniValue masternode(const JSONRPCRequest& request)
 
         int nCount;
         masternode_info_t mnInfo;
-        mnodeman.GetNextMasternodeInQueueForPayment(true, nCount, mnInfo);
+        std::vector<masternode_info_t> secondaryMnInfoRet;
+
+        mnodeman.GetNextMasternodesInQueueForPayment(true, nCount, mnInfo, secondaryMnInfoRet);
 
         int total = mnodeman.size();
         int enabled = mnodeman.CountEnabled();
@@ -135,8 +137,9 @@ UniValue masternode(const JSONRPCRequest& request)
         }
         nHeight = pindex->nHeight + (strCommand == "current" ? 1 : 10);
         mnodeman.UpdateLastPaid(pindex);
+        std::vector<masternode_info_t> secondaryMnInfoRet;
 
-        if (!mnodeman.GetNextMasternodeInQueueForPayment(nHeight, true, nCount, mnInfo))
+        if (!mnodeman.GetNextMasternodesInQueueForPayment(nHeight, true, nCount, mnInfo, secondaryMnInfoRet))
             return "unknown";
 
         UniValue obj(UniValue::VOBJ);

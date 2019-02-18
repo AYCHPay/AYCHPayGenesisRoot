@@ -250,7 +250,7 @@ public:
 
         // Masternodes
         consensus.nMasternodeCollateral = 750000;
-        consensus.nMasternodePaymentsStartBlock = 100000;
+        consensus.nMasternodePaymentsStartBlock = 300000;
 		consensus.nGovernanceBlockOffset = 1; // One block after the bonus block
         consensus.nGovernanceMinQuorum = 10;
         consensus.nGovernanceFilterElements = 20000;
@@ -265,10 +265,10 @@ public:
         consensus.nMasternodePoseBanMaxScore = 5;                    
         consensus.nMasternodeSignHashThreshold = 600000;                  
         // Masternode maturity configuration
-        consensus.nMasternodeMaturityBlockMultiplier = consensus.nGovernanceBlockOffset;             
+        consensus.nMasternodeMaturityBlockMultiplier = 1440;             
         consensus.nMasternodeMaturityThreshold = 336;                   
-        consensus.nMasternodeMaturitySecondariesMaxCount = int(consensus.nMasternodeMaturityBlockMultiplier / 10); 
-        consensus.aMasternodeMaturiySecondariesMinAmount = 0.5;       
+        consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
         // Block subsidy definition(s)
         consensus.nBlockRewardTotal = 600;                              
         consensus.nBlockRewardMasternode = 0.2;                         
@@ -401,8 +401,8 @@ public:
         };
 
         // Switch at block
-        fGenX_SwitchAtBlock = 3;
-        fGenX_EnforceAtBlock = 4;
+        fGenX_SwitchAtBlock = 11;
+        fGenX_EnforceAtBlock = 12;
 
         // Founders Addresses: 
         vFounderAddress = 
@@ -428,7 +428,7 @@ public:
 
         // Masternodes
         consensus.nMasternodeCollateral = 1;
-        consensus.nMasternodePaymentsStartBlock = 15;
+        consensus.nMasternodePaymentsStartBlock = 21;
 		consensus.nGovernanceBlockOffset = 1; 
         consensus.nGovernanceMinQuorum = 1;
         consensus.nGovernanceFilterElements = 500;
@@ -443,10 +443,10 @@ public:
         consensus.nMasternodePoseBanMaxScore = 5;                    
         consensus.nMasternodeSignHashThreshold = 600000;                  
         // Masternode maturity configuration
-        consensus.nMasternodeMaturityBlockMultiplier = consensus.nGovernanceBlockOffset;             
+        consensus.nMasternodeMaturityBlockMultiplier = 1440;             
         consensus.nMasternodeMaturityThreshold = 336;                   
-        consensus.nMasternodeMaturitySecondariesMaxCount = int(consensus.nMasternodeMaturityBlockMultiplier / 10); 
-        consensus.aMasternodeMaturiySecondariesMinAmount = 0.5;       
+        consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
         // Block subsidy definition(s)
         consensus.nBlockRewardTotal = 600;                              
         consensus.nBlockRewardMasternode = 0.2;                         
@@ -609,10 +609,10 @@ public:
         consensus.nMasternodePoseBanMaxScore = 5;                    
         consensus.nMasternodeSignHashThreshold = 600000;                  
         // Masternode maturity configuration
-        consensus.nMasternodeMaturityBlockMultiplier = consensus.nGovernanceBlockOffset;             
+        consensus.nMasternodeMaturityBlockMultiplier = 1440;             
         consensus.nMasternodeMaturityThreshold = 336;                   
-        consensus.nMasternodeMaturitySecondariesMaxCount = int(consensus.nMasternodeMaturityBlockMultiplier / 10); 
-        consensus.aMasternodeMaturiySecondariesMinAmount = 0.5;       
+        consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
         // Block subsidy definition(s)
         consensus.nBlockRewardTotal = 600;                              
         consensus.nBlockRewardMasternode = 0.2;                         
