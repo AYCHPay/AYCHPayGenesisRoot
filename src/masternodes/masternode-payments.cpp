@@ -51,7 +51,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
     CAmount nGovernanceBlockMaxValue = blockReward + CGovernanceBlock::GetPaymentsLimit(nBlockHeight);
     bool isGovernanceBlockMaxValueMet = (block.vtx[0]->GetValueOut() <= nGovernanceBlockMaxValue);
 
-    LogPrint(BCLog::GOV, "block.vtx[0]->GetValueOut() %lld <= nGovernanceBlockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nGovernanceBlockMaxValue);
+    LogPrint(BCLog::GOV, "[Governance] block.vtx[0]->GetValueOut() %lld <= nGovernanceBlockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nGovernanceBlockMaxValue);
 
     if (!masternodeSync.IsSynced() || fLiteMode) {
         // not enough data but at least it must NOT exceed governanceblock max value
@@ -75,7 +75,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
 
     if (CGovernanceBlockManager::IsGovernanceBlockTriggered(nBlockHeight)) {
         if (CGovernanceBlockManager::IsValid(block.vtx[0], nBlockHeight, blockReward)) {
-            LogPrint(BCLog::GOV, "IsBlockValueValid -- Valid governanceblock at height %d: %s", nBlockHeight, block.vtx[0]->ToString());
+            LogPrint(BCLog::GOV, "[Governance] IsBlockValueValid -- Valid governanceblock at height %d: %s", nBlockHeight, block.vtx[0]->ToString());
             // all checks are done in CGovernanceBlock::IsValid, nothing to do here
             return true;
         }
@@ -86,7 +86,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
         strErrorRet = strprintf("invalid governanceblock detected at height %d", nBlockHeight);
         return false;
     }
-    LogPrint(BCLog::GOV, "IsBlockValueValid -- No triggered governanceblock detected at height %d\n", nBlockHeight);
+    LogPrint(BCLog::GOV, "[Governance] IsBlockValueValid -- No triggered governanceblock detected at height %d\n", nBlockHeight);
     if (!isBlockRewardValueMet) {
         strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, no triggered governanceblock detected",
             nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
@@ -116,7 +116,7 @@ bool IsBlockPayeeValid(const CTransactionRef& txNew, int nBlockHeight, CAmount b
         return false;
     }
     // continue validation, should pay MN
-    LogPrint(BCLog::GOV, "IsBlockPayeeValid -- No triggered governanceblock detected at height %d\n", nBlockHeight);
+    LogPrint(BCLog::GOV, "[Governance] IsBlockPayeeValid -- No triggered governanceblock detected at height %d\n", nBlockHeight);
 
     // IF THIS ISN'T A GOVERNANCEBLOCK OR GOVERNANCEBLOCK IS INVALID, IT SHOULD PAY A MASTERNODE DIRECTLY
     if (mnpayments.IsTransactionValid(txNew, nBlockHeight, blockReward)) {
@@ -138,25 +138,31 @@ void FillBlockPayments(CMutableTransaction& txNew, int nBlockHeight, CAmount blo
     // only create governanceblocks if governanceblock is actually triggered
     // (height should be validated inside)
     if (CGovernanceBlockManager::IsGovernanceBlockTriggered(nBlockHeight)) {
-        LogPrint(BCLog::GOV, "FillBlockPayments -- triggered governanceblock creation at height %d\n", nBlockHeight);
+        LogPrint(BCLog::GOV, "[Governance] FillBlockPayments -- triggered governanceblock creation at height %d\n", nBlockHeight);
         CGovernanceBlockManager::CreateGovernanceBlock(txNew, nBlockHeight, vtxoutGovernanceRet);
         return;
     }
-
-    // FILL BLOCK PAYEE WITH MASTERNODE PAYMENT OTHERWISE
-    mnpayments.FillBlockPayees(txNew, nBlockHeight, blockReward, vtxoutMasternodeRet);
-    //LogPrint(BCLog::MN, "[Masternodes] FillBlockPayments -- nBlockHeight %d blockReward %lld vtxoutMasternodeRet %s txNew %s", nBlockHeight, blockReward, vtxoutMasternodeRet.ToString(), txNew.GetHash());
+    else
+    {
+        // FILL BLOCK PAYEE WITH MASTERNODE PAYMENT OTHERWISE
+        LogPrint(BCLog::MN, "[Masternodes] FillBlockPayments -- triggered masternode block creation at height %d\n", nBlockHeight);
+        mnpayments.FillBlockPayees(txNew, nBlockHeight, blockReward, vtxoutMasternodeRet);
+    }
 }
 
 std::string GetRequiredPaymentsString(int nBlockHeight)
 {
     // IF WE HAVE A ACTIVATED TRIGGER FOR THIS HEIGHT - IT IS A GOVERNANCEBLOCK, GET THE REQUIRED PAYEES
     if (CGovernanceBlockManager::IsGovernanceBlockTriggered(nBlockHeight)) {
+        LogPrint(BCLog::GOV, "[Governance] GetRequiredPaymentsString - getting governance payees at height %d\n", nBlockHeight);
         return CGovernanceBlockManager::GetRequiredPaymentsString(nBlockHeight);
     }
-
-    // OTHERWISE, PAY MASTERNODE
-    return mnpayments.GetRequiredPaymentsString(nBlockHeight);
+    else
+    {
+        // OTHERWISE, PAY MASTERNODE
+        LogPrint(BCLog::MN, "[Masternodes] GetRequiredPaymentsString - getting masternode payees at height %d\n", nBlockHeight);
+        return mnpayments.GetRequiredPaymentsString(nBlockHeight);
+    }
 }
 
 bool EnforceMasternodePayments(int nHeight)

@@ -125,7 +125,7 @@ void CGovernanceVote::Relay(CConnman& connman) const
 {
     // Do not relay until fully synced
     if (!masternodeSync.IsSynced()) {
-        LogPrint(BCLog::GOV, "CGovernanceVote::Relay -- won't relay until fully synced\n");
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::Relay -- won't relay until fully synced\n");
         return;
     }
 
@@ -206,7 +206,7 @@ bool CGovernanceVote::CheckSignature(const CPubKey& pubKeyMasternode) const
 
             if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
                 // nope, not in old format either
-                LogPrint(BCLog::GOV, "CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
+                LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
                 return false;
             }
         }
@@ -217,7 +217,7 @@ bool CGovernanceVote::CheckSignature(const CPubKey& pubKeyMasternode) const
             boost::lexical_cast<std::string>(nTime);
 
         if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrint(BCLog::GOV, "CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }
@@ -228,27 +228,27 @@ bool CGovernanceVote::CheckSignature(const CPubKey& pubKeyMasternode) const
 bool CGovernanceVote::IsValid(bool fSignatureCheck) const
 {
     if (nTime > GetAdjustedTime() + (60 * 60)) {
-        LogPrint(BCLog::GOV, "CGovernanceVote::IsValid -- vote is too far ahead of current time - %s - nTime %lli - Max Time %lli\n", GetHash().ToString(), nTime, GetAdjustedTime() + (60 * 60));
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::IsValid -- vote is too far ahead of current time - %s - nTime %lli - Max Time %lli\n", GetHash().ToString(), nTime, GetAdjustedTime() + (60 * 60));
         return false;
     }
 
     // support up to MAX_SUPPORTED_VOTE_SIGNAL, can be extended
     if (nVoteSignal > MAX_SUPPORTED_VOTE_SIGNAL)
     {
-        LogPrint(BCLog::GOV, "CGovernanceVote::IsValid -- Client attempted to vote on invalid signal(%d) - %s\n", nVoteSignal, GetHash().ToString());
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::IsValid -- Client attempted to vote on invalid signal(%d) - %s\n", nVoteSignal, GetHash().ToString());
         return false;
     }
 
     // 0=none, 1=yes, 2=no, 3=abstain. Beyond that reject votes
     if (nVoteOutcome > 3)
     {
-        LogPrint(BCLog::GOV, "CGovernanceVote::IsValid -- Client attempted to vote on invalid outcome(%d) - %s\n", nVoteSignal, GetHash().ToString());
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::IsValid -- Client attempted to vote on invalid outcome(%d) - %s\n", nVoteSignal, GetHash().ToString());
         return false;
     }
 
     masternode_info_t infoMn;
     if (!mnodeman.GetMasternodeInfo(masternodeOutpoint, infoMn)) {
-        LogPrint(BCLog::GOV, "CGovernanceVote::IsValid -- Unknown Masternode - %s\n", masternodeOutpoint.ToStringShort());
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::IsValid -- Unknown Masternode - %s\n", masternodeOutpoint.ToStringShort());
         return false;
     }
 
