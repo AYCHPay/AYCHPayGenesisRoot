@@ -3,6 +3,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <clientversion.h>
 #include <consensus/validation.h>
 #include <masternodes/governance.h>
 #include <masternodes/governance-object.h>
@@ -22,7 +23,7 @@ CGovernanceManager governance;
 
 int nSubmittedFinalBudget;
 
-const std::string CGovernanceManager::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-13";
+const std::string CGovernanceManager::SERIALIZATION_VERSION_STRING = CLIENT_NAME + "-CGovernanceManager-Version-1";
 const int CGovernanceManager::MAX_TIME_FUTURE_DEVIATION = 60*60;
 const int CGovernanceManager::RELIABLE_PROPAGATION_TIME = 60;
 
