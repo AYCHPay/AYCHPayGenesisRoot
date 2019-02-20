@@ -38,7 +38,7 @@ int Equihash<N,K>::InitialiseState(eh_HashState& base_state, const std::string p
     uint32_t le_N = htole32(N);
     uint32_t le_K = htole32(K);
     unsigned char personalization[crypto_generichash_blake2b_PERSONALBYTES] = {};
-    //LogPrint(BCLog::POW, "[POW] Equihash Initialise State called with %s\n", personalizationString);
+    //LogPrint(BCLog::POW, "[ProofOfWork] Equihash Initialise State called with %s\n", personalizationString);
     memcpy(personalization, personalizationString.c_str(), 8);
     memcpy(personalization+8,  &le_N, 4);
     memcpy(personalization+12, &le_K, 4);
@@ -337,7 +337,7 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
     eh_index init_size { 1 << (CollisionBitLength + 1) };
 
     // 1) Generate first list
-    // LogPrint(BCLog::POW, "[POW] Generating first list\n");
+    // LogPrint(BCLog::POW, "[ProofOfWork] Generating first list\n");
     size_t hashLen = HashLength;
     size_t lenIndices = sizeof(eh_index);
     std::vector<FullStepRow<FullWidth>> X;
@@ -354,13 +354,13 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
 
     // 3) Repeat step 2 until 2n/(k+1) bits remain
     for (unsigned int r = 1; r < K && X.size() > 0; r++) {
-        // LogPrint(BCLog::POW, "[POW] Round %u:\n", r);
+        // LogPrint(BCLog::POW, "[ProofOfWork] Round %u:\n", r);
         // 2a) Sort the list
-        // LogPrint(BCLog::POW, "[POW] - Sorting list\n");
+        // LogPrint(BCLog::POW, "[ProofOfWork] - Sorting list\n");
         std::sort(X.begin(), X.end(), CompareSR(CollisionByteLength));
         if (cancelled(ListSorting)) throw solver_cancelled;
 
-        // LogPrint(BCLog::POW, "[POW] - Finding collisions\n");
+        // LogPrint(BCLog::POW, "[ProofOfWork] - Finding collisions\n");
         size_t i = 0;
         size_t posFree = 0;
         std::vector<FullStepRow<FullWidth>> Xc;
@@ -412,12 +412,12 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
     }
 
     // k+1) Find a collision on last 2n(k+1) bits
-    // LogPrint(BCLog::POW, "[POW] Final round:\n");
+    // LogPrint(BCLog::POW, "[ProofOfWork] Final round:\n");
     if (X.size() > 1) {
-        // LogPrint(BCLog::POW, "[POW] - Sorting list\n");
+        // LogPrint(BCLog::POW, "[ProofOfWork] - Sorting list\n");
         std::sort(X.begin(), X.end(), CompareSR(hashLen));
         if (cancelled(FinalSorting)) throw solver_cancelled;
-        // LogPrint(BCLog::POW, "[POW] - Finding collisions\n");
+        // LogPrint(BCLog::POW, "[ProofOfWork] - Finding collisions\n");
         size_t i = 0;
         while (i < X.size() - 1) {
             size_t j = 1;
@@ -443,7 +443,7 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
             if (cancelled(FinalColliding)) throw solver_cancelled;
         }
     } else
-        //LogPrint(BCLog::POW, "[POW] - List is empty\n");
+        //LogPrint(BCLog::POW, "[ProofOfWork] - List is empty\n");
 
     return false;
 }
@@ -516,7 +516,7 @@ bool Equihash<N,K>::OptimisedSolve(const eh_HashState& base_state,
     {
 
         // 1) Generate first list
-        //LogPrint(BCLog::POW, "[POW] Generating first list\n");
+        //LogPrint(BCLog::POW, "[ProofOfWork] Generating first list\n");
         size_t hashLen = HashLength;
         size_t lenIndices = sizeof(eh_trunc);
         std::vector<TruncatedStepRow<TruncatedWidth>> Xt;
@@ -533,13 +533,13 @@ bool Equihash<N,K>::OptimisedSolve(const eh_HashState& base_state,
 
         // 3) Repeat step 2 until 2n/(k+1) bits remain
         for (size_t r = 1; r < K && Xt.size() > 0; r++) {
-            //LogPrint(BCLog::POW, "[POW] Round %zu:\n", r);
+            //LogPrint(BCLog::POW, "[ProofOfWork] Round %zu:\n", r);
             // 2a) Sort the list
-            //LogPrint(BCLog::POW, "[POW] - Sorting list\n");
+            //LogPrint(BCLog::POW, "[ProofOfWork] - Sorting list\n");
             std::sort(Xt.begin(), Xt.end(), CompareSR(CollisionByteLength));
             if (cancelled(ListSorting)) throw solver_cancelled;
 
-            //LogPrint(BCLog::POW, "[POW] - Finding collisions\n");
+            //LogPrint(BCLog::POW, "[ProofOfWork] - Finding collisions\n");
             size_t i = 0;
             size_t posFree = 0;
             std::vector<TruncatedStepRow<TruncatedWidth>> Xc;
@@ -598,12 +598,12 @@ bool Equihash<N,K>::OptimisedSolve(const eh_HashState& base_state,
         }
 
         // k+1) Find a collision on last 2n(k+1) bits
-        //LogPrint(BCLog::POW, "Final round:\n");
+        //LogPrint(BCLog::POW, "[ProofOfWork] Final round:\n");
         if (Xt.size() > 1) {
-            //LogPrint(BCLog::POW, "[POW] - Sorting list\n");
+            //LogPrint(BCLog::POW, "[ProofOfWork] - Sorting list\n");
             std::sort(Xt.begin(), Xt.end(), CompareSR(hashLen));
             if (cancelled(FinalSorting)) throw solver_cancelled;
-            //LogPrint(BCLog::POW, "[POW] - Finding collisions\n");
+            //LogPrint(BCLog::POW, "[ProofOfWork] - Finding collisions\n");
             size_t i = 0;
             while (i < Xt.size() - 1) {
                 size_t j = 1;
@@ -627,14 +627,14 @@ bool Equihash<N,K>::OptimisedSolve(const eh_HashState& base_state,
                 if (cancelled(FinalColliding)) throw solver_cancelled;
             }
         } //else
-            //LogPrint(BCLog::POW, "[POW] - List is empty\n");
+            //LogPrint(BCLog::POW, "[ProofOfWork] - List is empty\n");
 
     } // Ensure Xt goes out of scope and is destroyed
 
-    //LogPrint(BCLog::POW, "[POW] Found %d partial solutions\n", partialSolns.size());
+    //LogPrint(BCLog::POW, "[ProofOfWork] Found %d partial solutions\n", partialSolns.size());
 
     // Now for each solution run the algorithm again to recreate the indices
-    //LogPrint(BCLog::POW, "[POW] Culling solutions\n");
+    //LogPrint(BCLog::POW, "[ProofOfWork] Culling solutions\n");
     for (std::shared_ptr<eh_trunc> partialSoln : partialSolns) {
         std::set<std::vector<unsigned char>> solns;
         size_t hashLen;
@@ -717,7 +717,7 @@ bool Equihash<N,K>::OptimisedSolve(const eh_HashState& base_state,
 invalidsolution:
         invalidCount++;
     }
-    //LogPrint(BCLog::POW, "[POW] - Number of invalid solutions found: %zu\n", invalidCount);
+    //LogPrint(BCLog::POW, "[ProofOfWork] - Number of invalid solutions found: %zu\n", invalidCount);
 
     return false;
 }
@@ -726,7 +726,7 @@ template<unsigned int N, unsigned int K>
 bool Equihash<N,K>::IsValidSolution(const eh_HashState& base_state, std::vector<unsigned char> soln)
 {
     if (soln.size() != SolutionWidth) {
-        // LogPrint(BCLog::POW, "[POW] Invalid solution length: %d (expected %d)\n", soln.size(), SolutionWidth);
+        // LogPrint(BCLog::POW, "[ProofOfWork] Invalid solution length: %d (expected %d)\n", soln.size(), SolutionWidth);
         return false;
     }
 
@@ -746,17 +746,17 @@ bool Equihash<N,K>::IsValidSolution(const eh_HashState& base_state, std::vector<
         for (size_t i = 0; i < X.size(); i += 2) {
             if (!HasCollision(X[i], X[i+1], CollisionByteLength)) {
                 // Most likely means that they are using the wrong pers string....
-                // LogPrint(BCLog::POW, "[POW] Invalid solution: invalid collision length between StepRows\n");
-                // LogPrint(BCLog::POW, "[POW] X[i]   = %s\n", X[i].GetHex(hashLen));
-                // LogPrint(BCLog::POW, "[POW] X[i+1] = %s\n", X[i+1].GetHex(hashLen));
+                // LogPrint(BCLog::POW, "[ProofOfWork] Invalid solution: invalid collision length between StepRows\n");
+                // LogPrint(BCLog::POW, "[ProofOfWork] X[i]   = %s\n", X[i].GetHex(hashLen));
+                // LogPrint(BCLog::POW, "[ProofOfWork] X[i+1] = %s\n", X[i+1].GetHex(hashLen));
                 return false;
             }
             if (X[i+1].IndicesBefore(X[i], hashLen, lenIndices)) {
-                // LogPrint(BCLog::POW, "[POW] Invalid solution: Index tree incorrectly ordered\n");
+                // LogPrint(BCLog::POW, "[ProofOfWork] Invalid solution: Index tree incorrectly ordered\n");
                 return false;
             }
             if (!DistinctIndices(X[i], X[i+1], hashLen, lenIndices)) {
-                // LogPrint(BCLog::POW, "[POW] Invalid solution: duplicate indices\n");
+                // LogPrint(BCLog::POW, "[ProofOfWork] Invalid solution: duplicate indices\n");
                 return false;
             }
             Xc.emplace_back(X[i], X[i+1], hashLen, lenIndices, CollisionByteLength);
