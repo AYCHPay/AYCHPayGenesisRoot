@@ -236,7 +236,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout.push_back(CTxOut(vGiveaways, chainparams.GetGiveawayScriptAtHeight(nHeight)));
     // Sanity check
     assert(vInfrastructure + vGiveaways + vFounders + coinbaseTx.vout[0].nValue == totalSubsidy);
-    //LogPrintf("Sanity Check Values:\nHeight = %f\nTotal Subsidy = %f\nTotal Deduction = %f\nMiner = %f\nFounder Total = %f\nFounder Split = %f\nInfrastructure = %f\nGiveaways = %f\n", nHeight, totalSubsidy, vBlockDeductionTotal, coinbaseTx.vout[0].nValue, vFounders, ifr, vInfrastructure, vGiveaways / COIN);
+    LogPrint(BCLog::POW, "[ProofOfWork] Sanity Check Values:\nHeight = %f\nTotal Subsidy = %f\nTotal Deduction = %f\nMiner = %f\nFounder Total = %f\nFounder Split = %f\nInfrastructure = %f\nGiveaways = %f\n", nHeight, totalSubsidy, vBlockDeductionTotal, coinbaseTx.vout[0].nValue, vFounders, ifr, vInfrastructure, vGiveaways / COIN);
 
     // Add fees
     coinbaseTx.vout[0].nValue += nFees;
@@ -303,8 +303,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockWithKey(CReserveKe
 
 bool BlockAssembler::ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 {
-    //LogPrintf("%s\n", pblock->ToString());
-    //LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
+    LogPrint(BCLog::POW, "[ProofOfWork] %s\n", pblock->ToString());
+    LogPrint(BCLog::POW, "[ProofOfWork] generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
 
     // Found a solution
     {
@@ -398,7 +398,7 @@ void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)
 
     bool fPrintPriority = gArgs.GetBoolArg("-printpriority", DEFAULT_PRINTPRIORITY);
     if (fPrintPriority) {
-        LogPrintf("fee %s txid %s\n",
+        LogPrint(BCLog::POW, "[ProofOfWork] fee %s txid %s\n",
                   CFeeRate(iter->GetModifiedFee(), iter->GetTxSize()).ToString(),
                   iter->GetTx().GetHash().ToString());
     }
@@ -620,7 +620,7 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
 void static GenesisMiner(CWallet *pwallet)
 {
-    LogPrintf("Genesis Miner started\n");
+    LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner started\n");
     //SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("genesis-miner");
     const CChainParams& chainparams = Params();
@@ -636,7 +636,7 @@ void static GenesisMiner(CWallet *pwallet)
 
     std::string solver = gArgs.GetArg("-equihashsolver", "tromp");
     assert(solver == "tromp" || solver == "default");
-    LogPrintf("Using Equihash solver \"%s\" with n = %u, k = %u\n", solver, n, k);
+    LogPrint(BCLog::POW, "[ProofOfWork] Using Equihash solver \"%s\" with n = %u, k = %u\n", solver, n, k);
 
     std::mutex m_cs;
     bool cancelSolver = false;
@@ -658,7 +658,7 @@ void static GenesisMiner(CWallet *pwallet)
                 // Busy-wait for the network to come online so we don't waste time mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
                 //miningTimer.stop();
-                LogPrintf("Checking for peers before mining commences\n");
+                LogPrint(BCLog::POW, "[ProofOfWork] Checking for peers before mining commences\n");
                 
                 do 
                 {
@@ -675,7 +675,7 @@ void static GenesisMiner(CWallet *pwallet)
                     }
                     else
                     {
-                        // LogPrintf("Waiting for peers...\n");
+                        // LogPrint(BCLog::POW, "[ProofOfWork] Waiting for peers...\n");
                     }
                     MilliSleep(1000);
                 } while (true);
@@ -693,19 +693,19 @@ void static GenesisMiner(CWallet *pwallet)
             {
                 if (gArgs.GetArg("-mineraddress", "").empty()) 
                 {
-                    LogPrintf("Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 } 
                 else 
                 {
                     // Should never reach here, because -mineraddress validity is checked in init.cpp
-                    LogPrintf("Error in Genesis Miner: Invalid -mineraddress\n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Invalid -mineraddress\n");
                 }
                 return;
             }
             CBlock *pblock = &pblocktemplate->block;
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
-            //LogPrintf("Running Genesis Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(), ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
+            LogPrint(BCLog::POW, "[ProofOfWork] Running Genesis Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(), ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             //
             // Search
@@ -758,8 +758,8 @@ void static GenesisMiner(CWallet *pwallet)
 
                     // Found a solution
                     //SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    //LogPrintf("Genesis Miner:\n");
-                    //LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
+                    LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner:\n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
                     if (blockassembler.ProcessBlockFound(pblock, *pwallet, reservekey)) 
                     {
                         // Ignore chain updates caused by us
@@ -848,22 +848,22 @@ void static GenesisMiner(CWallet *pwallet)
                 // Regtest mode doesn't require peers
                 if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0 && chainparams.MiningRequiresPeers())
                 {
-                    LogPrintf("Equihash solver broke out of the loop, as GetNodeCount is zero and mining requires peers \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, as GetNodeCount is zero and mining requires peers \n");
                     break;
                 }
                 if ((UintToArith256(pblock->nNonce) & 0xffff) == 0xffff)
                 {
-                    LogPrintf("Equihash solver broke out of the loop \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop \n");
                     break;
                 }
                 if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 {
-                    LogPrintf("Equihash solver broke out of the loop, because GetTransactionsUpdated was incorrect \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because GetTransactionsUpdated was incorrect \n");
                     break;
                 }
                 if (pindexPrev != chainActive.Tip())
                 {
-                    LogPrintf("Equihash solver broke out of the loop, because the previous index is not the active tip \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because the previous index is not the active tip \n");
                     break;
                 }
 
@@ -877,14 +877,14 @@ void static GenesisMiner(CWallet *pwallet)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintf("Genesis Miner thread terminated\n");
+        LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner thread terminated\n");
         throw;
     }
     catch (const std::runtime_error &e)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintf("Genesis Miner runtime error: %s\n", e.what());
+        LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner runtime error: %s\n", e.what());
         return;
     }
     //miningTimer.stop();
