@@ -297,6 +297,7 @@ void MasternodeLock(COutPoint outpoint) {
             LogPrintf("Masternode Output is not spendable -- cannot get locked: %s", outpoint.hash.GetHex());
             continue;
         }
+        LOCK(pwallet->cs_wallet);
         pwallet->LockCoin(outpoint);
     }
 }

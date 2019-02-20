@@ -414,6 +414,7 @@ bool CMasternodeBroadcast::Create(const std::string& strService, const std::stri
     const COutPoint outpt(uint256S(strTxHash), std::stoi(strOutputIndex));
 
     for (CWalletRef pwallet : vpwallets) {
+        LOCK2(cs_main, pwallet->cs_wallet);
         pwallet->UnlockCoin(outpt);
         if (pwallet->GetMasternodeOutpointAndKeys(outpoint, pubKeyCollateralAddressNew, keyCollateralAddressNew, strTxHash, strOutputIndex)) {
             pwallet->LockCoin(outpt);

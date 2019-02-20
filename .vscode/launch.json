@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/src/genesisd",
-      "args": ["-testnet", "-datadir=/home/loki/mndebug/1", "-debug"],
+      "args": ["-testnet", "-debug"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
