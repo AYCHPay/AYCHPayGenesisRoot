@@ -12,7 +12,7 @@
 
 void zmqError(const char *str)
 {
-    LogPrint(BCLog::ZMQ, "zmq: Error: %s, errno=%s\n", str, zmq_strerror(errno));
+    LogPrint(BCLog::ZMQ, "[zmq] Error: %s, errno=%s\n", str, zmq_strerror(errno));
 }
 
 CZMQNotificationInterface::CZMQNotificationInterface() : pcontext(nullptr)
@@ -72,7 +72,7 @@ CZMQNotificationInterface* CZMQNotificationInterface::Create()
 // Called at startup to conditionally set up ZMQ socket(s)
 bool CZMQNotificationInterface::Initialize()
 {
-    LogPrint(BCLog::ZMQ, "zmq: Initialize notification interface\n");
+    LogPrint(BCLog::ZMQ, "[zmq] Initialize notification interface\n");
     assert(!pcontext);
 
     pcontext = zmq_init(1);
@@ -109,7 +109,7 @@ bool CZMQNotificationInterface::Initialize()
 // Called during shutdown sequence
 void CZMQNotificationInterface::Shutdown()
 {
-    LogPrint(BCLog::ZMQ, "zmq: Shutdown notification interface\n");
+    LogPrint(BCLog::ZMQ, "[zmq] Shutdown notification interface\n");
     if (pcontext)
     {
         for (std::list<CZMQAbstractNotifier*>::iterator i=notifiers.begin(); i!=notifiers.end(); ++i)
