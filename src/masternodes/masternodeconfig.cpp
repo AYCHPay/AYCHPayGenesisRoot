@@ -29,7 +29,7 @@ bool CMasternodeConfig::read(std::string& strErrRet) {
         if (configFile != NULL) {
             std::string strHeader = "# Masternode config file\n"
                           "# Format: alias IP:port masternodeprivkey collateral_output_txid collateral_output_index\n"
-                          "# Example: mn1 127.0.0.2:40333 6zUH728xDrgXR1qtNdAgrhiHNARRJoQZUuKgy1bur87QFpixLrn f589ff623c5db9687b059728ae3373a2a0ddffc2bb3249c367ed214cc1bc842e 0\n";
+                          "# Example: mn1 127.0.0.2:7233 6zUH728xDrgXR1qtNdAgrhiHNARRJoQZUuKgy1bur87QFpixLrn f589ff623c5db9687b059728ae3373a2a0ddffc2bb3249c367ed214cc1bc842e 0\n";
             fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
             fclose(configFile);
         }
@@ -70,6 +70,8 @@ bool CMasternodeConfig::read(std::string& strErrRet) {
             return false;
         }
         int mainnetDefaultPort = CreateChainParams(CBaseChainParams::MAIN)->GetDefaultPort();
+        int testnetDefaultPort = CreateChainParams(CBaseChainParams::TESTNET)->GetDefaultPort();
+        int regTestDefaultPort = CreateChainParams(CBaseChainParams::REGTEST)->GetDefaultPort();
         if (Params().NetworkIDString() == CBaseChainParams::MAIN) {
             if (port != mainnetDefaultPort) {
                 strErrRet = _("Invalid port detected in masternode.conf") + "\n" +
@@ -79,14 +81,27 @@ bool CMasternodeConfig::read(std::string& strErrRet) {
                 streamConfig.close();
                 return false;
             }
-        } else if (port == mainnetDefaultPort) {
-            strErrRet = _("Invalid port detected in masternode.conf") + "\n" +
-                    strprintf(_("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
-                    strprintf(_("(%d could be used only on mainnet)"), mainnetDefaultPort);
-            streamConfig.close();
-            return false;
-        }
-
+        } 
+        else if (Params().NetworkIDString() == CBaseChainParams::TESTNET) {
+            if (port != testnetDefaultPort) {
+                strErrRet = _("Invalid port detected in masternode.conf") + "\n" +
+                        strprintf(_("Port: %d"), port) + "\n" +
+                        strprintf(_("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
+                        strprintf(_("(must be %d for testnet)"), testnetDefaultPort);
+                streamConfig.close();
+                return false;
+            }
+        } 
+        else if (Params().NetworkIDString() == CBaseChainParams::REGTEST) {
+            if (port != regTestDefaultPort) {
+                strErrRet = _("Invalid port detected in masternode.conf") + "\n" +
+                        strprintf(_("Port: %d"), port) + "\n" +
+                        strprintf(_("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
+                        strprintf(_("(must be %d for regtest)"), regTestDefaultPort);
+                streamConfig.close();
+                return false;
+            }
+        } 
 
         add(alias, ip, privKey, txHash, outputIndex);
     }
