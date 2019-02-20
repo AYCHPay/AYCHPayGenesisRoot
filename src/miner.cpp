@@ -364,7 +364,6 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockWithKey(CReserveKe
 bool BlockAssembler::ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 {
     LogPrint(BCLog::POW, "[ProofOfWork] %s\n", pblock->ToString());
-    LogPrint(BCLog::POW, "[ProofOfWork] generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
 
     // Found a solution
     {
