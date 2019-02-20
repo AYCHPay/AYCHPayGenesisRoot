@@ -89,7 +89,12 @@ bool CMasternodeMan::Add(CMasternode &mn)
 
 void CMasternodeMan::AskForMN(CNode* pnode, const COutPoint& outpoint, CConnman& connman)
 {
-    if (!pnode) return;
+    if (!pnode)
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::AskForMN -- pnode is invalid \n");
+        return;
+    } 
+        
 
     LOCK(cs);
 
@@ -150,7 +155,11 @@ void CMasternodeMan::Check()
 
 void CMasternodeMan::CheckAndRemove(CConnman& connman)
 {
-    if (!masternodeSync.IsMasternodeListSynced()) return;
+    if (!masternodeSync.IsMasternodeListSynced())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::CheckAndRemove -- Masternode list is not synced \n");
+        return;
+    } 
 
     {
         // Need LOCK2 here to ensure consistent locking order because code below locks cs_main
@@ -838,7 +847,11 @@ bool CMasternodeMan::GetMasternodeRanks(CMasternodeMan::rank_pair_vec_t& vecMast
 void CMasternodeMan::ProcessMasternodeConnections(CConnman& connman)
 {
     //we don't care about this for regtest
-    if (Params().NetworkIDString() == CBaseChainParams::REGTEST) return;
+    if (Params().NetworkIDString() == CBaseChainParams::REGTEST)
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMasternodeConnections -- Skipped (RegTest) \n");
+        return;
+    }
 
     connman.ForEachNode(CConnman::AllNodes, [](CNode* pnode) {
 #ifdef ENABLE_WALLET
@@ -883,7 +896,11 @@ void CMasternodeMan::ProcessPendingMnbRequests(CConnman& connman)
 {
     std::pair<CService, std::set<uint256> > p = PopScheduledMnbRequestConnection();
     if (!(p.first == CService() || p.second.empty())) {
-        if (connman.IsMasternodeOrDisconnectRequested(p.first)) return;
+        if (connman.IsMasternodeOrDisconnectRequested(p.first))
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMasternodeConnections -- Skipped (IsMasternodeOrDisconnectRequested) \n");
+            return;
+        }
         mapPendingMNB.insert(std::make_pair(p.first, std::make_pair(GetTime(), p.second)));
         connman.AddPendingMasternode(p.first);
     }
@@ -924,7 +941,11 @@ void CMasternodeMan::ProcessPendingMnbRequests(CConnman& connman)
 
 void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman& connman)
 {  
-    if (fLiteMode) return; // disable all Genesis masternode specific functionality
+    if (fLiteMode)
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage -- Skipped (Lite Mode Detected) \n");
+        return;
+    } // disable all Genesis masternode specific functionality
 
     if (strCommand == NetMsgType::MNANNOUNCE) { //Masternode Broadcast
 
@@ -933,7 +954,11 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         pfrom->setAskFor.erase(mnb.GetHash());
 
-        if (!masternodeSync.IsBlockchainSynced()) return;
+        if (!masternodeSync.IsBlockchainSynced())
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNANNOUNCE) -- Skipped (Blockchain not synced) \n");
+            return;
+        }
 
         LogPrint(BCLog::MN, "[Masterenodes] MNANNOUNCE -- Masternode announce, masternode=%s\n", mnb.outpoint.ToStringShort());
 
@@ -960,14 +985,23 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         pfrom->setAskFor.erase(nHash);
 
-        if (!masternodeSync.IsBlockchainSynced()) return;
+        if (!masternodeSync.IsBlockchainSynced())
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNPING) -- Skipped (Blockchain not synced) \n");
+            return;
+        }
 
-        LogPrint(BCLog::MN, "[Masterenodes] MNPING -- Masternode ping, masternode=%s\n", mnp.masternodeOutpoint.ToStringShort());
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNPING) -- Masternode ping, masternode=%s\n", mnp.masternodeOutpoint.ToStringShort());
 
         // Need LOCK2 here to ensure consistent locking order because the CheckAndUpdate call below locks cs_main
         LOCK2(cs_main, cs);
 
-        if (mapSeenMasternodePing.count(nHash)) return; //seen
+        if (mapSeenMasternodePing.count(nHash))
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNPING) -- Skipped (Seen) \n");
+            return;
+        } //seen
+
         mapSeenMasternodePing.insert(std::make_pair(nHash, mnp));
 
         LogPrint(BCLog::MN, "[Masterenodes] MNPING -- Masternode ping, masternode=%s new\n", mnp.masternodeOutpoint.ToStringShort());
@@ -979,10 +1013,18 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
             UpdateLastSentinelPingTime();
 
         // too late, new MNANNOUNCE is required
-        if (pmn && pmn->IsNewStartRequired()) return;
+        if (pmn && pmn->IsNewStartRequired())
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNPING) -- Skipped (Too late, new MNANNOUNCE required) \n");
+            return;
+        }
 
         int nDos = 0;
-        if (mnp.CheckAndUpdate(pmn, false, nDos, connman)) return;
+        if (mnp.CheckAndUpdate(pmn, false, nDos, connman))
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNPING) -- Skipped (Updated) \n");
+            return;
+        }
 
         if (nDos > 0) {
             // if anything significant failed, mark that node
@@ -1000,7 +1042,11 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
         // Ignore such requests until we are fully synced.
         // We could start processing this after masternode list is synced
         // but this is a heavy one so it's better to finish sync first.
-        if (!masternodeSync.IsSynced()) return;
+        if (!masternodeSync.IsSynced())
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (DSEG) -- Skipped (Masternodes not synced) \n");
+            return;
+        }
 
         COutPoint masternodeOutpoint;
 
@@ -1030,7 +1076,11 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         pfrom->setAskFor.erase(mnv.GetHash());
 
-        if (!masternodeSync.IsMasternodeListSynced()) return;
+        if (!masternodeSync.IsMasternodeListSynced())
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::ProcessMessage (MNVERIFY) -- Skipped (Mastenode list not synced) \n");
+            return;
+        }
 
         if (mnv.vchSig1.empty()) {
             // CASE 1: someone asked me to verify myself /IP we are using/
@@ -1048,14 +1098,22 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 void CMasternodeMan::SyncSingle(CNode* pnode, const COutPoint& outpoint, CConnman& connman)
 {
     // do not provide any data until our node is synced
-    if (!masternodeSync.IsSynced()) return;
+    if (!masternodeSync.IsSynced())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::SyncSingle -- Skipped (Masternodes not synced) \n");
+        return;
+    }
 
     LOCK(cs);
 
     auto it = mapMasternodes.find(outpoint);
 
     if (it != mapMasternodes.end()) {
-        if (it->second.addr.IsRFC1918() || it->second.addr.IsLocal()) return; // do not send local network masternode
+        if (it->second.addr.IsRFC1918() || it->second.addr.IsLocal())
+        {
+            LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::SyncSingle -- Skipped (Local Network Masternode) \n");
+            return;
+        } // do not send local network masternode
         // NOTE: send masternode regardless of its current state, the other node will need it to verify old votes.
         LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::%s -- Sending Masternode entry: masternode=%s  addr=%s\n", __func__, outpoint.ToStringShort(), it->second.addr.ToString());
         PushDsegInvs(pnode, it->second);
@@ -1066,7 +1124,11 @@ void CMasternodeMan::SyncSingle(CNode* pnode, const COutPoint& outpoint, CConnma
 void CMasternodeMan::SyncAll(CNode* pnode, CConnman& connman)
 {
     // do not provide any data until our node is synced
-    if (!masternodeSync.IsSynced()) return;
+    if (!masternodeSync.IsSynced())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::SyncAll -- Skipped (Masternodes not synced) \n");
+        return;
+    }
 
     // local network
     bool isLocal = (pnode->addr.IsRFC1918() || pnode->addr.IsLocal());
@@ -1128,8 +1190,16 @@ void CMasternodeMan::PushDsegInvs(CNode* pnode, const CMasternode& mn)
 
 void CMasternodeMan::DoFullVerificationStep(CConnman& connman)
 {
-    if (activeMasternode.outpoint.IsNull()) return;
-    if (!masternodeSync.IsSynced()) return;
+    if (activeMasternode.outpoint.IsNull())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::DoFullVerificationStep -- Skipped (Outpoint is Null) \n");
+        return;
+    }
+    if (!masternodeSync.IsSynced())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::DoFullVerificationStep -- Skipped (Masternodes not synced) \n");
+        return;
+    }
 
     rank_pair_vec_t vecMasternodeRanks;
     GetMasternodeRanks(vecMasternodeRanks, nCachedBlockHeight - 1, MIN_POSE_PROTO_VERSION);
@@ -1159,12 +1229,20 @@ void CMasternodeMan::DoFullVerificationStep(CConnman& connman)
     }
 
     // edge case: list is too short and this masternode is not enabled
-    if (nMyRank == -1) return;
+    if (nMyRank == -1)
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::DoFullVerificationStep -- Skipped (List is too short and this masternode is not enabled) \n");
+        return;
+    }
 
     // send verify requests to up to MAX_POSE_CONNECTIONS masternodes
     // starting from MAX_POSE_RANK + nMyRank and using MAX_POSE_CONNECTIONS as a step
     int nOffset = MAX_POSE_RANK + nMyRank - 1;
-    if (nOffset >= (int)vecMasternodeRanks.size()) return;
+    if (nOffset >= (int)vecMasternodeRanks.size())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::DoFullVerificationStep -- Skipped (Offset too large) \n");
+        return;
+    }
 
     std::vector<const CMasternode*> vSortedByAddr;
     for (const auto& mnpair : mapMasternodes) {
@@ -1207,7 +1285,16 @@ void CMasternodeMan::DoFullVerificationStep(CConnman& connman)
 
 void CMasternodeMan::CheckSameAddr()
 {
-    if (!masternodeSync.IsSynced() || mapMasternodes.empty()) return;
+    if (!masternodeSync.IsSynced())
+    {
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::CheckSameAddr -- Skipped (Masternodes not synced) \n");
+        return;
+    }
+    else if (mapMasternodes.empty())
+    { 
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::CheckSameAddr -- Skipped (Masternodes map is empty) \n");
+        return;
+    }
 
     std::vector<CMasternode*> vBan;
     std::vector<CMasternode*> vSortedByAddr;
@@ -1746,7 +1833,23 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex, bool lock)
 {
     LOCK(cs);
 
-    if (fLiteMode || !masternodeSync.IsWinnersListSynced() || mapMasternodes.empty()) return;
+    if (fLiteMode)
+    { 
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::UpdateLastPaid -- Skipped (fLiteMode enabled) \n");
+        return;
+    }
+
+    if (!masternodeSync.IsWinnersListSynced())
+    { 
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::UpdateLastPaid -- Skipped (Winners list not synced) \n");
+        return;
+    }
+
+    if (mapMasternodes.empty())
+    { 
+        LogPrint(BCLog::MN, "[Masterenodes] CMasternodeMan::UpdateLastPaid -- Skipped (Masternodes map is empty) \n");
+        return;
+    }
 
     static int nLastRunBlockHeight = 0;
     // Scan at least LAST_PAID_SCAN_BLOCKS but no more than mnpayments.GetStorageLimit()
