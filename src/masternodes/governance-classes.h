@@ -109,12 +109,12 @@ public:
         }
         catch (std::exception& e)
         {
-            LogPrintf("CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d, what = %s\n",
+            LogPrint(BCLog::GOV, "[Governance] CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d, what = %s\n",
                 addrIn, nAmountIn, e.what());
         }
         catch (...)
         {
-            LogPrintf("CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d\n",
+            LogPrint(BCLog::GOV, "[Governance] CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d\n",
                 addrIn, nAmountIn);
         }
     }

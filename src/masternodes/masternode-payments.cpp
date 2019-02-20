@@ -449,12 +449,12 @@ bool CMasternodePaymentVote::Sign()
         uint256 hash = GetSignatureHash();
 
         if (!CHashSigner::SignHash(hash, activeMasternode.keyMasternode, vchSig)) {
-            LogPrintf("CMasternodePaymentVote::Sign -- SignHash() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePaymentVote::Sign -- SignHash() failed\n");
             return false;
         }
 
         if (!CHashSigner::VerifyHash(hash, activeMasternode.pubKeyMasternode, vchSig, strError)) {
-            LogPrintf("CMasternodePaymentVote::Sign -- VerifyHash() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePaymentVote::Sign -- VerifyHash() failed, error: %s\n", strError);
             return false;
         }
     } else {
@@ -463,12 +463,12 @@ bool CMasternodePaymentVote::Sign()
                     ScriptToAsmStr(payee);
 
         if (!CMessageSigner::SignMessage(strMessage, vchSig, activeMasternode.keyMasternode)) {
-            LogPrintf("CMasternodePaymentVote::Sign -- SignMessage() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePaymentVote::Sign -- SignMessage() failed\n");
             return false;
         }
 
         if (!CMessageSigner::VerifyMessage(activeMasternode.pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrintf("CMasternodePaymentVote::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePaymentVote::Sign -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }
@@ -783,7 +783,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
         return false;
     }
 
-    LogPrintf("CMasternodePayments::ProcessBlock -- Masternode found by GetNextMasternodesInQueueForPayment(): %s\n", mnInfo.outpoint.ToStringShort());
+    LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::ProcessBlock -- Masternode found by GetNextMasternodesInQueueForPayment(): %s\n", mnInfo.outpoint.ToStringShort());
 
     CScript payee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
 
@@ -798,7 +798,7 @@ bool CMasternodePayments::ProcessBlock(int nBlockHeight, CConnman& connman)
 
     LogPrint(BCLog::MN, "[Masterenodes] CMasternodePayments::ProcessBlock -- Signing vote\n");
     if (voteNew.Sign()) {
-        LogPrintf("CMasternodePayments::ProcessBlock -- AddOrUpdatePaymentVote()\n");
+        LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::ProcessBlock -- AddOrUpdatePaymentVote()\n");
 
         if (AddOrUpdatePaymentVote(voteNew)) {
             voteNew.Relay(connman);
@@ -815,7 +815,7 @@ void CMasternodePayments::CheckBlockVotes(int nBlockHeight)
 
     CMasternodeMan::rank_pair_vec_t mns;
     if (!mnodeman.GetMasternodeRanks(mns, nBlockHeight - 101, GetMinMasternodePaymentsProto())) {
-        LogPrintf("CMasternodePayments::CheckBlockVotes -- nBlockHeight=%d, GetMasternodeRanks failed\n", nBlockHeight);
+        LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::CheckBlockVotes -- nBlockHeight=%d, GetMasternodeRanks failed\n", nBlockHeight);
         return;
     }
     

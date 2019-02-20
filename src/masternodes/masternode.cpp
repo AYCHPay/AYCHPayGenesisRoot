@@ -495,7 +495,7 @@ bool CMasternodeBroadcast::SimpleCheck(int& nDos)
     }
 
     if (nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto()) {
-        LogPrintf("CMasternodeBroadcast::SimpleCheck -- outdated Masternode: masternode=%s  nProtocolVersion=%d\n", outpoint.ToStringShort(), nProtocolVersion);
+        LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::SimpleCheck -- outdated Masternode: masternode=%s  nProtocolVersion=%d\n", outpoint.ToStringShort(), nProtocolVersion);
         nActiveState = MASTERNODE_UPDATE_REQUIRED;
     }
 
@@ -609,7 +609,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
     }
 
     if (chainActive.Height() - nHeight + 1 < Params().GetConsensus().nMasternodeMinimumConfirmations) {
-        LogPrintf("CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO must have at least %d confirmations, masternode=%s\n",
+        LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::CheckOutpoint -- Masternode UTXO must have at least %d confirmations, masternode=%s\n",
                 Params().GetConsensus().nMasternodeMinimumConfirmations, outpoint.ToStringShort());
         // UTXO is legit but has not enough confirmations.
         // Maybe we miss few blocks, let this mnb be checked again later.
@@ -624,13 +624,13 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
     // NOTE: this is not accurate because block timestamp is NOT guaranteed to be 100% correct one.
     CBlockIndex* pRequiredConfIndex = chainActive[nHeight + Params().GetConsensus().nMasternodeMinimumConfirmations - 1]; // block where tx got nMasternodeMinimumConfirmations
     if (pRequiredConfIndex->GetBlockTime() > sigTime) {
-        LogPrintf("CMasternodeBroadcast::CheckOutpoint -- Bad sigTime %d (%d conf block is at %d) for Masternode %s %s\n",
+        LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::CheckOutpoint -- Bad sigTime %d (%d conf block is at %d) for Masternode %s %s\n",
                   sigTime, Params().GetConsensus().nMasternodeMinimumConfirmations, pRequiredConfIndex->GetBlockTime(), outpoint.ToStringShort(), addr.ToString());
         return false;
     }
 
     if (!CheckSignature(nDos)) {
-        LogPrintf("CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode=%s\n", outpoint.ToStringShort());
+        LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::CheckOutpoint -- CheckSignature() failed, masternode=%s\n", outpoint.ToStringShort());
         return false;
     }
 
@@ -674,11 +674,11 @@ bool CMasternodeBroadcast::Sign(const CKey& keyCollateralAddress)
     if (chainActive.Height() > Params().GetConsensus().nMasternodeSignHashThreshold) {
         uint256 hash = GetSignatureHash();
         if (!CHashSigner::SignHash(hash, keyCollateralAddress, vchSig)) {
-            LogPrintf("CMasternodeBroadcast::Sign -- SignHash() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::Sign -- SignHash() failed\n");
             return false;
         }
         if (!CHashSigner::VerifyHash(hash, pubKeyCollateralAddress, vchSig, strError)) {
-            LogPrintf("CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     } else {
@@ -687,12 +687,12 @@ bool CMasternodeBroadcast::Sign(const CKey& keyCollateralAddress)
                         boost::lexical_cast<std::string>(nProtocolVersion);
 
         if (!CMessageSigner::SignMessage(strMessage, vchSig, keyCollateralAddress)) {
-            LogPrintf("CMasternodeBroadcast::Sign -- SignMessage() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::Sign -- SignMessage() failed\n");
             return false;
         }
 
         if (!CMessageSigner::VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)) {
-            LogPrintf("CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::Sign -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }
@@ -715,7 +715,7 @@ bool CMasternodeBroadcast::CheckSignature(int& nDos) const
 
             if (!CMessageSigner::VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)){
                 // nope, not in old format either
-                LogPrintf("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: %s\n", strError);
+                LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: %s\n", strError);
                 nDos = 100;
                 return false;
             }
@@ -726,7 +726,7 @@ bool CMasternodeBroadcast::CheckSignature(int& nDos) const
                         boost::lexical_cast<std::string>(nProtocolVersion);
 
         if (!CMessageSigner::VerifyMessage(pubKeyCollateralAddress, vchSig, strMessage, strError)){
-            LogPrintf("CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeBroadcast::CheckSignature -- Got bad Masternode announce signature, error: %s\n", strError);
             nDos = 100;
             return false;
         }
@@ -796,12 +796,12 @@ bool CMasternodePing::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMaste
     if (chainActive.Height() > Params().GetConsensus().nMasternodeSignHashThreshold) {
         uint256 hash = GetSignatureHash();
         if (!CHashSigner::SignHash(hash, keyMasternode, vchSig)) {
-            LogPrintf("CMasternodePing::Sign -- SignHash() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePing::Sign -- SignHash() failed\n");
             return false;
         }
 
         if (!CHashSigner::VerifyHash(hash, pubKeyMasternode, vchSig, strError)) {
-            LogPrintf("CMasternodePing::Sign -- VerifyHash() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePing::Sign -- VerifyHash() failed, error: %s\n", strError);
             return false;
         }
     } else {
@@ -809,12 +809,12 @@ bool CMasternodePing::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMaste
                     boost::lexical_cast<std::string>(sigTime);
 
         if (!CMessageSigner::SignMessage(strMessage, vchSig, keyMasternode)) {
-            LogPrintf("CMasternodePing::Sign -- SignMessage() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePing::Sign -- SignMessage() failed\n");
             return false;
         }
 
         if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrintf("CMasternodePing::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePing::Sign -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }
@@ -835,7 +835,7 @@ bool CMasternodePing::CheckSignature(const CPubKey& pubKeyMasternode, int &nDos)
                         boost::lexical_cast<std::string>(sigTime);
 
             if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                LogPrintf("CMasternodePing::CheckSignature -- Got bad Masternode ping signature, masternode=%s, error: %s\n", masternodeOutpoint.ToStringShort(), strError);
+                LogPrint(BCLog::MN, "[Masternodes] CMasternodePing::CheckSignature -- Got bad Masternode ping signature, masternode=%s, error: %s\n", masternodeOutpoint.ToStringShort(), strError);
                 nDos = 33;
                 return false;
             }
@@ -845,7 +845,7 @@ bool CMasternodePing::CheckSignature(const CPubKey& pubKeyMasternode, int &nDos)
                     boost::lexical_cast<std::string>(sigTime);
 
         if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrintf("CMasternodePing::CheckSignature -- Got bad Masternode ping signature, masternode=%s, error: %s\n", masternodeOutpoint.ToStringShort(), strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePing::CheckSignature -- Got bad Masternode ping signature, masternode=%s, error: %s\n", masternodeOutpoint.ToStringShort(), strError);
             nDos = 33;
             return false;
         }

@@ -81,7 +81,7 @@ vote_signal_enum_t CGovernanceVoting::ConvertVoteSignal(const std::string& strVo
 
     const auto& it = mapStrVoteSignals.find(strVoteSignal);
     if (it == mapStrVoteSignals.end()) {
-        LogPrintf("CGovernanceVoting::%s -- ERROR: Unknown signal %s\n", __func__, strVoteSignal);
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceVoting::%s -- ERROR: Unknown signal %s\n", __func__, strVoteSignal);
         return VOTE_SIGNAL_NONE;
     }
     return it->second;
@@ -164,12 +164,12 @@ bool CGovernanceVote::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMaste
         uint256 hash = GetSignatureHash();
 
         if (!CHashSigner::SignHash(hash, keyMasternode, vchSig)) {
-            LogPrintf("CGovernanceVote::Sign -- SignHash() failed\n");
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::Sign -- SignHash() failed\n");
             return false;
         }
 
         if (!CHashSigner::VerifyHash(hash, pubKeyMasternode, vchSig, strError)) {
-            LogPrintf("CGovernanceVote::Sign -- VerifyHash() failed, error: %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::Sign -- VerifyHash() failed, error: %s\n", strError);
             return false;
         }
     } else {
@@ -177,12 +177,12 @@ bool CGovernanceVote::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMaste
             boost::lexical_cast<std::string>(nVoteSignal) + "|" + boost::lexical_cast<std::string>(nVoteOutcome) + "|" + boost::lexical_cast<std::string>(nTime);
 
         if (!CMessageSigner::SignMessage(strMessage, vchSig, keyMasternode)) {
-            LogPrintf("CGovernanceVote::Sign -- SignMessage() failed\n");
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::Sign -- SignMessage() failed\n");
             return false;
         }
 
         if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrintf("CGovernanceVote::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceVote::Sign -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }

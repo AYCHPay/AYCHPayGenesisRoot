@@ -268,23 +268,23 @@ bool CGovernanceObject::Sign(const CKey& keyMasternode, const CPubKey& pubKeyMas
         uint256 hash = GetSignatureHash();
 
         if (!CHashSigner::SignHash(hash, keyMasternode, vchSig)) {
-            LogPrintf("CGovernanceObject::Sign -- SignHash() failed\n");
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::Sign -- SignHash() failed\n");
             return false;
         }
 
         if (!CHashSigner::VerifyHash(hash, pubKeyMasternode, vchSig, strError)) {
-            LogPrintf("CGovernanceObject::Sign -- VerifyHash() failed, error: %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::Sign -- VerifyHash() failed, error: %s\n", strError);
             return false;
         }
     } else {
         std::string strMessage = GetSignatureMessage();
         if (!CMessageSigner::SignMessage(strMessage, vchSig, keyMasternode)) {
-            LogPrintf("CGovernanceObject::Sign -- SignMessage() failed\n");
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::Sign -- SignMessage() failed\n");
             return false;
         }
 
         if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrintf("CGovernanceObject::Sign -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::Sign -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }
@@ -306,13 +306,13 @@ bool CGovernanceObject::CheckSignature(const CPubKey& pubKeyMasternode) const
             std::string strMessage = GetSignatureMessage();
             if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
                 // nope, not in old format either
-                LogPrintf("CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
+                LogPrint(BCLog::GOV, "[Governance] CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
                 return false;
             }
         } else {
             std::string strMessage = GetSignatureMessage();
             if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-                LogPrintf("CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
+                LogPrint(BCLog::GOV, "[Governance] CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
                 return false;
             }
         }
@@ -320,7 +320,7 @@ bool CGovernanceObject::CheckSignature(const CPubKey& pubKeyMasternode) const
         std::string strMessage = GetSignatureMessage();
 
         if (!CMessageSigner::VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
-            LogPrintf("CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
             return false;
         }
     }
@@ -537,7 +537,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError, bool& fMissingC
 
     if (!GetTransaction(nCollateralHash, txCollateral, Params().GetConsensus(), nBlockHash, true)){
         strError = strprintf("Can't find collateral tx %s", nCollateralHash.ToString());
-        LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
 
@@ -563,7 +563,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError, bool& fMissingC
     for (const auto& output : txCollateral->vout) {
         if (!output.scriptPubKey.IsPayToScriptHash() && !output.scriptPubKey.IsUnspendable()) {
             //strError = strprintf("Invalid Script %s", txCollateral.GetHash().ToString());
-            LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+            LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
         if (output.scriptPubKey == findScript && output.nValue >= nMinFee) {
@@ -574,7 +574,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError, bool& fMissingC
 
     if (!foundOpReturn){
         //strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.GetHash().ToString());
-        LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
 
@@ -600,7 +600,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError, bool& fMissingC
         } else {
             strError += ", rejected -- try again later";
         }
-        LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
+        LogPrint(BCLog::GOV, "[Governance] CGovernanceObject::IsCollateralValid -- %s\n", strError);
 
         return false;
     }

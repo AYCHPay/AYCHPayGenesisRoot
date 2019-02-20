@@ -1479,12 +1479,12 @@ void CMasternodeMan::SendVerifyReply(CNode* pnode, CMasternodeVerification& mnv,
         std::string strMessage = strprintf("%s%d%s", activeMasternode.service.ToString(), mnv.nonce, blockHash.ToString());
 
         if (!CMessageSigner::SignMessage(strMessage, mnv.vchSig1, activeMasternode.keyMasternode)) {
-            LogPrintf("MasternodeMan::SendVerifyReply -- SignMessage() failed\n");
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- SignMessage() failed\n");
             return;
         }
 
         if (!CMessageSigner::VerifyMessage(activeMasternode.pubKeyMasternode, mnv.vchSig1, strMessage, strError)) {
-            LogPrintf("MasternodeMan::SendVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
             return;
         }
     }
@@ -1581,12 +1581,12 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
                         uint256 hash2 = mnv.GetSignatureHash2(blockHash);
 
                         if (!CHashSigner::SignHash(hash2, activeMasternode.keyMasternode, mnv.vchSig2)) {
-                            LogPrintf("MasternodeMan::ProcessVerifyReply -- SignHash() failed\n");
+                            LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- SignHash() failed\n");
                             return;
                         }
 
                         if (!CHashSigner::VerifyHash(hash2, activeMasternode.pubKeyMasternode, mnv.vchSig2, strError)) {
-                            LogPrintf("MasternodeMan::ProcessVerifyReply -- VerifyHash() failed, error: %s\n", strError);
+                            LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- VerifyHash() failed, error: %s\n", strError);
                             return;
                         }
                     } else {
@@ -1594,12 +1594,12 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
                                                 mnv.masternodeOutpoint1.ToStringShort(), mnv.masternodeOutpoint2.ToStringShort());
 
                         if (!CMessageSigner::SignMessage(strMessage2, mnv.vchSig2, activeMasternode.keyMasternode)) {
-                            LogPrintf("MasternodeMan::ProcessVerifyReply -- SignMessage() failed\n");
+                            LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- SignMessage() failed\n");
                             return;
                         }
 
                         if (!CMessageSigner::VerifyMessage(activeMasternode.pubKeyMasternode, mnv.vchSig2, strMessage2, strError)) {
-                            LogPrintf("MasternodeMan::ProcessVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
+                            LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
                             return;
                         }
                     }
@@ -1710,12 +1710,12 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
             uint256 hash2 = mnv.GetSignatureHash2(blockHash);
 
             if (!CHashSigner::VerifyHash(hash1, pmn1->pubKeyMasternode, mnv.vchSig1, strError)) {
-                LogPrintf("MasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
+                LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
                 return;
             }
 
             if (!CHashSigner::VerifyHash(hash2, pmn2->pubKeyMasternode, mnv.vchSig2, strError)) {
-                LogPrintf("MasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
+                LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
                 return;
             }
         } else {
