@@ -161,7 +161,7 @@ void TorControlConnection::readcb(struct bufferevent *bev, void *ctx)
                     self->reply_handlers.front()(*self, self->message);
                     self->reply_handlers.pop_front();
                 } else {
-                    LogPrint\(BCLog::TOR, "[Tor] Received unexpected sync reply %i\n", self->message.code);
+                    LogPrint(BCLog::TOR, "[Tor] Received unexpected sync reply %i\n", self->message.code);
                 }
             }
             self->message.Clear();
@@ -180,13 +180,13 @@ void TorControlConnection::eventcb(struct bufferevent *bev, short what, void *ct
 {
     TorControlConnection *self = (TorControlConnection*)ctx;
     if (what & BEV_EVENT_CONNECTED) {
-        LogPrint\(BCLog::TOR, "[Tor] Successfully connected!\n");
+        LogPrint(BCLog::TOR, "[Tor] Successfully connected!\n");
         self->connected(*self);
     } else if (what & (BEV_EVENT_EOF|BEV_EVENT_ERROR)) {
         if (what & BEV_EVENT_ERROR) {
-            LogPrint\(BCLog::TOR, "[Tor] Error connecting to Tor control socket\n");
+            LogPrint(BCLog::TOR, "[Tor] Error connecting to Tor control socket\n");
         } else {
-            LogPrint\(BCLog::TOR, "[Tor] End of stream\n");
+            LogPrint(BCLog::TOR, "[Tor] End of stream\n");
         }
         self->Disconnect();
         self->disconnected(*self);
@@ -486,7 +486,7 @@ TorController::~TorController()
 void TorController::add_onion_cb(TorControlConnection& _conn, const TorControlReply& reply)
 {
     if (reply.code == 250) {
-        LogPrint\(BCLog::TOR, "[Tor] ADD_ONION successful\n");
+        LogPrint(BCLog::TOR, "[Tor] ADD_ONION successful\n");
         for (const std::string &s : reply.lines) {
             std::map<std::string,std::string> m = ParseTorReplyMapping(s);
             std::map<std::string,std::string>::iterator i;
@@ -521,7 +521,7 @@ void TorController::add_onion_cb(TorControlConnection& _conn, const TorControlRe
 void TorController::auth_cb(TorControlConnection& _conn, const TorControlReply& reply)
 {
     if (reply.code == 250) {
-        LogPrint\(BCLog::TOR, "[Tor] Authentication successful\n");
+        LogPrint(BCLog::TOR, "[Tor] Authentication successful\n");
 
         // Now that we know Tor is running setup the proxy for onion addresses
         // if -onion isn't set to something else.
@@ -575,7 +575,7 @@ static std::vector<uint8_t> ComputeResponse(const std::string &key, const std::v
 void TorController::authchallenge_cb(TorControlConnection& _conn, const TorControlReply& reply)
 {
     if (reply.code == 250) {
-        LogPrint\(BCLog::TOR, "[Tor] SAFECOOKIE authentication challenge successful\n");
+        LogPrint(BCLog::TOR, "[Tor] SAFECOOKIE authentication challenge successful\n");
         std::pair<std::string,std::string> l = SplitTorReplyLine(reply.lines[0]);
         if (l.first == "AUTHCHALLENGE") {
             std::map<std::string,std::string> m = ParseTorReplyMapping(l.second);
@@ -630,12 +630,12 @@ void TorController::protocolinfo_cb(TorControlConnection& _conn, const TorContro
                 std::map<std::string,std::string> m = ParseTorReplyMapping(l.second);
                 std::map<std::string,std::string>::iterator i;
                 if ((i = m.find("Tor")) != m.end()) {
-                    LogPrint\(BCLog::TOR, "[Tor] Connected to Tor version %s\n", i->second);
+                    LogPrint(BCLog::TOR, "[Tor] Connected to Tor version %s\n", i->second);
                 }
             }
         }
         for (const std::string &s : methods) {
-            LogPrint\(BCLog::TOR, "[Tor] Supported authentication method: %s\n", s);
+            LogPrint(BCLog::TOR, "[Tor] Supported authentication method: %s\n", s);
         }
         // Prefer NULL, otherwise SAFECOOKIE. If a password is provided, use HASHEDPASSWORD
         /* Authentication:
