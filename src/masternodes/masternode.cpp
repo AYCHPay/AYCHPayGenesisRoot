@@ -353,8 +353,11 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
     LOCK(cs_mapMasternodeBlocks);
 
     for (int i = 0; pindexActive->nHeight > nBlockLastPaidPrimary && i < nMaxBlocksToScanBack; i++) {
-        if (mnpayments.mapMasternodeBlocksPrimary.count(pindexActive->nHeight) &&
-            mnpayments.mapMasternodeBlocksPrimary[pindexActive->nHeight].HasPayeeWithVotes(mnpayee, 2))
+        std:size_t checkitOut = mnpayments.mapMasternodeBlocksPrimary.count(pindexActive->nHeight);
+        bool hazIt = mnpayments.mapMasternodeBlocksPrimary[pindexActive->nHeight].HasPayeeWithVotes(mnpayee, 2);
+        int mnCount = mnodeman.CountMasternodes(-1);
+
+        if ((mnCount > 2 && checkitOut && hazIt) || (mnCount <= 2))
         {
             if (blockPos.IsNull() == true) {
                 return;
@@ -367,16 +370,29 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
             }
             
             int activationHeight = 0;
-            CAmount nMasternodePayment = GetMasternodePayments(pindexActive->nHeight, activationHeight, block.vtx[0]->GetValueOut());
+            CAmount nMasternodePaymentPrimary = GetMasternodePayments(pindexActive->nHeight, activationHeight, block.vtx[0]->GetValueOut());
 
             for (const auto& txout : block.vtx[0]->vout)
             {
-                if (mnpayee == txout.scriptPubKey && nMasternodePayment == txout.nValue) {
+                if (mnpayee == txout.scriptPubKey && nMasternodePaymentPrimary == txout.nValue) {
                     nBlockLastPaidPrimary = pindexActive->nHeight;
                     nTimeLastPaidPrimary = pindexActive->nTime;
-                    LogPrint(BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
+                    LogPrint(BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
                     return;
                 }
+                else if (mnpayee == txout.scriptPubKey)
+                {
+                    // This is a bit fuzzy for my liking, but the logic:
+                    // * This is the coinbase transaction
+                    // * I am a masternode
+                    // * I am being paid in the coinbase tx, as a mn, but it is not as the primary
+                    // Should suffice to substantiate the claim that this is a secondary masternode payment to me
+                    nBlockLastPaidSecondary = pindexActive->nHeight;
+                    nTimeLastPaidSecondary = pindexActive->nTime;
+                    LogPrint(BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
+                    return;
+                }
+                
             }
         }
 
