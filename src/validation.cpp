@@ -473,7 +473,7 @@ CAmount GetMasternodePayments(int nHeight, int activationHeight, CAmount blockVa
     else
     {
         // This masternode must only be paid according to its maturity level
-        CAmount proratedPayment = ceil(allowedPayment / thresholdAge);
+        CAmount proratedPayment = ceil((allowedPayment / thresholdAge) * blockAge);
         // Doing it this way makes the transition smooth-ish and avoids creating dust (<1 genx)
         if ((proratedPayment + minimumPrimaryPayment) < (minimumPrimaryPayment * 2))
         {
@@ -2208,6 +2208,9 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     assert(pindex->phashBlock);
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
+
+    // Update block tip in masternodeman
+    mnodeman.UpdatedBlockTip(pindex);
 
     int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
     LogPrint(BCLog::BENCH, "[Benchmarking]    - Index writing: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5 - nTime4), nTimeIndex * MICRO, nTimeIndex * MILLI / nBlocksTotal);

@@ -226,16 +226,18 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
             LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Failed to detect masternode to pay\n");
             return;
         }
+
         // fill payee with locally calculated winner and hope for the best
         payee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
         // Calculate the primaryPayeeActivationHeight for this locally calculated winner...
         primaryPayeeActivationHeight = mnInfo.activationBlockHeight;
     }
 
-    /* Yay me... I found a primary */
+    /* Yay me... I found a primary... I think */
+
     // GET MASTERNODE PAYMENT VARIABLES SETUP
     CAmount primaryMasternodePayment = GetMasternodePayments(nBlockHeight, primaryPayeeActivationHeight, blockReward);
-    CAmount secondaryPaymentTotal = blockReward - primaryMasternodePayment;
+    CAmount secondaryPaymentTotal = (blockReward * Params().GetConsensus().nBlockRewardMasternode) - primaryMasternodePayment;
     // Add the primary masternode payment
     CTxOut masternodePaymentTx = CTxOut(primaryMasternodePayment, payee);
     vtxoutMasternodeRet.push_back(masternodePaymentTx);

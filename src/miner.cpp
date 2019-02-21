@@ -43,6 +43,7 @@
 #include <mutex>
 
 #include <masternodes/masternode-payments.h>
+#include <masternodes/masternode-sync.h>
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -739,6 +740,27 @@ void static GenesisMiner(CWallet *pwallet)
                     MilliSleep(1000);
                 } while (true);
                 //miningTimer.start();
+            }
+
+            // Make sure masternode stuff is synced before mining... otherwise payments will go wonky
+            if (!masternodeSync.IsSynced())
+            {
+                LogPrint(BCLog::POW, "[ProofOfWork] Waiting for masternode sync to complete before mining commences\n");
+                do 
+                {
+                    bool isMnStuffSynced = masternodeSync.IsSynced();
+                    if (isMnStuffSynced)
+                    {
+                        LogPrint(BCLog::POW, "[ProofOfWork] Masternode sync has completed. Commencing mining...\n");
+                        break;
+                    }
+                    else
+                    {
+                        // LogPrint(BCLog::POW, "[ProofOfWork] Masternode sync has still not completed. Can not commence mining...\n");
+                    }
+                    // Wait for 5 seconds... masternode stuff takes a while....
+                    MilliSleep(5000);
+                } while (true);
             }
 
             //

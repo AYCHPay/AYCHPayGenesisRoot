@@ -597,6 +597,35 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
             continue; 
         }
 
+        // Make sure that the activation height is set
+        if (mnpair.second.nCollateralMinConfBlockHeight <= 0)
+        {
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee activation height <= zero. Eish. \n");
+            continue; 
+        }
+
+        // Make sure thte activation height is realistic
+        if (mnpair.second.nCollateralMinConfBlockHeight > nBlockHeight)
+        {
+            // Some kind of fair notice of what happened if this fails
+            LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee activation height is in the future... great Scott! \n");
+            continue; 
+        }
+
+        // if (mnpair.second.nBlockLastPaidPrimary == 0)
+        // {
+        //     // This *could* be (but probably isn't) right... if this is is the first payment to this masternode
+        //     int masternodesEnabledBlocks = nBlockHeight - Params().GetConsensus().nMasternodePaymentsStartBlock;
+        //     int primaryPayeeBlockAge = nBlockHeight - mnpair.second.nCollateralMinConfBlockHeight;
+        //     bool irrationalPayeeAge = masternodesEnabledBlocks > nMnCount && primaryPayeeBlockAge > nMnCount;
+        //     if (irrationalPayeeAge)
+        //     {
+        //         // This does not make sense, as this masternodes *should* have been paid by now
+        //         LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee nTimeLastPaidPrimary is irrationally zero \n");
+        //         continue; 
+        //     }
+        // }
+
         LogPrint(BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Selected \n");
         vecMasternodeLastPaid.push_back(std::make_pair(mnpair.second.GetLastPaidBlockPrimary(), &mnpair.second));
     }
@@ -697,7 +726,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         sampleSize = vecMasternodeLastPaidSecondary.size();
     }
     // copy sampleSize items to the output
-    for(int i=0; i<sampleSize; ++i){
+    for(int i=0; i< (int)sampleSize; ++i){
         const CMasternode *pBestSecondaryMasternode = vecMasternodeLastPaidSecondary[i].second;
         if (pBestSecondaryMasternode)
         {
@@ -1986,10 +2015,11 @@ void CMasternodeMan::UpdatedBlockTip(const CBlockIndex *pindex, bool lock)
 
     CheckSameAddr();
 
-    if (fMasternodeMode) {
-        // normal wallet does not need to update this every block, doing update on rpc call should be enough
-        UpdateLastPaid(pindex, lock);
-    }
+    // normal wallet does need to update this every block for mining and block vvalidation, doing update on rpc call would not be enough
+    UpdateLastPaid(pindex, lock);
+    // if (fMasternodeMode) {
+    //     UpdateLastPaid(pindex, lock);
+    // }
 }
                          
 void CMasternodeMan::WarnMasternodeDaemonUpdates()
