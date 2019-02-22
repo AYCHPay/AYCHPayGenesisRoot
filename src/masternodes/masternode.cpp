@@ -353,7 +353,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
     LOCK(cs_mapMasternodeBlocks);
 
     for (int i = 0; pindexActive->nHeight > nBlockLastPaidPrimary && i < nMaxBlocksToScanBack; i++) {
-        std:size_t checkitOut = mnpayments.mapMasternodeBlocksPrimary.count(pindexActive->nHeight);
+        size_t checkitOut = mnpayments.mapMasternodeBlocksPrimary.count(pindexActive->nHeight);
         bool hazIt = mnpayments.mapMasternodeBlocksPrimary[pindexActive->nHeight].HasPayeeWithVotes(mnpayee, 2);
         int mnCount = mnodeman.CountMasternodes(-1);
 
