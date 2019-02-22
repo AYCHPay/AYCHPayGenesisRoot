@@ -368,8 +368,9 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // nodes with support for servicebits filtering should be at the top
-        //vSeeds.emplace_back("testnet1.genesisnetwork.io", true);
-        //vSeeds.emplace_back("testnet2.genesisnetwork.io", true);
+        vSeeds.emplace_back("testnet1.genesisnetwork.io", true);
+        vSeeds.emplace_back("testnet2.genesisnetwork.io", true);
+        vSeeds.emplace_back("testnet3.genesisnetwork.io", true);
 
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 125);// 
