@@ -150,7 +150,8 @@ struct Params {
     int nMasternodeMinimumConfirmations;
     CAmount nMasternodeCollateral;
     int nFulfilledRequestExpireTime;
-    // Previously static values                         // Defaults for mainnet:
+    int nBlockRewardGovernance;                         // 90
+    // Previously static masternode values              // Defaults for mainnet:
     int nMasternodeCheckSeconds;                        // 5
     int nMasternodeMinMnbSeconds;                       // 5 * 60
     int nMasternodeMinMnpSeconds;                       // 10 * 60

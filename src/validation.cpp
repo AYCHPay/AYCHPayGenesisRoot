@@ -1219,6 +1219,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, bool fGovernanceBlockPartOnly)
 {
     int subsidy = 0;
+    int governanceBlockPart = 0;
 
     // Ignore the genesis block, which has no value
     if (nHeight == 0)
@@ -1230,42 +1231,22 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
         // There are no mature blocks yet...
         subsidy = BLOCK_REWARD_MAX;
     }
-    else if (
-        // Normal bonus block
-        (nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == 0) ||
-        // Governance block
-        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == consensusParams.nGovernanceBlockOffset)
-    )
+    else if (nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == 0)
     {
         // ultra block (once a lunar year +/- 336 days)
         subsidy = (consensusParams.GetUltraBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
     }
-    else if (
-        // Normal bonus block
-        (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0) ||
-        // Governance block
-        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
-    )
+    else if (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0)
     {
         // a mega block (once a lunar month +/- 28 days) 
         subsidy = (consensusParams.GetMegaBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
     }
-    else if (
-        // Normal bonus block
-        (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0) ||
-        // Governance block
-        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == consensusParams.nGovernanceBlockOffset) 
-    )
+    else if (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0)
     {
         // a weekly super block (+/- 7 days)
         subsidy = (consensusParams.GetSuperBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
     }
-    else if (
-        // Normal bonus block
-        (nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == 0) ||
-        // Governance block
-        (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == consensusParams.nGovernanceBlockOffset)
-    )
+    else if (nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == 0)
     {
         // a daily bonus block
         subsidy = (consensusParams.GetBonusBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
@@ -1309,6 +1290,13 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
         // Make sure the subsidy divides by 4 to make the rest of the math work better
         subsidy -= subsidy % 4;
     }
+    else if (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    {
+        // governance block - once a lunar month, on the block following the mega block
+        subsidy = consensusParams.nBlockRewardTotal;
+        governanceBlockPart = consensusParams.GetMegaBlockInterval() * consensusParams.nBlockRewardGovernance;
+        subsidy += governanceBlockPart;
+    }
     else
     {
         // A normal block... with masternodes
@@ -1317,12 +1305,8 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
 
     //LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Subsidy %i acceptable for block %i \n", subsidy, nHeight);
     CAmount nSubsidy = subsidy * COIN;
-    // Deduct the "normal" payments from the big block amount
-    CAmount nGovernanceBlockPart = 0;
-    if (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == consensusParams.nGovernanceBlockOffset)
-    {
-        nGovernanceBlockPart = consensusParams.nBlockRewardTotal * consensusParams.nBlockRewardMasternode;
-    }
+    CAmount nGovernanceBlockPart = governanceBlockPart * COIN;
+
     return fGovernanceBlockPartOnly ? nGovernanceBlockPart :  nSubsidy;
 }
 
@@ -2178,7 +2162,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         return state.DoS(20, error("ConnectBlock(GENX): %s", strError), REJECT_INVALID, "bad-cb-amount");
     }
     
-    if (pindex->nHeight > Params().GetConsensus().nMasternodePaymentsStartBlock) {
+    if (pindex->nHeight >= Params().GetConsensus().nMasternodePaymentsStartBlock) {
         if (!IsBlockPayeeValid(block.vtx[0], pindex->nHeight, blockReward)) {
             return state.DoS(20, error("ConnectBlock(GENX): couldn't find masternode or governance block payments"),
                                     REJECT_INVALID, "bad-cb-payee");

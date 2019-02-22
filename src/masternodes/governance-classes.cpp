@@ -436,14 +436,14 @@ bool CGovernanceBlock::IsValidBlockHeight(int nBlockHeight)
     // GOVERNANCEBLOCKS CAN HAPPEN ONLY after hardfork and only ONCE PER CYCLE to be Params().GetConsensus().nGovernanceBlockOffset 
     // blocks after the bonus block
     return nBlockHeight >= Params().GetConsensus().nMasternodePaymentsStartBlock &&
-        ((nBlockHeight % Params().GetConsensus().GetBonusBlockInterval()) == Params().GetConsensus().nGovernanceBlockOffset);
+        ((nBlockHeight % Params().GetConsensus().GetMegaBlockInterval()) == Params().GetConsensus().nGovernanceBlockOffset);
 }
 
 void CGovernanceBlock::GetNearestGovernanceBlocksHeights(int nBlockHeight, int& nLastGovernanceBlockRet, int& nNextGovernanceBlockRet)
 {
     const Consensus::Params& consensusParams = Params().GetConsensus();
     int nMasternodePaymentsStartBlock = consensusParams.nMasternodePaymentsStartBlock;
-    int nGovernanceBlockCycle = consensusParams.nSuperBlockInterval;
+    int nGovernanceBlockCycle = consensusParams.GetMegaBlockInterval();
     int nGovernanceBlockOffset = consensusParams.nGovernanceBlockOffset;
 
     // Get first governance block

@@ -246,56 +246,74 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     else
     {
+        // Once masternodes are enabled...
         // Block subsidy breakdown (Total value: chainparams.GetConsensus().nBlockRewardTotal):
-        // chainparams.GetConsensus().nBlockRewardMasternode - 20%
-        // chainparams.GetConsensus().nBlockRewardFounders - 10% Combined
-        // chainparams.GetConsensus().nBlockRewardGiveaways - 5%
-        // chainparams.GetConsensus().nBlockRewardInfrastructure - 5%
-        // chainparams.GetConsensus().nBlockRewardFinder - 60% to the miner / minter
-        auto deductionFraction = 1.0 - chainparams.GetConsensus().nBlockRewardFinder;
-        auto firstVal = coinbaseTx.vout[0].nValue;
-        auto rawVal = firstVal * deductionFraction;
-        auto vBlockDeductionTotal = round(rawVal);
+        // chainparams.GetConsensus().nBlockRewardFinder - 350 to the miner / minter
+        // chainparams.GetConsensus().nBlockRewardMasternode - 200
+        // chainparams.GetConsensus().nBlockRewardFounders - 60 Combined
+        // chainparams.GetConsensus().nBlockRewardGiveaways - 0
+        // chainparams.GetConsensus().nBlockRewardInfrastructure - 0
+
+        // The 'normal' deductions... i.e. without governance
+        auto vBlockDeductionTotal = (chainparams.GetConsensus().nBlockRewardTotal - chainparams.GetConsensus().nBlockRewardFinder) * COIN;
+        // In case of governance block, leave the normal amount for the miner
+        if (nHeight >= chainparams.GetConsensus().nMasternodePaymentsStartBlock 
+                && nHeight >= chainparams.GetConsensus().GetMegaBlockInterval() 
+                && (nHeight % chainparams.GetConsensus().GetMegaBlockInterval()) == chainparams.GetConsensus().nGovernanceBlockOffset)
+        {
+            // Add the value of the governance block as well as the masternode amount to the deduction, 
+            // to ensure that the "base payments" are consistent
+            vBlockDeductionTotal += (GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true) + chainparams.GetConsensus().nBlockRewardMasternode) * COIN;
+        }
+
         // Now, make the main deduction
         coinbaseTx.vout[0].nValue -= vBlockDeductionTotal;
 
         // And give it to the beneficiaries:
-        // Founders deduction
-        auto vFoundersMultiplier = chainparams.GetConsensus().nBlockRewardFounders / deductionFraction;
-        auto vFounders = (int64_t)round(vBlockDeductionTotal * vFoundersMultiplier);
-        // Each founder gets paid on each block
-        std::vector<CScript> allFounderScripts = chainparams.GetAllFounderScripts();
-        // Check the division... see if we'll have any change left after the division
-        auto foundersChange = vFounders % allFounderScripts.size();
-        if (foundersChange != 0)
-        {
-            coinbaseTx.vout[0].nValue += foundersChange;
-            vFounders -= foundersChange;
+        if (chainparams.GetConsensus().nBlockRewardFounders > 0)
+        {            
+            // Founders deduction
+            auto vFounders = (int)chainparams.GetConsensus().nBlockRewardFounders * COIN;
+            // Each founder gets paid on each block
+            std::vector<CScript> allFounderScripts = chainparams.GetAllFounderScripts();
+            // Check the division... see if we'll have any change left after the division
+            auto foundersChange = vFounders % allFounderScripts.size();
+            if (foundersChange != 0)
+            {
+                coinbaseTx.vout[0].nValue += foundersChange;
+                vFounders -= foundersChange;
+            }
+            // Calculate the individual founder's reward
+            auto ifr = vFounders / allFounderScripts.size();
+            // create the transactions
+            for (auto &founderScript : allFounderScripts)
+            {
+                coinbaseTx.vout.push_back(CTxOut(ifr, founderScript));
+            }            
         }
-        // Calculate the individual founder's reward
-        auto ifr = vFounders / allFounderScripts.size();
-        // create the transactions
-        for (auto &founderScript : allFounderScripts)
-        {
-            coinbaseTx.vout.push_back(CTxOut(ifr, founderScript));
-        }            
 
-        // Infrastructure (Dev / Community Management / Outsourcing / Exchange Fees / Hosting) 
-        auto vInfrastructureMultiplier = chainparams.GetConsensus().nBlockRewardInfrastructure / deductionFraction;
-        auto vInfrastructure = round(vBlockDeductionTotal * vInfrastructureMultiplier);
-        coinbaseTx.vout.push_back(CTxOut(vInfrastructure, chainparams.GetInfrastructureScriptAtHeight(nHeight)));
-        // Giveaways (Bounties, Airdrops, Ad Hoc Giveaways) 
-        auto vGiveawaysMultiplier = chainparams.GetConsensus().nBlockRewardGiveaways / deductionFraction;
-        auto vGiveaways = round(vBlockDeductionTotal * vGiveawaysMultiplier);
-        coinbaseTx.vout.push_back(CTxOut(vGiveaways, chainparams.GetGiveawayScriptAtHeight(nHeight)));
-        // Fill masternode and governance payment information
-        auto vMasternodeDeduction = round(totalSubsidy * chainparams.GetConsensus().nBlockRewardMasternode); // GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true);
+        if (chainparams.GetConsensus().nBlockRewardInfrastructure > 0)
+        {            
+            // Infrastructure (Dev / Community Management / Outsourcing / Exchange Fees / Hosting) 
+            auto vInfrastructure = (int)chainparams.GetConsensus().nBlockRewardFounders * COIN;
+            coinbaseTx.vout.push_back(CTxOut(vInfrastructure, chainparams.GetInfrastructureScriptAtHeight(nHeight)));
+        }
+
+        if (chainparams.GetConsensus().nBlockRewardGiveaways > 0)
+        {
+            // Giveaways (Bounties, Airdrops, Ad Hoc Giveaways) 
+            auto vGiveaways = (int)chainparams.GetConsensus().nBlockRewardGiveaways * COIN;
+            coinbaseTx.vout.push_back(CTxOut(vGiveaways, chainparams.GetGiveawayScriptAtHeight(nHeight)));
+        }
+
+        // Fill masternode / governance payment information
         FillBlockPayments(coinbaseTx, nHeight, nFees + totalSubsidy, pblock->vtxoutMasternode, pblock->vtxoutGovernance);
+
         // Sanity check
+        // auto vMasternodeDeduction = round(totalSubsidy * chainparams.GetConsensus().nBlockRewardMasternode); // GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true);
         // Reset the var, to make the sanity check work
-        firstVal = coinbaseTx.vout[0].nValue;
-        LogPrint(BCLog::POW, "[ProofOfWork] Sanity Check Values:\nHeight          = %f\nTotal Subsidy   = %f\nTotal Deduction = %f\nMiner           = %f\nFounder Total   = %f\nFounder Split   = %f\nInfrastructure  = %f\nGiveaways       = %f\nMasternodes     = %f\n", nHeight, totalSubsidy / COIN, vBlockDeductionTotal / COIN, firstVal / COIN, vFounders / COIN, ifr / COIN, vInfrastructure / COIN, vGiveaways / COIN, vMasternodeDeduction / COIN);
-        assert(vInfrastructure + vGiveaways + vFounders + firstVal + vMasternodeDeduction == totalSubsidy);
+        // LogPrint(BCLog::POW, "[ProofOfWork] Sanity Check Values:\nHeight          = %f\nTotal Subsidy   = %f\nTotal Deduction = %f\nMiner           = %f\nFounder Total   = %f\nFounder Split   = %f\nInfrastructure  = %f\nGiveaways       = %f\nMasternodes     = %f\n", nHeight, totalSubsidy / COIN, vBlockDeductionTotal / COIN, firstVal / COIN, vFounders / COIN, ifr / COIN, vInfrastructure / COIN, vGiveaways / COIN, vMasternodeDeduction / COIN);
+        // assert(vInfrastructure + vGiveaways + vFounders + firstVal + vMasternodeDeduction == totalSubsidy);
     }
 
 

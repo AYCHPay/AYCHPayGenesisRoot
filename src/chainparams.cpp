@@ -270,14 +270,13 @@ public:
         consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
         consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
         // Block subsidy definition(s)
-        consensus.nBlockRewardTotal = 600;                              
-        consensus.nBlockRewardMasternode = 0.2;                         
-        consensus.nBlockRewardFounders = 0.1;                           
-        consensus.nBlockRewardGiveaways = 0.05;                          
-        consensus.nBlockRewardInfrastructure = 0.05;                    
-        consensus.nBlockRewardFinder = 0.6;                             
-
-
+        consensus.nBlockRewardFinder = 350;     // miner / minter
+        consensus.nBlockRewardMasternode = 200;                         
+        consensus.nBlockRewardFounders = 60;                           
+        consensus.nBlockRewardGiveaways = 0;                          
+        consensus.nBlockRewardInfrastructure = 0;                    
+        consensus.nBlockRewardTotal = consensus.nBlockRewardFinder + consensus.nBlockRewardMasternode + consensus.nBlockRewardFounders + consensus.nBlockRewardGiveaways + consensus.nBlockRewardInfrastructure; // 610 // Normal block                               
+        consensus.nBlockRewardGovernance = 90;                   
     }
 };
 
@@ -448,12 +447,13 @@ public:
         consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
         consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
         // Block subsidy definition(s)
-        consensus.nBlockRewardTotal = 600;                              
-        consensus.nBlockRewardMasternode = 0.2;                         
-        consensus.nBlockRewardFounders = 0.1;                           
-        consensus.nBlockRewardGiveaways = 0.05;                          
-        consensus.nBlockRewardInfrastructure = 0.05;                    
-        consensus.nBlockRewardFinder = 0.6;                             
+        consensus.nBlockRewardFinder = 350;     // miner / minter
+        consensus.nBlockRewardMasternode = 200;                         
+        consensus.nBlockRewardFounders = 60;                           
+        consensus.nBlockRewardGiveaways = 0;                          
+        consensus.nBlockRewardInfrastructure = 0;                    
+        consensus.nBlockRewardTotal = consensus.nBlockRewardFinder + consensus.nBlockRewardMasternode + consensus.nBlockRewardFounders + consensus.nBlockRewardGiveaways + consensus.nBlockRewardInfrastructure; // 610 // Normal block                               
+        consensus.nBlockRewardGovernance = 90;                              
     }
 };
 
@@ -594,7 +594,7 @@ public:
 
         // Masternodes
         consensus.nMasternodeCollateral = 1 * COIN;
-        consensus.nMasternodePaymentsStartBlock = 0;
+        consensus.nMasternodePaymentsStartBlock = 21;
 		consensus.nGovernanceBlockOffset = 1;
         consensus.nGovernanceMinQuorum = 1;
         consensus.nGovernanceFilterElements = 500;
@@ -614,13 +614,13 @@ public:
         consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
         consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
         // Block subsidy definition(s)
-        consensus.nBlockRewardTotal = 600;                              
-        consensus.nBlockRewardMasternode = 0.2;                         
-        consensus.nBlockRewardFounders = 0.1;                           
-        consensus.nBlockRewardGiveaways = 0.05;                          
-        consensus.nBlockRewardInfrastructure = 0.05;                    
-        consensus.nBlockRewardFinder = 0.6;
-        
+        consensus.nBlockRewardFinder = 350;     // miner / minter
+        consensus.nBlockRewardMasternode = 200;                         
+        consensus.nBlockRewardFounders = 60;                           
+        consensus.nBlockRewardGiveaways = 0;                          
+        consensus.nBlockRewardInfrastructure = 0;                    
+        consensus.nBlockRewardTotal = consensus.nBlockRewardFinder + consensus.nBlockRewardMasternode + consensus.nBlockRewardFounders + consensus.nBlockRewardGiveaways + consensus.nBlockRewardInfrastructure; // 610 // Normal block                               
+        consensus.nBlockRewardGovernance = 90;                                      
     }
 };
 
