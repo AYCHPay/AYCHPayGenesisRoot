@@ -1250,6 +1250,11 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
     {
         // a daily bonus block
         subsidy = (consensusParams.GetBonusBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+        if (Params().NetworkIDString() == CBaseChainParams::TESTNET) 
+        {
+            subsidy += 1000;
+        }
+
     }
     else if(nHeight < consensusParams.nMasternodePaymentsStartBlock)
     {
