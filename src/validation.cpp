@@ -2147,7 +2147,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
 		if (block.vtx[0]->GetValueOut() > blockReward)
 		return state.DoS(100,
 						 error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
-							   block.vtx[0]->GetValueOut(), blockReward),
+							   block.vtx[0]->GetValueOut() / COIN, blockReward / COIN),
 							   REJECT_INVALID, "bad-cb-amount");
 
     // Genesis Masternode : Modified to check masternode payments and governance blocks
