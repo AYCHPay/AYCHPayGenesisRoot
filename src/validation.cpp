@@ -459,7 +459,7 @@ int GetUTXOConfirmations(const COutPoint& outpoint)
 
 CAmount GetMasternodePayments(int nHeight, int activationHeight, CAmount blockValue)
 {
-    CAmount totalReward = blockValue * Params().GetConsensus().nBlockRewardMasternode;
+    CAmount totalReward = Params().GetConsensus().nBlockRewardMasternode * COIN;
     int blockAge = nHeight - activationHeight;
     int thresholdAge = Params().GetConsensus().nMasternodeMaturityThreshold * Params().GetConsensus().nMasternodeMaturityBlockMultiplier;
     CAmount minimumSecondaryDeduction = (Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount * Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount) * COIN;
@@ -3557,7 +3557,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         {
             // Add the value of the governance block as well as the masternode amount to the deduction, 
             // to ensure that the "base payments" are consistent
-            vBlockDeductionTotal += (GetBlockSubsidy(nHeight, consensusParams, true) + consensusParams.nBlockRewardMasternode) * COIN;
+            vBlockDeductionTotal += (GetBlockSubsidy(nHeight, consensusParams, true) + consensusParams.nBlockRewardMasternode * COIN);
         }
 
         if (consensusParams.nBlockRewardFounders > 0)

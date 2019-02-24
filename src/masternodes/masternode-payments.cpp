@@ -237,12 +237,12 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
 
     // GET MASTERNODE PAYMENT VARIABLES SETUP
     CAmount primaryMasternodePayment = GetMasternodePayments(nBlockHeight, primaryPayeeActivationHeight, blockReward);
-    CAmount secondaryPaymentTotal = (blockReward * Params().GetConsensus().nBlockRewardMasternode) - primaryMasternodePayment;
+    CAmount secondaryPaymentTotal = (Params().GetConsensus().nBlockRewardMasternode * COIN) - primaryMasternodePayment;
     // Add the primary masternode payment
     CTxOut masternodePaymentTx = CTxOut(primaryMasternodePayment, payee);
     vtxoutMasternodeRet.push_back(masternodePaymentTx);
     txNew.vout.push_back(masternodePaymentTx);
-    LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Masternode payment %lld to %s\n", primaryMasternodePayment, EncodeDestination(CScriptID(payee)));
+    LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Masternode payment %lld to %s\n", primaryMasternodePayment / COIN, EncodeDestination(CScriptID(payee)));
 
     // Work on secondaries...
     if ((int)secondaryMnInfoRet.size() == 0)
@@ -283,11 +283,11 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
                 CTxOut masternodeSecondaryPaymentTx = CTxOut(secondaryItemPayment, secondaryPayees[i]);
                 vtxoutMasternodeRet.push_back(masternodeSecondaryPaymentTx);
                 txNew.vout.push_back(masternodeSecondaryPaymentTx);
-                LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Secondary Masternode payment %lld to %s\n", amountToPaySecondary, EncodeDestination(CScriptID(secondaryPayees[i])));
+                LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Secondary Masternode payment %lld to %s\n", amountToPaySecondary / COIN, EncodeDestination(CScriptID(secondaryPayees[i])));
             }
         }
     }
-    LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Found %n secondary masternodes to pay\n", (int)secondaryPayees.size());
+    LogPrint(BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Found %i secondary masternodes to pay\n", (int)secondaryPayees.size());
 }
 
 int CMasternodePayments::GetMinMasternodePaymentsProto() const {

@@ -166,12 +166,12 @@ struct Params {
     int nMasternodeMaturitySecondariesMaxCount;         // the max number of secondary masternodes to pay
     double aMasternodeMaturiySecondariesMinAmount;      // the minimum amount to pay a secondary masternode
     // Block subsidy definition(s)
-    int nBlockRewardTotal;                              // 660
-    double nBlockRewardMasternode;                       // 20%
-    double nBlockRewardFounders;                         // 10% combined
-    double nBlockRewardGiveaways;                        // 5%
-    double nBlockRewardInfrastructure;                   // 5%
-    double nBlockRewardFinder;                           // 60%
+    int nBlockRewardTotal;                              
+    double nBlockRewardMasternode;                       
+    double nBlockRewardFounders;                         
+    double nBlockRewardGiveaways;                        
+    double nBlockRewardInfrastructure;                   
+    double nBlockRewardFinder;                           
 };
 } // namespace Consensus
 
