@@ -3471,74 +3471,183 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
     // reward block or time is reached, with exception of the genesis block.
     bool found = false;
 
-    auto vBlockDeductionTotal =  GetBlockSubsidy(nHeight, consensusParams) / 4;
-    auto deductionChange = vBlockDeductionTotal % 5;
-    vBlockDeductionTotal -= deductionChange;
+    // Pre masternodes
+    if (nHeight < consensusParams.nMasternodePaymentsStartBlock)
+    {
+        auto vBlockDeductionTotal =  GetBlockSubsidy(nHeight, consensusParams) / 4;
+        auto deductionChange = vBlockDeductionTotal % 5;
+        vBlockDeductionTotal -= deductionChange;
 
-    // Founders Reward
-    auto vFounders = (vBlockDeductionTotal / 5) * 2;
-    std::vector<CScript> allFounderScripts = Params().GetAllFounderScripts();
-    // Check the division... see if we'll have any change left after the division
-    auto foundersChange = vFounders % allFounderScripts.size();
-    if (foundersChange != 0)
-    {
-        vFounders -= foundersChange;
-    }
-    // Calculate the individual founder's reward
-    int64_t ifr = vFounders / allFounderScripts.size();
-    // create the transactions
-    uint32_t foundScripts = 0;
-    for (auto &founderScript : allFounderScripts)
-    {
+        // Founders Reward
+        auto vFounders = (vBlockDeductionTotal / 5) * 2;
+        std::vector<CScript> allFounderScripts = Params().GetAllFounderScripts();
+        // Check the division... see if we'll have any change left after the division
+        auto foundersChange = vFounders % allFounderScripts.size();
+        if (foundersChange != 0)
+        {
+            vFounders -= foundersChange;
+        }
+        // Calculate the individual founder's reward
+        int64_t ifr = vFounders / allFounderScripts.size();
+        // create the transactions
+        uint32_t foundScripts = 0;
+        for (auto &founderScript : allFounderScripts)
+        {
+            BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                if (output.scriptPubKey == founderScript) {
+                    if (output.nValue == ifr) 
+                    {
+                        foundScripts++;
+                        break;
+                    }
+                    else
+                    {
+                        LogPrintf("Wrong block founders value: %i should be %i \n", output.nValue, ifr);
+                    }
+                }
+            }
+        }
+        if (foundScripts == allFounderScripts.size())
+        {
+            found = true;
+        }
+
+        if (!found) {
+            return state.DoS(100, error("%s: founders payment missing", __func__), REJECT_INVALID, "cb-no-founders-payment");
+        }
+
+        // Infrastructure
         BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
-            if (output.scriptPubKey == founderScript) {
-                if (output.nValue == ifr) 
-                {
-                    foundScripts++;
+            if (output.scriptPubKey == Params().GetInfrastructureScriptAtHeight(nHeight)) {
+                if (output.nValue == (vBlockDeductionTotal / 5) * 1) {
+                    found = true;
                     break;
                 }
-                else
-                {
-                    LogPrintf("Wrong block founders value: %i should be %i \n", output.nValue, ifr);
+            }
+        }
+
+        if (!found) {
+            return state.DoS(100, error("%s: infrastructure payment missing", __func__), REJECT_INVALID, "cb-no-infrastructure-payment");
+        }
+
+        // Giveaways
+        BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+            if (output.scriptPubKey == Params().GetGiveawayScriptAtHeight(nHeight)) {
+                if (output.nValue == (vBlockDeductionTotal / 5) * 2) {
+                    found = true;
+                    break;
                 }
             }
         }
+
+        if (!found) {
+            return state.DoS(100, error("%s: giveaways payment missing", __func__), REJECT_INVALID, "cb-no-giveaways-payment");
+        }
+
     }
-    if (foundScripts == allFounderScripts.size())
+    // With masternodes
+    else
     {
-        found = true;
-    }
+        // The 'normal' deductions... i.e. without governance
+        auto vBlockDeductionTotal = (consensusParams.nBlockRewardTotal - consensusParams.nBlockRewardFinder) * COIN;
+        // In case of governance block, leave the normal amount for the miner
+        if (nHeight >= consensusParams.nMasternodePaymentsStartBlock 
+                && nHeight >= consensusParams.GetMegaBlockInterval() 
+                && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+        {
+            // Add the value of the governance block as well as the masternode amount to the deduction, 
+            // to ensure that the "base payments" are consistent
+            vBlockDeductionTotal += (GetBlockSubsidy(nHeight, consensusParams, true) + consensusParams.nBlockRewardMasternode) * COIN;
+        }
 
-    if (!found) {
-        return state.DoS(100, error("%s: founders payment missing", __func__), REJECT_INVALID, "cb-no-founders-payment");
-    }
-
-    // Infrastructure
-    BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
-        if (output.scriptPubKey == Params().GetInfrastructureScriptAtHeight(nHeight)) {
-            if (output.nValue == (vBlockDeductionTotal / 5) * 1) {
+        if (consensusParams.nBlockRewardFounders > 0)
+        {
+            // Founders deduction
+            auto vFounders = (int)consensusParams.nBlockRewardFounders * COIN;
+            // Keep track of what has been paid
+            vBlockDeductionTotal -= vFounders;
+            // Each founder gets paid on each block
+            std::vector<CScript> allFounderScripts = Params().GetAllFounderScripts();
+            // Check the division... see if we'll have any change left after the division
+            auto foundersChange = vFounders % allFounderScripts.size();
+            if (foundersChange != 0)
+            {
+                vFounders -= foundersChange;
+            }
+            // Calculate the individual founder's reward
+            CAmount ifr = vFounders / allFounderScripts.size();
+            // create the transactions
+            uint32_t foundScripts = 0;
+            for (auto &founderScript : allFounderScripts)
+            {
+                BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                    if (output.scriptPubKey == founderScript) {
+                        if (output.nValue == ifr) 
+                        {
+                            foundScripts++;
+                            break;
+                        }
+                        else
+                        {
+                            LogPrintf("Wrong block founders value: %i should be %i \n", output.nValue, ifr);
+                        }
+                    }
+                }
+            }
+            if (foundScripts == allFounderScripts.size())
+            {
                 found = true;
-                break;
+            }
+
+            if (!found) {
+                return state.DoS(100, error("%s: founders payment missing", __func__), REJECT_INVALID, "cb-no-founders-payment");
             }
         }
-    }
 
-    if (!found) {
-        return state.DoS(100, error("%s: infrastructure payment missing", __func__), REJECT_INVALID, "cb-no-infrastructure-payment");
-    }
 
-    // Giveaways
-    BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
-        if (output.scriptPubKey == Params().GetGiveawayScriptAtHeight(nHeight)) {
-            if (output.nValue == (vBlockDeductionTotal / 5) * 2) {
-                found = true;
-                break;
+        if (consensusParams.nBlockRewardInfrastructure > 0)
+        {
+            // Infrastructure
+            auto infrastructureDeduction = consensusParams.nBlockRewardFounders * COIN;
+            // Keep track of what has been paid
+            vBlockDeductionTotal -= infrastructureDeduction;
+
+            BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                if (output.scriptPubKey == Params().GetInfrastructureScriptAtHeight(nHeight)) {
+                    if (output.nValue == infrastructureDeduction) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                return state.DoS(100, error("%s: infrastructure payment missing", __func__), REJECT_INVALID, "cb-no-infrastructure-payment");
             }
         }
-    }
 
-    if (!found) {
-        return state.DoS(100, error("%s: giveaways payment missing", __func__), REJECT_INVALID, "cb-no-giveaways-payment");
+        if (consensusParams.nBlockRewardGiveaways > 0)
+        {
+            // Giveaways
+            auto giveAwaysDeduction = consensusParams.nBlockRewardGiveaways * COIN;
+            // Keep track of what has been paid
+            vBlockDeductionTotal -= giveAwaysDeduction;
+
+            BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                if (output.scriptPubKey == Params().GetGiveawayScriptAtHeight(nHeight)) {
+                    if (output.nValue == giveAwaysDeduction) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                return state.DoS(100, error("%s: giveaways payment missing", __func__), REJECT_INVALID, "cb-no-giveaways-payment");
+            }
+        }
+
+        // ToDo: Validate masternode and governance payments here...
     }
 
 
