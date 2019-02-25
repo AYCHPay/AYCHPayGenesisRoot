@@ -306,7 +306,7 @@ UniValue masternode(const JSONRPCRequest& request)
             mnObj.push_back(Pair("txHash", mne.getTxHash()));
             mnObj.push_back(Pair("outputIndex", mne.getOutputIndex()));
             mnObj.push_back(Pair("status", strStatus));
-            resultObj.push_back(Pair("masternode", mnObj));
+            resultObj.push_back(Pair(mne.getAlias(), mnObj));
         }
 
         return resultObj;
