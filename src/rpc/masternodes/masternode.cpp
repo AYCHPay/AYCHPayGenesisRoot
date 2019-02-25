@@ -142,15 +142,18 @@ UniValue masternode(const JSONRPCRequest& request)
         if (!mnodeman.GetNextMasternodesInQueueForPayment(nHeight, true, nCount, mnInfo, secondaryMnInfoRet))
             return "unknown";
 
+        
         UniValue obj(UniValue::VOBJ);
 
-        obj.push_back(Pair("height",        nHeight));
-        obj.push_back(Pair("IP:port",       mnInfo.addr.ToString()));
-        obj.push_back(Pair("protocol",      mnInfo.nProtocolVersion));
-        obj.push_back(Pair("outpoint",      mnInfo.outpoint.ToStringShort()));
-        obj.push_back(Pair("payee",         EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))))));
-        obj.push_back(Pair("lastseen",      mnInfo.nTimeLastPing));
-        obj.push_back(Pair("activeseconds", mnInfo.nTimeLastPing - mnInfo.sigTime));
+        obj.push_back(Pair("height",                nHeight));
+        obj.push_back(Pair("ip",                    mnInfo.addr.ToStringIP()));
+        obj.push_back(Pair("port",                  mnInfo.addr.ToStringPort()));
+        obj.push_back(Pair("protocol",              mnInfo.nProtocolVersion));
+        obj.push_back(Pair("outpoint",              mnInfo.outpoint.ToStringShort()));
+        obj.push_back(Pair("payee",                 EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))))));
+        obj.push_back(Pair("lastseen",              mnInfo.nTimeLastPing));
+        obj.push_back(Pair("activeseconds",         mnInfo.nTimeLastPing - mnInfo.sigTime));
+        obj.push_back(Pair("activationblockheight", mnInfo.activationBlockHeight));
         return obj;
     }
 
@@ -281,9 +284,24 @@ UniValue masternode(const JSONRPCRequest& request)
 
             std::string strStatus = fFound ? mn.GetStatus() : "MISSING";
 
+            // Better formatting for network address (only for IPV4)
+            std::string s = mne.getIp();
+            std::string delimiter = ":";
+            size_t pos = 0;
+            std::string mnip = "";
+            std::string mnport = "";
+            std::string token;
+            while ((pos = s.find(delimiter)) != std::string::npos) {
+                token = s.substr(0, pos);
+                mnip = token;
+                s.erase(0, pos + delimiter.length());
+            }
+            mnport = s;
+
             UniValue mnObj(UniValue::VOBJ);
             mnObj.push_back(Pair("alias", mne.getAlias()));
-            mnObj.push_back(Pair("address", mne.getIp()));
+            mnObj.push_back(Pair("ip", mnip));
+            mnObj.push_back(Pair("port", mnport));
             mnObj.push_back(Pair("privateKey", mne.getPrivKey()));
             mnObj.push_back(Pair("txHash", mne.getTxHash()));
             mnObj.push_back(Pair("outputIndex", mne.getOutputIndex()));
@@ -503,7 +521,8 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 if (strFilter !="" && strInfo.find(strFilter) == std::string::npos &&
                     strOutpoint.find(strFilter) == std::string::npos) continue;
                 UniValue objMN(UniValue::VOBJ);
-                objMN.push_back(Pair("address", mn.addr.ToString()));
+                objMN.push_back(Pair("ip", mn.addr.ToStringIP()));
+                objMN.push_back(Pair("port", mn.addr.ToStringPort()));
                 objMN.push_back(Pair("payee", EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mn.pubKeyCollateralAddress.GetID()))))));
                 objMN.push_back(Pair("status", mn.GetStatus()));
                 objMN.push_back(Pair("protocol", mn.nProtocolVersion));
