@@ -263,7 +263,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         {
             // Add the value of the governance block as well as the masternode amount to the deduction, 
             // to ensure that the "base payments" are consistent
-            vBlockDeductionTotal += (GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true) + chainparams.GetConsensus().nBlockRewardMasternode) * COIN;
+            CAmount gPart = GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true);
+            vBlockDeductionTotal += gPart;
         }
 
         // Now, make the main deduction
