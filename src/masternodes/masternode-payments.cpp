@@ -271,14 +271,16 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
             // make the division equal
             secondaryPaymentTotal -= secondariesPaymentChange;
             CAmount secondaryItemPayment = secondaryPaymentTotal / secondariesCount;
+            bool changeApplied = false;
             for(int i=0; i< (int)secondaryPayees.size(); ++i)
             {
                 // Add the primary masternode payment
                 CAmount amountToPaySecondary = secondaryItemPayment;
-                if (i == 0)
+                if (!changeApplied)
                 {
                     // Add the change to the first payment
                     amountToPaySecondary += secondariesPaymentChange;
+                    changeApplied = true;
                 }
                 CTxOut masternodeSecondaryPaymentTx = CTxOut(secondaryItemPayment, secondaryPayees[i]);
                 vtxoutMasternodeRet.push_back(masternodeSecondaryPaymentTx);
