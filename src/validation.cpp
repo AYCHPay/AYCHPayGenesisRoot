@@ -1235,11 +1235,19 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
     {
         // ultra block (once a lunar year +/- 336 days)
         subsidy = (consensusParams.GetUltraBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+        if (Params().NetworkIDString() == CBaseChainParams::TESTNET) 
+        {
+            subsidy += 1000;
+        }
     }
     else if (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0)
     {
         // a mega block (once a lunar month +/- 28 days) 
         subsidy = (consensusParams.GetMegaBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+        if (Params().NetworkIDString() == CBaseChainParams::TESTNET) 
+        {
+            subsidy += 1000;
+        }
     }
     else if (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0)
     {
