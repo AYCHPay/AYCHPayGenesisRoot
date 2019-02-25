@@ -488,18 +488,30 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             "  \"height\" : n                      (numeric) The height of the next block\n"
             "  \"equihashn\" : n                   (numeric) Equihash N\n"
             "  \"equihashk\" : n                   (numeric) Equihash K\n"
-            "  \"masternode\" : {                  (json object) required masternode payee that must be included in the next block\n"
+            
+            "  \"finder\" : n                      (numeric) Amount to pay the miner / minter \n"
+            "  \"giveaways\" : n                   (numeric) Amount to pay towards giveaways \n"
+            "  \"infrastructure\" : n              (numeric) Amount to pay towards infrastructure \n"
+            "  \"founderstotal\" : n               (numeric) Total amount to pay to founders \n"
+            "  \"founders\" : {                    (json object) required founder payee that must be included in the next block\n"
             "      \"payee\" : \"xxxx\",             (string) payee address\n"
             "      \"script\" : \"xxxx\",            (string) payee scriptPubKey\n"
-            "      \"amount\": n                   (numeric) required amount to pay\n"
+            "      \"amount\": n                     (numeric) required amount to pay\n"
+            "  },\n"
+            "  \"masternodes_total\" : n           (numeric) Total amount to pay to masternodes \n"
+            "  \"masternodes\" : {                 (json object) required masternode payee that must be included in the next block\n"
+            "      \"payee\" : \"xxxx\",             (string) payee address\n"
+            "      \"script\" : \"xxxx\",            (string) payee scriptPubKey\n"
+            "      \"amount\": n                     (numeric) required amount to pay\n"
             "  },\n"
             "  \"masternode_payments_started\" :  true|false, (boolean) true, if masternode payments started\n"
             "  \"masternode_payments_enforced\" : true|false, (boolean) true, if masternode payments are enforced\n"
+            "  \"governanceblock_amount\" : n      (numeric) Governance per block deduction \n"
             "  \"governanceblock\" : [                  (array) required governanceblock payees that must be included in the next block\n"
             "      {\n"
             "         \"payee\" : \"xxxx\",          (string) payee address\n"
             "         \"script\" : \"xxxx\",         (string) payee scriptPubKey\n"
-            "         \"amount\": n                (numeric) required amount to pay\n"
+            "         \"amount\": n                  (numeric) required amount to pay\n"
             "      }\n"
             "      ,...\n"
             "  ],\n"
@@ -806,7 +818,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0]->vout[0].nValue));
+    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0]->GetValueOut())); // GetValueOut()
     result.push_back(Pair("longpollid", chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
@@ -831,6 +843,38 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("equihashn", (int64_t)(Params().EquihashN())));
     result.push_back(Pair("equihashk", (int64_t)(Params().EquihashK())));
 
+    // Explicit deduction amounts
+    CAmount finderAmount = Params().GetConsensus().nBlockRewardFinder * COIN ; // miner / minter
+    result.push_back(Pair("finder", (int64_t)finderAmount));
+
+    CAmount giveAwaysAmount = Params().GetConsensus().nBlockRewardGiveaways * COIN; // giveaways total
+    result.push_back(Pair("giveaways", (int64_t)giveAwaysAmount));
+
+    CAmount infrastructureAmount = Params().GetConsensus().nBlockRewardInfrastructure * COIN; // infrastructure total
+    result.push_back(Pair("infrastructure", (int64_t)infrastructureAmount));
+
+    CAmount founderTotalAmount = Params().GetConsensus().nBlockRewardFounders * COIN; // founder total
+    result.push_back(Pair("founderstotal", (int64_t)founderTotalAmount));
+    
+    std::vector<CScript> foundersScripts = Params().GetAllFounderScripts();
+    UniValue founderScriptsObjArray(UniValue::VARR);
+    if (foundersScripts.size()) {
+        CAmount founderItemAmount = founderTotalAmount / (int)foundersScripts.size();
+        for (const auto& scriptout : foundersScripts) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination dest;
+            ExtractDestination(scriptout, dest);
+            entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            entry.push_back(Pair("script", HexStr(scriptout)));
+            entry.push_back(Pair("amount", founderItemAmount));
+            founderScriptsObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("founders", founderScriptsObjArray));
+
+    CAmount masternodeTotalAmount = Params().GetConsensus().nBlockRewardMasternode * COIN; // masternode total amount
+    result.push_back(Pair("masternodes_total", (int64_t)masternodeTotalAmount));
+
     UniValue masternodeObjArray(UniValue::VARR);
     if (pblock->vtxoutMasternode.size()) {
         for (const auto& txout : pblock->vtxoutMasternode) {
@@ -843,9 +887,12 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             masternodeObjArray.push_back(entry);
         }
     }
-    result.push_back(Pair("masternode", masternodeObjArray));
+    result.push_back(Pair("masternodes", masternodeObjArray));
     result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
     result.push_back(Pair("masternode_payments_enforced", true));
+
+    CAmount governannceBlockAmount = Params().GetConsensus().nBlockRewardGovernance * COIN; // governance per block amount
+    result.push_back(Pair("governanceblock_amount", (int64_t)governannceBlockAmount));
 
     UniValue governanceblockObjArray(UniValue::VARR);
     if (pblock->vtxoutGovernance.size()) {
