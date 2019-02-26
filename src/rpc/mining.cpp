@@ -1008,72 +1008,114 @@ UniValue submitblock(const JSONRPCRequest& request)
 
 UniValue getblocksubsidy(const JSONRPCRequest& request)
 {
-  if (request.fHelp || request.params.size() > 1)
-    throw std::runtime_error(
-      "getblocksubsidy height\n"
-      "\nReturns block subsidy reward of block at index provided, taking block deductions into account.\n"
-      "\nArguments:\n"
-      "1. height          (numeric, optional) The block height. If not provided, defaults to the current height of the chain.\n"
-      "\nResult:\n"
-      "{\n"
-      "\"miner\": n,    (numeric) The mining reward amount in genxis.\n"
-      "\"founders-chris\": f, (numeric) The founders reward in genxis (Chris) ()\n"
-      "\"founders-jimmy\": f, (numeric) The founders reward in genxis (Jimmy) ()\n"
-      "\"founders-scott\": f, (numeric) The founders reward in genxis (Scott) ()\n"
-      "\"founders-shelby\": f, (numeric) The founders reward in genxis (Shelby) ()\n"
-      "\"founders-loki\": f, (numeric) The founders reward in genxis (Loki) ()\n"
-      "\"infrastructure\": f, (numeric) Infrastructure deduction in genxis \n"
-      "\"giveaways\": f, (numeric) Giveaways deduction in genxis \n"
-      "}\n"
-      "\nExamples:\n"
-      + HelpExampleCli("getblocksubsidy", "1000")
-      + HelpExampleRpc("getblocksubsidy", "1000")
+    if (request.fHelp || request.params.size() > 1)
+        throw std::runtime_error(
+        "getblocksubsidy height\n"
+        "\nReturns block subsidy reward of block at index provided, taking block deductions into account.\n"
+        "\nArguments:\n"
+        "1. height          (numeric, optional) The block height. If not provided, defaults to the current height of the chain.\n"
+        "For blocks before masternodes and governance payments are enabled (" + itostr(Params().GetConsensus().nMasternodePaymentsStartBlock) + "):\n"
+        "\nResult:\n"
+        "{\n"
+        "\"height\": n,           (numeric) Block height\n"
+        "\"total\": n,            (numeric) Total block reward\n"
+        "\"deductions\": n,       (numeric) Total block deductions from the miner reward\n"
+        "\"miner\": n,            (numeric) The mining reward amount in genxis.\n"
+        "\"foundertotal\": n,     (numeric) The total (combined amount paid to the founders in genxis.\n"
+        "\"founders-chris\": f,   (numeric) The founders reward in genxis (Chris) ()\n"
+        "\"founders-jimmy\": f,   (numeric) The founders reward in genxis (Jimmy) ()\n"
+        "\"founders-scott\": f,   (numeric) The founders reward in genxis (Scott) ()\n"
+        "\"founders-shelby\": f,  (numeric) The founders reward in genxis (Shelby) ()\n"
+        "\"founders-loki\": f,    (numeric) The founders reward in genxis (Loki) ()\n"
+        "\"infrastructure\": f,   (numeric) Infrastructure deduction in genxis \n"
+        "\"giveaways\": f,        (numeric) Giveaways deduction in genxis \n"
+        "}\n"
+        "For blocks after masternodes and governance payments are enabled:\n"
+        "\nResult:\n"
+        "{\n"
+        "\"height\": n,           (numeric) Block height\n"
+        "\"total\": f,            (numeric) Total block reward\n"
+        "\"miner\": f,            (numeric) The mining / minting reward amount in genxis.\n"
+        "\"masternodestotal\": f, (numeric) The total (combined) amount paid to the masternodes in genxis.\n"
+        "\"governancetotal\": f,  (numeric) The total (combined) amount paid towards governance in genxis.\n"
+        "\"founderstotal\": f,    (numeric) The total (combined) amount paid to the founders in genxis.\n"
+        "\"founderamount\": f,    (numeric) The reward paid to each individual founder in genxis\n"
+        "\"infrastructure\": f,   (numeric) Infrastructure deduction in genxis \n"
+        "\"giveaways\": f,        (numeric) Giveaways deduction in genxis \n"
+        "}\n"
+        "\nExamples:\n"
+        + HelpExampleCli("getblocksubsidy", "1000")
+        + HelpExampleRpc("getblocksubsidy", "1000")
     );
 
-  RPCTypeCheck(request.params, {UniValue::VNUM});
+    RPCTypeCheck(request.params, {UniValue::VNUM});
 
-  LOCK(cs_main);
-  int nHeight = (request.params.size() == 1) ? request.params[0].get_int() : chainActive.Height() + 1;
-  if (nHeight < 0)
-    throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range.");
+    LOCK(cs_main);
+    int nHeight = (request.params.size() == 1) ? request.params[0].get_int() : chainActive.Height() + 1;
+    if (nHeight < 0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range.");
 
-  UniValue result(UniValue::VOBJ);
+    UniValue result(UniValue::VOBJ);
 
-  CAmount nReward = GetBlockSubsidy(nHeight, Params().GetConsensus());
-
-    CAmount deductions = nReward / 4;
-    CAmount miner = nReward - deductions;
-    auto deductionChange = deductions % 5;
-    // The change (remainder) gets re-added to the miner
-    miner += deductionChange;
-    // And removed from the deduction
-    deductions -= deductionChange;
-    // Founders : 40% of deduction (10% of total block)
-    auto vFounders = (deductions / 5) * 2;
-    // Check the division... see if we'll have any change left after the division
-    auto foundersChange = vFounders % 5;
-    if (foundersChange != 0)
+    if (nHeight < Params().GetConsensus().nMasternodePaymentsStartBlock)
     {
-        miner += foundersChange;
-        vFounders -= foundersChange;
+        CAmount nReward = GetBlockSubsidy(nHeight, Params().GetConsensus());
+        CAmount deductions = nReward / 4;
+        CAmount miner = nReward - deductions;
+        auto deductionChange = deductions % 5;
+        // The change (remainder) gets re-added to the miner
+        miner += deductionChange;
+        // And removed from the deduction
+        deductions -= deductionChange;
+        // Founders : 40% of deduction (10% of total block)
+        auto vFounders = (deductions / 5) * 2;
+        // Check the division... see if we'll have any change left after the division
+        auto foundersChange = vFounders % 5;
+        if (foundersChange != 0)
+        {
+            miner += foundersChange;
+            vFounders -= foundersChange;
+        }
+        // Calculate the individual founder's reward
+        auto ifr = vFounders / 5;
+
+        result.push_back(Pair("height", nHeight));
+        result.push_back(Pair("total", nReward));
+        result.push_back(Pair("deductions", deductions));
+        result.push_back(Pair("miner", miner));
+        result.push_back(Pair("foundertotal", vFounders));
+        result.push_back(Pair("founders-chris", ifr));
+        result.push_back(Pair("founders-jimmy", ifr));
+        result.push_back(Pair("founders-scott", ifr));
+        result.push_back(Pair("founders-shelby", ifr));
+        result.push_back(Pair("founders-loki", ifr));
+        result.push_back(Pair("infrastructure", (deductions / 5)));
+        result.push_back(Pair("giveaways", (deductions / 5) * 2));
     }
-    // Calculate the individual founder's reward
-    auto ifr = vFounders / 5;
+    else
+    {
+        CAmount subsidy = GetBlockSubsidy(nHeight, Params().GetConsensus());
+        CAmount miner = Params().GetConsensus().nBlockRewardFinder * COIN;
+        CAmount foundersTotal = Params().GetConsensus().nBlockRewardFounders * COIN;
+        CAmount giveawaysAmount = Params().GetConsensus().nBlockRewardGiveaways * COIN;
+        CAmount infrastructureAmount = Params().GetConsensus().nBlockRewardInfrastructure * COIN;
+        CAmount masternodesTotal = Params().GetConsensus().nBlockRewardMasternode * COIN;
+        // Calculate the individual founder's reward
+        CAmount ifr = foundersTotal / (int)Params().GetAllFounderScripts().size();
 
-    result.push_back(Pair("height", nHeight));
-    result.push_back(Pair("total", nReward));
-    result.push_back(Pair("deductions", deductions));
-    result.push_back(Pair("miner", miner));
-    result.push_back(Pair("foundertotal", vFounders));
-    result.push_back(Pair("founders-chris", ifr));
-    result.push_back(Pair("founders-jimmy", ifr));
-    result.push_back(Pair("founders-scott", ifr));
-    result.push_back(Pair("founders-shelby", ifr));
-    result.push_back(Pair("founders-loki", ifr));
-    result.push_back(Pair("infrastructure", (deductions / 5)));
-    result.push_back(Pair("giveaways", (deductions / 5) * 2));
+        result.push_back(Pair("height", nHeight));
+        result.push_back(Pair("total", subsidy));
+        result.push_back(Pair("deductions", subsidy - miner));
+        result.push_back(Pair("miner", miner));
+        result.push_back(Pair("masternodestotal", masternodesTotal));
+        result.push_back(Pair("governancetotal", GetBlockSubsidy(nHeight, Params().GetConsensus(), true)));
+        result.push_back(Pair("founderstotal", foundersTotal));
+        result.push_back(Pair("founderamount", ifr));
+        result.push_back(Pair("infrastructure", infrastructureAmount));
+        result.push_back(Pair("giveaways", giveawaysAmount));
+    }
 
-  return result;
+    return result;
 }
 
 UniValue estimatefee(const JSONRPCRequest& request)
