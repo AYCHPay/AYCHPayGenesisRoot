@@ -203,23 +203,23 @@ public:
 
         checkpointData = {
             {
-                {
-                    0, consensus.hashGenesisBlock
-                },
-                {
-                    10000, uint256S("0x000002a7e0ce0fec9117d68137819a4cfb7fa4f46408384340c9f652e7029b49")
-                },
-                {
-                    20000, uint256S("0x00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501")
-                }
+                {       0, consensus.hashGenesisBlock },
+                {   10000, uint256S("0x000002a7e0ce0fec9117d68137819a4cfb7fa4f46408384340c9f652e7029b49") },
+                {   20000, uint256S("0x00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501") },
+                {   50000, uint256S("0x0000045888d66288fda73bda42afa3e583da3aae9f3b39a587ac309ebc15dfcf") },
+                {  100000, uint256S("0x00000aa6196846292dc2dc30f9aef6e611526bf59040373ebc03bcc682103c07") },
+                {  150000, uint256S("0x000000fb79e0be3b9de46e286ba6f5707eb8bbe5a60056c73d2588e4d680397e") },
+                {  200000, uint256S("0x00000c24d6a2b1b539978c8f59ad4447abadad05377cd19ace5da055f2c72353") },
+                {  250000, uint256S("0x0000046bb8a7b130f93b664dee3495641216acd0469c9516bf82ac8c030086df") },
+                {  275000, uint256S("0x000003670dd2f382dfd345a54d8751871328f7520ca0968671d74b461de70114") }
             }
         };
 
         chainTxData = ChainTxData{
-            // Data from rpc: getchaintxstats 4096 00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501
-            /* nTime    */ 1532884444,
-            /* nTxCount */ 43002,
-            /* dTxRate  */ 0.05389735186421477
+            // Data from rpc: getchaintxstats 4096 000003670dd2f382dfd345a54d8751871328f7520ca0968671d74b461de70114
+            /* nTime    */ 1551099205,
+            /* nTxCount */ 780677,
+            /* dTxRate  */ 0.07566131360884529
         };
 
         // Switch at block
@@ -250,8 +250,8 @@ public:
 
         // Masternodes
         consensus.nMasternodeCollateral = 750000 * COIN;
-        consensus.nMasternodePaymentsStartBlock = 300000;
-		consensus.nGovernanceBlockOffset = 1; // One block after the bonus block
+        consensus.nMasternodePaymentsStartBlock = 325000;
+		consensus.nGovernanceBlockOffset = 1; // One block after the mega block
         consensus.nGovernanceMinQuorum = 10;
         consensus.nGovernanceFilterElements = 20000;
         consensus.nMasternodeMinimumConfirmations = 15;
