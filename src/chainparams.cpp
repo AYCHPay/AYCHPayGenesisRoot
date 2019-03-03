@@ -128,7 +128,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000ac2050bc0");
+        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000000000052d7f47804");
 
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501"); 
