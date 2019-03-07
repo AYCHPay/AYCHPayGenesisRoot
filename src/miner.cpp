@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -41,6 +41,9 @@
 #include <pow/tromp/equi_miner.h>
 #include <functional>
 #include <mutex>
+
+#include <masternodes/masternode-payments.h>
+#include <masternodes/masternode-sync.h>
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -143,7 +146,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     pblocktemplate.reset(new CBlockTemplate());
 
-    if(!pblocktemplate.get())
+    if (!pblocktemplate.get())
         return nullptr;
     pblock = &pblocktemplate->block; // pointer for convenience
 
@@ -197,51 +200,128 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     auto totalSubsidy = GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     coinbaseTx.vout[0].nValue = totalSubsidy;
 
-    // Deductions total 25% of the block subsidy
-    auto vBlockDeductionTotal = coinbaseTx.vout[0].nValue / 4;
-    // Ensure more reliable validation later, by rounding
-    auto deductionChange = vBlockDeductionTotal % 5;
-    // The change (remainder) gets re-added to the miner
-    coinbaseTx.vout[0].nValue += deductionChange;
-    // And removed from the deduction
-    vBlockDeductionTotal -= deductionChange;
-    // Now, make the main deduction
-    coinbaseTx.vout[0].nValue -= vBlockDeductionTotal;
-
-    // And give it to the beneficiaries:
-    // Founders : 40% of deduction (10% of total block)
-    auto vFounders = (vBlockDeductionTotal / 5) * 2;
-    // Each founder gets paid on each block
-    std::vector<CScript> allFounderScripts = chainparams.GetAllFounderScripts();
-    // Check the division... see if we'll have any change left after the division
-    auto foundersChange = vFounders % allFounderScripts.size();
-    if (foundersChange != 0)
+    // pre-masternodes
+    if (nHeight < chainparams.GetConsensus().nMasternodePaymentsStartBlock)
     {
-        coinbaseTx.vout[0].nValue += foundersChange;
-        vFounders -= foundersChange;
+        // Deductions total 25% of the block subsidy
+        auto vBlockDeductionTotal = coinbaseTx.vout[0].nValue / 4;
+        // Ensure more reliable validation later, by rounding
+        auto deductionChange = vBlockDeductionTotal % 5;
+        // The change (remainder) gets re-added to the miner
+        coinbaseTx.vout[0].nValue += deductionChange;
+        // And removed from the deduction
+        vBlockDeductionTotal -= deductionChange;
+        // Now, make the main deduction
+        coinbaseTx.vout[0].nValue -= vBlockDeductionTotal;
+
+        // And give it to the beneficiaries:
+        // Founders : 40% of deduction (10% of total block)
+        auto vFounders = (vBlockDeductionTotal / 5) * 2;
+        // Each founder gets paid on each block
+        std::vector<CScript> allFounderScripts = chainparams.GetAllFounderScripts();
+        // Check the division... see if we'll have any change left after the division
+        auto foundersChange = vFounders % allFounderScripts.size();
+        if (foundersChange != 0)
+        {
+            coinbaseTx.vout[0].nValue += foundersChange;
+            vFounders -= foundersChange;
+        }
+        // Calculate the individual founder's reward
+        auto ifr = vFounders / allFounderScripts.size();
+        // create the transactions
+        for (auto &founderScript : allFounderScripts)
+        {
+            coinbaseTx.vout.push_back(CTxOut(ifr, founderScript));
+        }            
+
+        // Infrastructure (Dev / Community Management / Outsourcing / Exchange Fees / Hosting) : 20% of deduction (5% of total block)
+        auto vInfrastructure = (vBlockDeductionTotal / 5) * 1;
+        coinbaseTx.vout.push_back(CTxOut(vInfrastructure, chainparams.GetInfrastructureScriptAtHeight(nHeight)));
+        // Giveaways (Bounties, Airdrops, Ad Hoc Giveaways) : 40% of deduction (10% of total block)
+        auto vGiveaways = (vBlockDeductionTotal / 5) * 2;
+        coinbaseTx.vout.push_back(CTxOut(vGiveaways, chainparams.GetGiveawayScriptAtHeight(nHeight)));
+        // Sanity check
+        assert(vInfrastructure + vGiveaways + vFounders + coinbaseTx.vout[0].nValue == totalSubsidy);
+        //LogPrintf("Sanity Check Values:\nHeight = %f\nTotal Subsidy = %f\nTotal Deduction = %f\nMiner = %f\nFounder Total = %f\nFounder Split = %f\nInfrastructure = %f\nGiveaways = %f\n", nHeight, totalSubsidy, vBlockDeductionTotal, coinbaseTx.vout[0].nValue, vFounders, ifr, vInfrastructure, vGiveaways / COIN);
     }
-    // Calculate the individual founder's reward
-    auto ifr = vFounders / allFounderScripts.size();
-    // create the transactions
-    for (auto &founderScript : allFounderScripts)
+    else
     {
-        coinbaseTx.vout.push_back(CTxOut(ifr, founderScript));
-    }            
+        // Once masternodes are enabled...
+        // Block subsidy breakdown (Total value: chainparams.GetConsensus().nBlockRewardTotal):
+        // chainparams.GetConsensus().nBlockRewardFinder - 350 to the miner / minter
+        // chainparams.GetConsensus().nBlockRewardMasternode - 200
+        // chainparams.GetConsensus().nBlockRewardFounders - 60 Combined
+        // chainparams.GetConsensus().nBlockRewardGiveaways - 0
+        // chainparams.GetConsensus().nBlockRewardInfrastructure - 0
 
-    // Infrastructure (Dev / Community Management / Outsourcing / Exchange Fees / Hosting) : 20% of deduction (5% of total block)
-    auto vInfrastructure = (vBlockDeductionTotal / 5) * 1;
-    coinbaseTx.vout.push_back(CTxOut(vInfrastructure, chainparams.GetInfrastructureScriptAtHeight(nHeight)));
-    // Giveaways (Bounties, Airdrops, Ad Hoc Giveaways) : 40% of deduction (10% of total block)
-    auto vGiveaways = (vBlockDeductionTotal / 5) * 2;
-    coinbaseTx.vout.push_back(CTxOut(vGiveaways, chainparams.GetGiveawayScriptAtHeight(nHeight)));
-    // Sanity check
-    assert(vInfrastructure + vGiveaways + vFounders + coinbaseTx.vout[0].nValue == totalSubsidy);
-    //LogPrintf("Sanity Check Values:\nHeight = %f\nTotal Subsidy = %f\nTotal Deduction = %f\nMiner = %f\nFounder Total = %f\nFounder Split = %f\nInfrastructure = %f\nGiveaways = %f\n", nHeight, totalSubsidy, vBlockDeductionTotal, coinbaseTx.vout[0].nValue, vFounders, ifr, vInfrastructure, vGiveaways / COIN);
+        // The 'normal' deductions... i.e. without governance
+        auto vBlockDeductionTotal = (chainparams.GetConsensus().nBlockRewardTotal - chainparams.GetConsensus().nBlockRewardFinder) * COIN;
+        // In case of governance block, leave the normal amount for the miner
+        if (nHeight >= chainparams.GetConsensus().nMasternodePaymentsStartBlock 
+                && nHeight >= chainparams.GetConsensus().GetMegaBlockInterval() 
+                && (nHeight % chainparams.GetConsensus().GetMegaBlockInterval()) == chainparams.GetConsensus().nGovernanceBlockOffset)
+        {
+            // Add the value of the governance block as well as the masternode amount to the deduction, 
+            // to ensure that the "base payments" are consistent
+            CAmount gPart = GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true);
+            vBlockDeductionTotal += gPart;
+        }
+
+        // Now, make the main deduction
+        coinbaseTx.vout[0].nValue -= vBlockDeductionTotal;
+
+        // And give it to the beneficiaries:
+        if (chainparams.GetConsensus().nBlockRewardFounders > 0)
+        {            
+            // Founders deduction
+            auto vFounders = (int)chainparams.GetConsensus().nBlockRewardFounders * COIN;
+            // Each founder gets paid on each block
+            std::vector<CScript> allFounderScripts = chainparams.GetAllFounderScripts();
+            // Check the division... see if we'll have any change left after the division
+            auto foundersChange = vFounders % allFounderScripts.size();
+            if (foundersChange != 0)
+            {
+                coinbaseTx.vout[0].nValue += foundersChange;
+                vFounders -= foundersChange;
+            }
+            // Calculate the individual founder's reward
+            auto ifr = vFounders / allFounderScripts.size();
+            // create the transactions
+            for (auto &founderScript : allFounderScripts)
+            {
+                coinbaseTx.vout.push_back(CTxOut(ifr, founderScript));
+            }            
+        }
+
+        if (chainparams.GetConsensus().nBlockRewardInfrastructure > 0)
+        {            
+            // Infrastructure (Dev / Community Management / Outsourcing / Exchange Fees / Hosting) 
+            auto vInfrastructure = (int)chainparams.GetConsensus().nBlockRewardFounders * COIN;
+            coinbaseTx.vout.push_back(CTxOut(vInfrastructure, chainparams.GetInfrastructureScriptAtHeight(nHeight)));
+        }
+
+        if (chainparams.GetConsensus().nBlockRewardGiveaways > 0)
+        {
+            // Giveaways (Bounties, Airdrops, Ad Hoc Giveaways) 
+            auto vGiveaways = (int)chainparams.GetConsensus().nBlockRewardGiveaways * COIN;
+            coinbaseTx.vout.push_back(CTxOut(vGiveaways, chainparams.GetGiveawayScriptAtHeight(nHeight)));
+        }
+
+        // Fill masternode / governance payment information
+        FillBlockPayments(coinbaseTx, nHeight, nFees + totalSubsidy, pblock->vtxoutMasternode, pblock->vtxoutGovernance);
+
+        // Sanity check
+        // auto vMasternodeDeduction = round(totalSubsidy * chainparams.GetConsensus().nBlockRewardMasternode); // GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true);
+        // Reset the var, to make the sanity check work
+        // LogPrint(BCLog::POW, "[ProofOfWork] Sanity Check Values:\nHeight          = %f\nTotal Subsidy   = %f\nTotal Deduction = %f\nMiner           = %f\nFounder Total   = %f\nFounder Split   = %f\nInfrastructure  = %f\nGiveaways       = %f\nMasternodes     = %f\n", nHeight, totalSubsidy / COIN, vBlockDeductionTotal / COIN, firstVal / COIN, vFounders / COIN, ifr / COIN, vInfrastructure / COIN, vGiveaways / COIN, vMasternodeDeduction / COIN);
+        // assert(vInfrastructure + vGiveaways + vFounders + firstVal + vMasternodeDeduction == totalSubsidy);
+    }
+
 
     // Add fees
     coinbaseTx.vout[0].nValue += nFees;
-
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
+        
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
     pblocktemplate->vTxFees[0] = -nFees;
@@ -269,7 +349,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     int64_t nTime2 = GetTimeMicros();
 
-    LogPrint(BCLog::BENCH, "CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n", 0.001 * (nTime1 - nTimeStart), nPackagesSelected, nDescendantsUpdated, 0.001 * (nTime2 - nTime1), 0.001 * (nTime2 - nTimeStart));
+    LogPrint(BCLog::BENCH, "[Benchmarking] CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n", 0.001 * (nTime1 - nTimeStart), nPackagesSelected, nDescendantsUpdated, 0.001 * (nTime2 - nTime1), 0.001 * (nTime2 - nTimeStart));
 
     return std::move(pblocktemplate);
 }
@@ -303,8 +383,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockWithKey(CReserveKe
 
 bool BlockAssembler::ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 {
-    //LogPrintf("%s\n", pblock->ToString());
-    //LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue));
+    LogPrint(BCLog::POW, "[ProofOfWork] %s\n", pblock->ToString());
 
     // Found a solution
     {
@@ -398,7 +477,7 @@ void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)
 
     bool fPrintPriority = gArgs.GetBoolArg("-printpriority", DEFAULT_PRINTPRIORITY);
     if (fPrintPriority) {
-        LogPrintf("fee %s txid %s\n",
+        LogPrint(BCLog::POW, "[ProofOfWork] fee %s txid %s\n",
                   CFeeRate(iter->GetModifiedFee(), iter->GetTxSize()).ToString(),
                   iter->GetTx().GetHash().ToString());
     }
@@ -620,7 +699,7 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
 void static GenesisMiner(CWallet *pwallet)
 {
-    LogPrintf("Genesis Miner started\n");
+    LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner started\n");
     //SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("genesis-miner");
     const CChainParams& chainparams = Params();
@@ -636,7 +715,7 @@ void static GenesisMiner(CWallet *pwallet)
 
     std::string solver = gArgs.GetArg("-equihashsolver", "tromp");
     assert(solver == "tromp" || solver == "default");
-    LogPrintf("Using Equihash solver \"%s\" with n = %u, k = %u\n", solver, n, k);
+    LogPrint(BCLog::POW, "[ProofOfWork] Using Equihash solver \"%s\" with n = %u, k = %u\n", solver, n, k);
 
     std::mutex m_cs;
     bool cancelSolver = false;
@@ -658,7 +737,7 @@ void static GenesisMiner(CWallet *pwallet)
                 // Busy-wait for the network to come online so we don't waste time mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
                 //miningTimer.stop();
-                LogPrintf("Checking for peers before mining commences\n");
+                LogPrint(BCLog::POW, "[ProofOfWork] Checking for peers before mining commences\n");
                 
                 do 
                 {
@@ -675,11 +754,32 @@ void static GenesisMiner(CWallet *pwallet)
                     }
                     else
                     {
-                        // LogPrintf("Waiting for peers...\n");
+                        // LogPrint(BCLog::POW, "[ProofOfWork] Waiting for peers...\n");
                     }
                     MilliSleep(1000);
                 } while (true);
                 //miningTimer.start();
+            }
+
+            // Make sure masternode stuff is synced before mining... otherwise payments will go wonky
+            if (!masternodeSync.IsSynced())
+            {
+                LogPrint(BCLog::POW, "[ProofOfWork] Waiting for masternode sync to complete before mining commences\n");
+                do 
+                {
+                    bool isMnStuffSynced = masternodeSync.IsSynced();
+                    if (isMnStuffSynced)
+                    {
+                        LogPrint(BCLog::POW, "[ProofOfWork] Masternode sync has completed. Commencing mining...\n");
+                        break;
+                    }
+                    else
+                    {
+                        // LogPrint(BCLog::POW, "[ProofOfWork] Masternode sync has still not completed. Can not commence mining...\n");
+                    }
+                    // Wait for 5 seconds... masternode stuff takes a while....
+                    MilliSleep(5000);
+                } while (true);
             }
 
             //
@@ -693,19 +793,19 @@ void static GenesisMiner(CWallet *pwallet)
             {
                 if (gArgs.GetArg("-mineraddress", "").empty()) 
                 {
-                    LogPrintf("Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 } 
                 else 
                 {
                     // Should never reach here, because -mineraddress validity is checked in init.cpp
-                    LogPrintf("Error in Genesis Miner: Invalid -mineraddress\n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Invalid -mineraddress\n");
                 }
                 return;
             }
             CBlock *pblock = &pblocktemplate->block;
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
-            //LogPrintf("Running Genesis Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(), ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
+            LogPrint(BCLog::POW, "[ProofOfWork] Running Genesis Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(), ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             //
             // Search
@@ -758,8 +858,8 @@ void static GenesisMiner(CWallet *pwallet)
 
                     // Found a solution
                     //SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    //LogPrintf("Genesis Miner:\n");
-                    //LogPrintf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
+                    LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner:\n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
                     if (blockassembler.ProcessBlockFound(pblock, *pwallet, reservekey)) 
                     {
                         // Ignore chain updates caused by us
@@ -848,22 +948,22 @@ void static GenesisMiner(CWallet *pwallet)
                 // Regtest mode doesn't require peers
                 if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0 && chainparams.MiningRequiresPeers())
                 {
-                    LogPrintf("Equihash solver broke out of the loop, as GetNodeCount is zero and mining requires peers \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, as GetNodeCount is zero and mining requires peers \n");
                     break;
                 }
                 if ((UintToArith256(pblock->nNonce) & 0xffff) == 0xffff)
                 {
-                    LogPrintf("Equihash solver broke out of the loop \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop \n");
                     break;
                 }
                 if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 {
-                    LogPrintf("Equihash solver broke out of the loop, because GetTransactionsUpdated was incorrect \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because GetTransactionsUpdated was incorrect \n");
                     break;
                 }
                 if (pindexPrev != chainActive.Tip())
                 {
-                    LogPrintf("Equihash solver broke out of the loop, because the previous index is not the active tip \n");
+                    LogPrint(BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because the previous index is not the active tip \n");
                     break;
                 }
 
@@ -877,14 +977,14 @@ void static GenesisMiner(CWallet *pwallet)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintf("Genesis Miner thread terminated\n");
+        LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner thread terminated\n");
         throw;
     }
     catch (const std::runtime_error &e)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintf("Genesis Miner runtime error: %s\n", e.what());
+        LogPrint(BCLog::POW, "[ProofOfWork] Genesis Miner runtime error: %s\n", e.what());
         return;
     }
     //miningTimer.stop();

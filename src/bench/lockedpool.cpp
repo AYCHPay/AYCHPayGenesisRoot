@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 The Bitcoin Core developers
+// Copyright (c) 2016-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -29,7 +29,7 @@ static void BenchLockedPool(benchmark::State& state)
             if (s & 0x80000000) {
                 b.free(addr[idx]);
                 addr[idx] = nullptr;
-            } else if(!addr[idx]) {
+            } else if (!addr[idx]) {
                 addr[idx] = b.alloc((s >> 16) & (MSIZE-1));
             }
             bool lsb = s & 1;

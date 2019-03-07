@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -87,7 +87,7 @@ AddressBookPage::AddressBookPage(const PlatformStyle *platformStyle, Mode _mode,
     contextMenu->addAction(copyAddressAction);
     contextMenu->addAction(copyLabelAction);
     contextMenu->addAction(editAction);
-    if(tab == SendingTab)
+    if (tab == SendingTab)
         contextMenu->addAction(deleteAction);
     contextMenu->addSeparator();
 
@@ -110,7 +110,7 @@ AddressBookPage::~AddressBookPage()
 void AddressBookPage::setModel(AddressTableModel *_model)
 {
     this->model = _model;
-    if(!_model)
+    if (!_model)
         return;
 
     proxyModel = new QSortFilterProxyModel(this);
@@ -164,13 +164,13 @@ void AddressBookPage::onCopyLabelAction()
 
 void AddressBookPage::onEditAction()
 {
-    if(!model)
+    if (!model)
         return;
 
-    if(!ui->tableView->selectionModel())
+    if (!ui->tableView->selectionModel())
         return;
     QModelIndexList indexes = ui->tableView->selectionModel()->selectedRows();
-    if(indexes.isEmpty())
+    if (indexes.isEmpty())
         return;
 
     EditAddressDialog dlg(
@@ -185,7 +185,7 @@ void AddressBookPage::onEditAction()
 
 void AddressBookPage::on_newAddress_clicked()
 {
-    if(!model)
+    if (!model)
         return;
 
     EditAddressDialog dlg(
@@ -193,7 +193,7 @@ void AddressBookPage::on_newAddress_clicked()
         EditAddressDialog::NewSendingAddress :
         EditAddressDialog::NewReceivingAddress, this);
     dlg.setModel(model);
-    if(dlg.exec())
+    if (dlg.exec())
     {
         newAddressToSelect = dlg.getAddress();
     }
@@ -202,11 +202,11 @@ void AddressBookPage::on_newAddress_clicked()
 void AddressBookPage::on_deleteAddress_clicked()
 {
     QTableView *table = ui->tableView;
-    if(!table->selectionModel())
+    if (!table->selectionModel())
         return;
 
     QModelIndexList indexes = table->selectionModel()->selectedRows();
-    if(!indexes.isEmpty())
+    if (!indexes.isEmpty())
     {
         table->model()->removeRow(indexes.at(0).row());
     }
@@ -216,10 +216,10 @@ void AddressBookPage::selectionChanged()
 {
     // Set button states based on selected tab and selection
     QTableView *table = ui->tableView;
-    if(!table->selectionModel())
+    if (!table->selectionModel())
         return;
 
-    if(table->selectionModel()->hasSelection())
+    if (table->selectionModel()->hasSelection())
     {
         switch(tab)
         {
@@ -248,7 +248,7 @@ void AddressBookPage::selectionChanged()
 void AddressBookPage::done(int retval)
 {
     QTableView *table = ui->tableView;
-    if(!table->selectionModel() || !table->model())
+    if (!table->selectionModel() || !table->model())
         return;
 
     // Figure out which address was selected, and return it
@@ -259,7 +259,7 @@ void AddressBookPage::done(int retval)
         returnValue = address.toString();
     }
 
-    if(returnValue.isEmpty())
+    if (returnValue.isEmpty())
     {
         // If no address entry selected, return rejected
         retval = Rejected;
@@ -285,7 +285,7 @@ void AddressBookPage::on_exportButton_clicked()
     writer.addColumn("Label", AddressTableModel::Label, Qt::EditRole);
     writer.addColumn("Address", AddressTableModel::Address, Qt::EditRole);
 
-    if(!writer.write()) {
+    if (!writer.write()) {
         QMessageBox::critical(this, tr("Exporting Failed"),
             tr("There was an error trying to save the address list to %1. Please try again.").arg(filename));
     }
@@ -294,7 +294,7 @@ void AddressBookPage::on_exportButton_clicked()
 void AddressBookPage::contextualMenu(const QPoint &point)
 {
     QModelIndex index = ui->tableView->indexAt(point);
-    if(index.isValid())
+    if (index.isValid())
     {
         contextMenu->exec(QCursor::pos());
     }
@@ -303,7 +303,7 @@ void AddressBookPage::contextualMenu(const QPoint &point)
 void AddressBookPage::selectNewAddress(const QModelIndex &parent, int begin, int /*end*/)
 {
     QModelIndex idx = proxyModel->mapFromSource(model->index(begin, AddressTableModel::Address, parent));
-    if(idx.isValid() && (idx.data(Qt::EditRole).toString() == newAddressToSelect))
+    if (idx.isValid() && (idx.data(Qt::EditRole).toString() == newAddressToSelect))
     {
         // Select row of newly created address, once
         ui->tableView->setFocus();

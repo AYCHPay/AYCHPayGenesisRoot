@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -61,7 +61,7 @@ public:
         {
             cachedNodeStats.clear();
             std::vector<CNodeStats> vstats;
-            if(g_connman)
+            if (g_connman)
                 g_connman->GetNodeStats(vstats);
 #if QT_VERSION >= 0x040700
             cachedNodeStats.reserve(vstats.size());
@@ -161,7 +161,7 @@ int PeerTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant PeerTableModel::data(const QModelIndex &index, int role) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return QVariant();
 
     CNodeCombinedStats *rec = static_cast<CNodeCombinedStats*>(index.internalPointer());
@@ -198,9 +198,9 @@ QVariant PeerTableModel::data(const QModelIndex &index, int role) const
 
 QVariant PeerTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if(orientation == Qt::Horizontal)
+    if (orientation == Qt::Horizontal)
     {
-        if(role == Qt::DisplayRole && section < columns.size())
+        if (role == Qt::DisplayRole && section < columns.size())
         {
             return columns[section];
         }
@@ -210,7 +210,7 @@ QVariant PeerTableModel::headerData(int section, Qt::Orientation orientation, in
 
 Qt::ItemFlags PeerTableModel::flags(const QModelIndex &index) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return 0;
 
     Qt::ItemFlags retval = Qt::ItemIsSelectable | Qt::ItemIsEnabled;

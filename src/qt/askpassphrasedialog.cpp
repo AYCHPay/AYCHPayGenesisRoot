@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -90,7 +90,7 @@ void AskPassphraseDialog::setModel(WalletModel *_model)
 void AskPassphraseDialog::accept()
 {
     SecureString oldpass, newpass1, newpass2;
-    if(!model)
+    if (!model)
         return;
     oldpass.reserve(MAX_PASSPHRASE_SIZE);
     newpass1.reserve(MAX_PASSPHRASE_SIZE);
@@ -106,7 +106,7 @@ void AskPassphraseDialog::accept()
     switch(mode)
     {
     case Encrypt: {
-        if(newpass1.empty() || newpass2.empty())
+        if (newpass1.empty() || newpass2.empty())
         {
             // Cannot encrypt with empty passphrase
             break;
@@ -115,11 +115,11 @@ void AskPassphraseDialog::accept()
                  tr("Warning: If you encrypt your wallet and lose your passphrase, you will <b>LOSE ALL OF YOUR GENESIS</b>!") + "<br><br>" + tr("Are you sure you wish to encrypt your wallet?"),
                  QMessageBox::Yes|QMessageBox::Cancel,
                  QMessageBox::Cancel);
-        if(retval == QMessageBox::Yes)
+        if (retval == QMessageBox::Yes)
         {
-            if(newpass1 == newpass2)
+            if (newpass1 == newpass2)
             {
-                if(model->setWalletEncrypted(true, newpass1))
+                if (model->setWalletEncrypted(true, newpass1))
                 {
                     QMessageBox::warning(this, tr("Wallet encrypted"),
                                          "<qt>" +
@@ -153,7 +153,7 @@ void AskPassphraseDialog::accept()
         }
         } break;
     case Unlock:
-        if(!model->setWalletLocked(false, oldpass))
+        if (!model->setWalletLocked(false, oldpass))
         {
             QMessageBox::critical(this, tr("Wallet unlock failed"),
                                   tr("The passphrase entered for the wallet decryption was incorrect."));
@@ -164,7 +164,7 @@ void AskPassphraseDialog::accept()
         }
         break;
     case Decrypt:
-        if(!model->setWalletEncrypted(false, oldpass))
+        if (!model->setWalletEncrypted(false, oldpass))
         {
             QMessageBox::critical(this, tr("Wallet decryption failed"),
                                   tr("The passphrase entered for the wallet decryption was incorrect."));
@@ -175,9 +175,9 @@ void AskPassphraseDialog::accept()
         }
         break;
     case ChangePass:
-        if(newpass1 == newpass2)
+        if (newpass1 == newpass2)
         {
-            if(model->changePassphrase(oldpass, newpass1))
+            if (model->changePassphrase(oldpass, newpass1))
             {
                 QMessageBox::information(this, tr("Wallet encrypted"),
                                      tr("Wallet passphrase was successfully changed."));

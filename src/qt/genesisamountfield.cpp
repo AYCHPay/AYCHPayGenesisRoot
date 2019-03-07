@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -34,7 +34,7 @@ public:
 
     QValidator::State validate(QString &text, int &pos) const
     {
-        if(text.isEmpty())
+        if (text.isEmpty())
             return QValidator::Intermediate;
         bool valid = false;
         parse(text, &valid);
@@ -46,7 +46,7 @@ public:
     {
         bool valid = false;
         CAmount val = parse(input, &valid);
-        if(valid)
+        if (valid)
         {
             input = GenesisUnits::format(currentUnit, val, false, GenesisUnits::separatorAlways);
             lineEdit()->setText(input);
@@ -80,7 +80,7 @@ public:
 
         currentUnit = unit;
 
-        if(valid)
+        if (valid)
             setValue(val);
         else
             clear();
@@ -93,7 +93,7 @@ public:
 
     QSize minimumSizeHint() const
     {
-        if(cachedMinimumSizeHint.isEmpty())
+        if (cachedMinimumSizeHint.isEmpty())
         {
             ensurePolished();
 
@@ -138,12 +138,12 @@ private:
     {
         CAmount val = 0;
         bool valid = GenesisUnits::parse(currentUnit, text, &val);
-        if(valid)
+        if (valid)
         {
-            if(val < 0 || val > GenesisUnits::maxMoney())
+            if (val < 0 || val > GenesisUnits::maxMoney())
                 valid = false;
         }
-        if(valid_out)
+        if (valid_out)
             *valid_out = valid;
         return valid ? val : 0;
     }
@@ -174,11 +174,11 @@ protected:
         StepEnabled rv = 0;
         bool valid = false;
         CAmount val = value(&valid);
-        if(valid)
+        if (valid)
         {
-            if(val > 0)
+            if (val > 0)
                 rv |= StepDownEnabled;
-            if(val < GenesisUnits::maxMoney())
+            if (val < GenesisUnits::maxMoney())
                 rv |= StepUpEnabled;
         }
         return rv;

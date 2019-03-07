@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 The Bitcoin Core developers
+// Copyright (c) 2016-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -65,7 +65,7 @@ void* Arena::alloc(size_t size)
         return nullptr;
 
     // Pick a large enough free-chunk
-    auto it = std::find_if(chunks_free.begin(), chunks_free.end(),
+    auto it = std::find_if (chunks_free.begin(), chunks_free.end(),
         [=](const std::map<char*, size_t>::value_type& chunk){ return chunk.second >= size; });
     if (it == chunks_free.end())
         return nullptr;

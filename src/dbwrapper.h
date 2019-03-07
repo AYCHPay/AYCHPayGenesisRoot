@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2017 The Bitcoin Core developers
+// Copyright (c) 2012-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -234,7 +234,7 @@ public:
         if (!status.ok()) {
             if (status.IsNotFound())
                 return false;
-            LogPrintf("LevelDB read failure: %s\n", status.ToString());
+            LogPrint(BCLog::LEVELDB, "[LevelDB] Read Failure: %s\n", status.ToString());
             dbwrapper_private::HandleError(status);
         }
         try {
@@ -268,7 +268,7 @@ public:
         if (!status.ok()) {
             if (status.IsNotFound())
                 return false;
-            LogPrintf("LevelDB read failure: %s\n", status.ToString());
+            LogPrint(BCLog::LEVELDB, "[LevelDB] Read failure: %s\n", status.ToString());
             dbwrapper_private::HandleError(status);
         }
         return true;

@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -113,7 +113,7 @@ public:
         switch(status)
         {
         case CT_NEW:
-            if(inModel)
+            if (inModel)
             {
                 qWarning() << "AddressTablePriv::updateEntry: Warning: Got CT_NEW, but entry is already in model";
                 break;
@@ -123,7 +123,7 @@ public:
             parent->endInsertRows();
             break;
         case CT_UPDATED:
-            if(!inModel)
+            if (!inModel)
             {
                 qWarning() << "AddressTablePriv::updateEntry: Warning: Got CT_UPDATED, but entry is not in model";
                 break;
@@ -133,7 +133,7 @@ public:
             parent->emitDataChanged(lowerIndex);
             break;
         case CT_DELETED:
-            if(!inModel)
+            if (!inModel)
             {
                 qWarning() << "AddressTablePriv::updateEntry: Warning: Got CT_DELETED, but entry is not in model";
                 break;
@@ -152,7 +152,7 @@ public:
 
     AddressTableEntry *index(int idx)
     {
-        if(idx >= 0 && idx < cachedAddressTable.size())
+        if (idx >= 0 && idx < cachedAddressTable.size())
         {
             return &cachedAddressTable[idx];
         }
@@ -190,17 +190,17 @@ int AddressTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant AddressTableModel::data(const QModelIndex &index, int role) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return QVariant();
 
     AddressTableEntry *rec = static_cast<AddressTableEntry*>(index.internalPointer());
 
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
+    if (role == Qt::DisplayRole || role == Qt::EditRole)
     {
         switch(index.column())
         {
         case Label:
-            if(rec->label.isEmpty() && role == Qt::DisplayRole)
+            if (rec->label.isEmpty() && role == Qt::DisplayRole)
             {
                 return tr("(no label)");
             }
@@ -215,7 +215,7 @@ QVariant AddressTableModel::data(const QModelIndex &index, int role) const
     else if (role == Qt::FontRole)
     {
         QFont font;
-        if(index.column() == Address)
+        if (index.column() == Address)
         {
             font = GUIUtil::fixedPitchFont();
         }
@@ -237,48 +237,48 @@ QVariant AddressTableModel::data(const QModelIndex &index, int role) const
 
 bool AddressTableModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return false;
     AddressTableEntry *rec = static_cast<AddressTableEntry*>(index.internalPointer());
     std::string strPurpose = (rec->type == AddressTableEntry::Sending ? "send" : "receive");
     editStatus = OK;
 
-    if(role == Qt::EditRole)
+    if (role == Qt::EditRole)
     {
         LOCK(wallet->cs_wallet); /* For SetAddressBook / DelAddressBook */
         CTxDestination curAddress = DecodeDestination(rec->address.toStdString());
-        if(index.column() == Label)
+        if (index.column() == Label)
         {
             // Do nothing, if old label == new label
-            if(rec->label == value.toString())
+            if (rec->label == value.toString())
             {
                 editStatus = NO_CHANGES;
                 return false;
             }
             wallet->SetAddressBook(curAddress, value.toString().toStdString(), strPurpose);
-        } else if(index.column() == Address) {
+        } else if (index.column() == Address) {
             CTxDestination newAddress = DecodeDestination(value.toString().toStdString());
             // Refuse to set invalid address, set error status and return false
-            if(boost::get<CNoDestination>(&newAddress))
+            if (boost::get<CNoDestination>(&newAddress))
             {
                 editStatus = INVALID_ADDRESS;
                 return false;
             }
             // Do nothing, if old address == new address
-            else if(newAddress == curAddress)
+            else if (newAddress == curAddress)
             {
                 editStatus = NO_CHANGES;
                 return false;
             }
             // Check for duplicate addresses to prevent accidental deletion of addresses, if you try
             // to paste an existing address over another address (with a different label)
-            else if(wallet->mapAddressBook.count(newAddress))
+            else if (wallet->mapAddressBook.count(newAddress))
             {
                 editStatus = DUPLICATE_ADDRESS;
                 return false;
             }
             // Double-check that we're not overwriting a receiving address
-            else if(rec->type == AddressTableEntry::Sending)
+            else if (rec->type == AddressTableEntry::Sending)
             {
                 // Remove old entry
                 wallet->DelAddressBook(curAddress);
@@ -293,9 +293,9 @@ bool AddressTableModel::setData(const QModelIndex &index, const QVariant &value,
 
 QVariant AddressTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if(orientation == Qt::Horizontal)
+    if (orientation == Qt::Horizontal)
     {
-        if(role == Qt::DisplayRole && section < columns.size())
+        if (role == Qt::DisplayRole && section < columns.size())
         {
             return columns[section];
         }
@@ -305,14 +305,14 @@ QVariant AddressTableModel::headerData(int section, Qt::Orientation orientation,
 
 Qt::ItemFlags AddressTableModel::flags(const QModelIndex &index) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return 0;
     AddressTableEntry *rec = static_cast<AddressTableEntry*>(index.internalPointer());
 
     Qt::ItemFlags retval = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
     // Can edit address and label for sending addresses,
     // and only label for receiving addresses.
-    if(rec->type == AddressTableEntry::Sending ||
+    if (rec->type == AddressTableEntry::Sending ||
       (rec->type == AddressTableEntry::Receiving && index.column()==Label))
     {
         retval |= Qt::ItemIsEditable;
@@ -324,7 +324,7 @@ QModelIndex AddressTableModel::index(int row, int column, const QModelIndex &par
 {
     Q_UNUSED(parent);
     AddressTableEntry *data = priv->index(row);
-    if(data)
+    if (data)
     {
         return createIndex(row, column, priv->index(row));
     }
@@ -348,9 +348,9 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con
 
     editStatus = OK;
 
-    if(type == Send)
+    if (type == Send)
     {
-        if(!walletModel->validateAddress(address))
+        if (!walletModel->validateAddress(address))
         {
             editStatus = INVALID_ADDRESS;
             return QString();
@@ -358,27 +358,27 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con
         // Check for duplicate addresses
         {
             LOCK(wallet->cs_wallet);
-            if(wallet->mapAddressBook.count(DecodeDestination(strAddress)))
+            if (wallet->mapAddressBook.count(DecodeDestination(strAddress)))
             {
                 editStatus = DUPLICATE_ADDRESS;
                 return QString();
             }
         }
     }
-    else if(type == Receive)
+    else if (type == Receive)
     {
         // Generate a new address to associate with given label
         CPubKey newKey;
-        if(!wallet->GetKeyFromPool(newKey))
+        if (!wallet->GetKeyFromPool(newKey))
         {
             WalletModel::UnlockContext ctx(walletModel->requestUnlock());
-            if(!ctx.isValid())
+            if (!ctx.isValid())
             {
                 // Unlock wallet failed or was cancelled
                 editStatus = WALLET_UNLOCK_FAILURE;
                 return QString();
             }
-            if(!wallet->GetKeyFromPool(newKey))
+            if (!wallet->GetKeyFromPool(newKey))
             {
                 editStatus = KEY_GENERATION_FAILURE;
                 return QString();
@@ -405,7 +405,7 @@ bool AddressTableModel::removeRows(int row, int count, const QModelIndex &parent
 {
     Q_UNUSED(parent);
     AddressTableEntry *rec = priv->index(row);
-    if(count != 1 || !rec || rec->type == AddressTableEntry::Receiving)
+    if (count != 1 || !rec || rec->type == AddressTableEntry::Receiving)
     {
         // Can only remove one row at a time, and cannot remove rows not in model.
         // Also refuse to remove receiving addresses.
@@ -438,7 +438,7 @@ int AddressTableModel::lookupAddress(const QString &address) const
 {
     QModelIndexList lst = match(index(0, Address, QModelIndex()),
                                 Qt::EditRole, address, 1, Qt::MatchExactly);
-    if(lst.isEmpty())
+    if (lst.isEmpty())
     {
         return -1;
     }

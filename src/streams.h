@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -86,7 +86,7 @@ class CVectorWriter
 */
     CVectorWriter(int nTypeIn, int nVersionIn, std::vector<unsigned char>& vchDataIn, size_t nPosIn) : nType(nTypeIn), nVersion(nVersionIn), vchData(vchDataIn), nPos(nPosIn)
     {
-        if(nPos > vchData.size())
+        if (nPos > vchData.size())
             vchData.resize(nPos);
     }
 /*
@@ -128,8 +128,12 @@ class CVectorWriter
     void seek(size_t nSize)
     {
         nPos += nSize;
-        if(nPos > vchData.size())
+        if (nPos > vchData.size())
             vchData.resize(nPos);
+    }
+    size_t size() const
+    {
+        return vchData.size() - nPos;
     }
 private:
     const int nType;

@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -113,6 +113,10 @@ public:
         // LWMA
         consensus.nZawyLwmaAveragingWindow = 90;
 
+        // Maturity
+        consensus.nCoinbaseMaturity = 100;
+        consensus.nTxMinConfirmations = 6;
+
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
@@ -124,10 +128,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000ac2050bc0");
+        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000000000052d7f47804");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501"); 
+        consensus.defaultAssumeValid = uint256S("0x000003670dd2f382dfd345a54d8751871328f7520ca0968671d74b461de70114"); 
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -199,23 +203,23 @@ public:
 
         checkpointData = {
             {
-                {
-                    0, consensus.hashGenesisBlock
-                },
-                {
-                    10000, uint256S("0x000002a7e0ce0fec9117d68137819a4cfb7fa4f46408384340c9f652e7029b49")
-                },
-                {
-                    20000, uint256S("0x00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501")
-                }
+                {       0, consensus.hashGenesisBlock },
+                {   10000, uint256S("0x000002a7e0ce0fec9117d68137819a4cfb7fa4f46408384340c9f652e7029b49") },
+                {   20000, uint256S("0x00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501") },
+                {   50000, uint256S("0x0000045888d66288fda73bda42afa3e583da3aae9f3b39a587ac309ebc15dfcf") },
+                {  100000, uint256S("0x00000aa6196846292dc2dc30f9aef6e611526bf59040373ebc03bcc682103c07") },
+                {  150000, uint256S("0x000000fb79e0be3b9de46e286ba6f5707eb8bbe5a60056c73d2588e4d680397e") },
+                {  200000, uint256S("0x00000c24d6a2b1b539978c8f59ad4447abadad05377cd19ace5da055f2c72353") },
+                {  250000, uint256S("0x0000046bb8a7b130f93b664dee3495641216acd0469c9516bf82ac8c030086df") },
+                {  275000, uint256S("0x000003670dd2f382dfd345a54d8751871328f7520ca0968671d74b461de70114") }
             }
         };
 
         chainTxData = ChainTxData{
-            // Data from rpc: getchaintxstats 4096 00000d375549a032c60f9a857da1cbe260dcb53c1d718216f06e897fb2fe3501
-            /* nTime    */ 1532884444,
-            /* nTxCount */ 43002,
-            /* dTxRate  */ 0.05389735186421477
+            // Data from rpc: getchaintxstats 4096 000003670dd2f382dfd345a54d8751871328f7520ca0968671d74b461de70114
+            /* nTime    */ 1551099205,
+            /* nTxCount */ 780677,
+            /* dTxRate  */ 0.07566131360884529
         };
 
         // Switch at block
@@ -243,6 +247,36 @@ public:
         {
             "SQnWFjgxMJyyMQK97gjdF8gYBUUH3kSWEA", // Giveaways
         };
+
+        // Masternodes
+        consensus.nMasternodeCollateral = 750000 * COIN;
+        consensus.nMasternodePaymentsStartBlock = 325000;
+		consensus.nGovernanceBlockOffset = 1; // One block after the mega block
+        consensus.nGovernanceMinQuorum = 10;
+        consensus.nGovernanceFilterElements = 20000;
+        consensus.nMasternodeMinimumConfirmations = 15;
+        consensus.nFulfilledRequestExpireTime = 60*60; // fulfilled requests expire in 1 hour
+        consensus.nMasternodeCheckSeconds = 5;                    
+        consensus.nMasternodeMinMnbSeconds = 5 * 60;                      
+        consensus.nMasternodeMinMnpSeconds = 10 * 60;                    
+        consensus.nMasternodeSentinelPingMaxSeconds = 60 * 60;              
+        consensus.nMasternodeExpirationSeconds = 120 * 60;                   
+        consensus.nMasternodeNewStartRequiredSeconds = 180 * 60;             
+        consensus.nMasternodePoseBanMaxScore = 5;                    
+        consensus.nMasternodeSignHashThreshold = 600000;                  
+        // Masternode maturity configuration
+        consensus.nMasternodeMaturityBlockMultiplier = 1440;             
+        consensus.nMasternodeMaturityThreshold = 336;                   
+        consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
+        // Block subsidy definition(s)
+        consensus.nBlockRewardFinder = 350;     // miner / minter
+        consensus.nBlockRewardMasternode = 200;                         
+        consensus.nBlockRewardFounders = 60;                           
+        consensus.nBlockRewardGiveaways = 0;                          
+        consensus.nBlockRewardInfrastructure = 0;                    
+        consensus.nBlockRewardTotal = consensus.nBlockRewardFinder + consensus.nBlockRewardMasternode + consensus.nBlockRewardFounders + consensus.nBlockRewardGiveaways + consensus.nBlockRewardInfrastructure; // 610 // Normal block                               
+        consensus.nBlockRewardGovernance = 90;                   
     }
 };
 
@@ -272,6 +306,10 @@ public:
 
         // LWMA
         consensus.nZawyLwmaAveragingWindow = 90;
+
+        // Maturity
+        consensus.nCoinbaseMaturity = 5;
+        consensus.nTxMinConfirmations = 1;
 
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
@@ -332,6 +370,7 @@ public:
         // nodes with support for servicebits filtering should be at the top
         vSeeds.emplace_back("testnet1.genesisnetwork.io", true);
         vSeeds.emplace_back("testnet2.genesisnetwork.io", true);
+        vSeeds.emplace_back("testnet3.genesisnetwork.io", true);
 
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 125);// 
@@ -362,8 +401,8 @@ public:
         };
 
         // Switch at block
-        fGenX_SwitchAtBlock = 3;
-        fGenX_EnforceAtBlock = 1;
+        fGenX_SwitchAtBlock = 11;
+        fGenX_EnforceAtBlock = 12;
 
         // Founders Addresses: 
         vFounderAddress = 
@@ -387,6 +426,35 @@ public:
             "c4NjsSBF4NGXbzxAJUiK1P1KfmxpxXiaaP", // Giveaways
         };
 
+        // Masternodes
+        consensus.nMasternodeCollateral = 1 * COIN;
+        consensus.nMasternodePaymentsStartBlock = 21;
+		consensus.nGovernanceBlockOffset = 1; 
+        consensus.nGovernanceMinQuorum = 1;
+        consensus.nGovernanceFilterElements = 500;
+        consensus.nMasternodeMinimumConfirmations = 1;
+        consensus.nFulfilledRequestExpireTime = 5*60; // fulfilled requests expire in 5 minutes
+        consensus.nMasternodeCheckSeconds = 5;                    
+        consensus.nMasternodeMinMnbSeconds = 5 * 60;                      
+        consensus.nMasternodeMinMnpSeconds = 10 * 60;                    
+        consensus.nMasternodeSentinelPingMaxSeconds = 60 * 60;              
+        consensus.nMasternodeExpirationSeconds = 120 * 60;                   
+        consensus.nMasternodeNewStartRequiredSeconds = 180 * 60;             
+        consensus.nMasternodePoseBanMaxScore = 5;                    
+        consensus.nMasternodeSignHashThreshold = 600000;                  
+        // Masternode maturity configuration
+        consensus.nMasternodeMaturityBlockMultiplier = 1440;             
+        consensus.nMasternodeMaturityThreshold = 336;                   
+        consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
+        // Block subsidy definition(s)
+        consensus.nBlockRewardFinder = 350;     // miner / minter
+        consensus.nBlockRewardMasternode = 200;                         
+        consensus.nBlockRewardFounders = 60;                           
+        consensus.nBlockRewardGiveaways = 0;                          
+        consensus.nBlockRewardInfrastructure = 0;                    
+        consensus.nBlockRewardTotal = consensus.nBlockRewardFinder + consensus.nBlockRewardMasternode + consensus.nBlockRewardFounders + consensus.nBlockRewardGiveaways + consensus.nBlockRewardInfrastructure; // 610 // Normal block                               
+        consensus.nBlockRewardGovernance = 90;                              
     }
 };
 
@@ -422,6 +490,10 @@ public:
 
         // LWMA
         consensus.nZawyLwmaAveragingWindow = 90;
+
+        // Maturity
+        consensus.nCoinbaseMaturity = 1;
+        consensus.nTxMinConfirmations = 1;
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x00");
@@ -520,7 +592,36 @@ public:
         {
             "c5M76MoQpWA5SqqKLiRWy8jpuT4Ubrcuqr", // Giveaways
         };
-        
+
+        // Masternodes
+        consensus.nMasternodeCollateral = 1 * COIN;
+        consensus.nMasternodePaymentsStartBlock = 21;
+		consensus.nGovernanceBlockOffset = 1;
+        consensus.nGovernanceMinQuorum = 1;
+        consensus.nGovernanceFilterElements = 500;
+        consensus.nMasternodeMinimumConfirmations = 1;
+        consensus.nFulfilledRequestExpireTime = 5*60; // fulfilled requests expire in 5 minutes
+        consensus.nMasternodeCheckSeconds = 5;                    
+        consensus.nMasternodeMinMnbSeconds = 5 * 60;                      
+        consensus.nMasternodeMinMnpSeconds = 10 * 60;                    
+        consensus.nMasternodeSentinelPingMaxSeconds = 60 * 60;              
+        consensus.nMasternodeExpirationSeconds = 120 * 60;                   
+        consensus.nMasternodeNewStartRequiredSeconds = 180 * 60;             
+        consensus.nMasternodePoseBanMaxScore = 5;                    
+        consensus.nMasternodeSignHashThreshold = 600000;                  
+        // Masternode maturity configuration
+        consensus.nMasternodeMaturityBlockMultiplier = 1440;             
+        consensus.nMasternodeMaturityThreshold = 336;                   
+        consensus.nMasternodeMaturitySecondariesMaxCount = 20; 
+        consensus.aMasternodeMaturiySecondariesMinAmount = 1;       
+        // Block subsidy definition(s)
+        consensus.nBlockRewardFinder = 350;     // miner / minter
+        consensus.nBlockRewardMasternode = 200;                         
+        consensus.nBlockRewardFounders = 60;                           
+        consensus.nBlockRewardGiveaways = 0;                          
+        consensus.nBlockRewardInfrastructure = 0;                    
+        consensus.nBlockRewardTotal = consensus.nBlockRewardFinder + consensus.nBlockRewardMasternode + consensus.nBlockRewardFounders + consensus.nBlockRewardGiveaways + consensus.nBlockRewardInfrastructure; // 610 // Normal block                               
+        consensus.nBlockRewardGovernance = 90;                                      
     }
 };
 
@@ -570,10 +671,11 @@ CScript CChainParams::AddressToScript(std::string inAddress) const
 // Block height must be >0 and <=last founders reward block height 
 // or block time must be within 1 year of the genesis block time
 // Index variable i ranges from 0 - (vFounderAddress.size()-1)
-std::string CChainParams::GetFounderAddressAtHeight(int nHeight) const 
+std::string CChainParams::GetFounderAddressAtHeight(uint32_t nHeight) const 
 {
-    int maxHeight = consensus.GetLastFoundersRewardBlockHeight();
-    assert(nHeight > 0 && nHeight <= maxHeight);
+    uint32_t maxHeight = consensus.GetLastFoundersRewardBlockHeight();
+    uint32_t justAZero = 0;
+    assert(nHeight > justAZero && nHeight <= maxHeight);
 
     size_t addressChangeInterval = (maxHeight + vFounderAddress.size()) / vFounderAddress.size();
     size_t i = nHeight / addressChangeInterval;
@@ -583,15 +685,16 @@ std::string CChainParams::GetFounderAddressAtHeight(int nHeight) const
 // Block height must be >0 and <=last founders reward block height
 // or block time must be within 1 year of the genesis block time
 // The address is expected to be a multisig (P2SH) address
-CScript CChainParams::GetFounderScriptAtHeight(int nHeight) const 
+CScript CChainParams::GetFounderScriptAtHeight(uint32_t nHeight) const 
 {
     //assert(nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight());
     return AddressToScript(GetFounderAddressAtHeight(nHeight).c_str());
 }
 
-std::string CChainParams::GetFounderAddressAtIndex(int i) const 
+std::string CChainParams::GetFounderAddressAtIndex(uint32_t i) const 
 {
-    assert(i >= 0 && i < vFounderAddress.size());
+    uint32_t justAZero = 0;
+    assert(i >= justAZero && i < vFounderAddress.size());
     return vFounderAddress[i];
 }
 
@@ -608,10 +711,11 @@ std::vector<CScript> CChainParams::GetAllFounderScripts() const
 // Block height must be >0 and <=last founders reward block height 
 // or block time must be within 1 year of the genesis block time
 // Index variable i ranges from 0 - (vFoundersRewardAddress.size()-1)
-std::string CChainParams::GetInfrastructureAddressAtHeight(int nHeight) const 
+std::string CChainParams::GetInfrastructureAddressAtHeight(uint32_t nHeight) const 
 {
-    int maxHeight = consensus.GetLastFoundersRewardBlockHeight();
-    assert(nHeight > 0 && nHeight <= maxHeight);
+    uint32_t maxHeight = consensus.GetLastFoundersRewardBlockHeight();
+    uint32_t justAZero = 0;
+    assert(nHeight > justAZero && nHeight <= maxHeight);
 
     size_t addressChangeInterval = (maxHeight + vInfrastructureAddress.size()) / vInfrastructureAddress.size();
     size_t i = nHeight / addressChangeInterval;
@@ -621,25 +725,27 @@ std::string CChainParams::GetInfrastructureAddressAtHeight(int nHeight) const
 // Block height must be >0 and <=last founders reward block height
 // or block time must be within 1 year of the genesis block time
 // The address is expected to be a multisig (P2SH) address
-CScript CChainParams::GetInfrastructureScriptAtHeight(int nHeight) const 
+CScript CChainParams::GetInfrastructureScriptAtHeight(uint32_t nHeight) const 
 {
     //assert(nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight());
     return AddressToScript(GetInfrastructureAddressAtHeight(nHeight).c_str());
 }
 
-std::string CChainParams::GetInfrastructureAddressAtIndex(int i) const 
+std::string CChainParams::GetInfrastructureAddressAtIndex(uint32_t i) const 
 {
-    assert(i >= 0 && i < vInfrastructureAddress.size());
+    uint32_t justAZero = 0;
+    assert(i >= justAZero && i < vInfrastructureAddress.size());
     return vInfrastructureAddress[i];
 }
 
 // Block height must be >0 and <=last founders reward block height 
 // or block time must be within 1 year of the genesis block time
 // Index variable i ranges from 0 - (vFoundersRewardAddress.size()-1)
-std::string CChainParams::GetGiveawayAddressAtHeight(int nHeight) const 
+std::string CChainParams::GetGiveawayAddressAtHeight(uint32_t nHeight) const 
 {
-    int maxHeight = consensus.GetLastFoundersRewardBlockHeight();
-    assert(nHeight > 0 && nHeight <= maxHeight);
+    uint32_t maxHeight = consensus.GetLastFoundersRewardBlockHeight();
+    uint32_t justAZero = 0;
+    assert(nHeight > justAZero && nHeight <= maxHeight);
 
     size_t addressChangeInterval = (maxHeight + vGiveawayAddress.size()) / vGiveawayAddress.size();
     size_t i = nHeight / addressChangeInterval;
@@ -649,14 +755,15 @@ std::string CChainParams::GetGiveawayAddressAtHeight(int nHeight) const
 // Block height must be >0 and <=last founders reward block height
 // or block time must be within 1 year of the genesis block time
 // The address is expected to be a multisig (P2SH) address
-CScript CChainParams::GetGiveawayScriptAtHeight(int nHeight) const 
+CScript CChainParams::GetGiveawayScriptAtHeight(uint32_t nHeight) const 
 {
     //assert(nHeight > 0 && nHeight <= consensus.GetLastFoundersRewardBlockHeight());
     return AddressToScript(GetGiveawayAddressAtHeight(nHeight).c_str());
 }
 
-std::string CChainParams::GetGiveawayAddressAtIndex(int i) const 
+std::string CChainParams::GetGiveawayAddressAtIndex(uint32_t i) const 
 {
-    assert(i >= 0 && i < vGiveawayAddress.size());
+    uint32_t justAZero = 0;
+    assert(i >= justAZero && i < vGiveawayAddress.size());
     return vGiveawayAddress[i];
 }

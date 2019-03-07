@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2017 The Bitcoin Core developers
+// Copyright (c) 2012-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -63,7 +63,7 @@ public:
 
                 assert(p <= limit);
                 base[std::min(bufsize - 1, (int)(p - base))] = '\0';
-                LogPrintf("leveldb: %s", base);
+                LogPrint(BCLog::LEVELDB, "[LevelDB] LevelDB: %s", base);
                 if (base != buffer) {
                     delete[] base;
                 }
@@ -103,21 +103,21 @@ CDBWrapper::CDBWrapper(const fs::path& path, size_t nCacheSize, bool fMemory, bo
         options.env = penv;
     } else {
         if (fWipe) {
-            LogPrintf("Wiping LevelDB in %s\n", path.string());
+            LogPrint(BCLog::LEVELDB, "[LevelDB] Wiping LevelDB in %s\n", path.string());
             leveldb::Status result = leveldb::DestroyDB(path.string(), options);
             dbwrapper_private::HandleError(result);
         }
         TryCreateDirectories(path);
-        LogPrintf("Opening LevelDB in %s\n", path.string());
+        LogPrint(BCLog::LEVELDB, "[LevelDB] Opening LevelDB in %s\n", path.string());
     }
     leveldb::Status status = leveldb::DB::Open(options, path.string(), &pdb);
     dbwrapper_private::HandleError(status);
-    LogPrintf("Opened LevelDB successfully\n");
+    LogPrint(BCLog::LEVELDB, "[LevelDB] Opened LevelDB successfully\n");
 
     if (gArgs.GetBoolArg("-forcecompactdb", false)) {
-        LogPrintf("Starting database compaction of %s\n", path.string());
+        LogPrint(BCLog::CMPCTBLOCK, "[CompactBlocks] Starting database compaction of %s\n", path.string());
         pdb->CompactRange(nullptr, nullptr);
-        LogPrintf("Finished database compaction of %s\n", path.string());
+        LogPrint(BCLog::CMPCTBLOCK, "[CompactBlocks] Finished database compaction of %s\n", path.string());
     }
 
     // The base-case obfuscation key, which is a noop.
@@ -199,7 +199,7 @@ void HandleError(const leveldb::Status& status)
 {
     if (status.ok())
         return;
-    LogPrintf("%s\n", status.ToString());
+    LogPrint(BCLog::LEVELDB, "[LevelDB] %s\n", status.ToString());
     if (status.IsCorruption())
         throw dbwrapper_error("Database corrupted");
     if (status.IsIOError())

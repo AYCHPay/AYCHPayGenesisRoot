@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -49,12 +49,12 @@ static void writeNewline(QTextStream &f)
 bool CSVModelWriter::write()
 {
     QFile file(filename);
-    if(!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
     QTextStream out(&file);
 
     int numRows = 0;
-    if(model)
+    if (model)
     {
         numRows = model->rowCount();
     }
@@ -62,7 +62,7 @@ bool CSVModelWriter::write()
     // Header row
     for(int i=0; i<columns.size(); ++i)
     {
-        if(i!=0)
+        if (i!=0)
         {
             writeSep(out);
         }
@@ -75,7 +75,7 @@ bool CSVModelWriter::write()
     {
         for(int i=0; i<columns.size(); ++i)
         {
-            if(i!=0)
+            if (i!=0)
             {
                 writeSep(out);
             }

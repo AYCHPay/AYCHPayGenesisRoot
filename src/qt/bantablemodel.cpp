@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -48,7 +48,7 @@ public:
     void refreshBanlist()
     {
         banmap_t banMap;
-        if(g_connman)
+        if (g_connman)
             g_connman->GetBanned(banMap);
 
         cachedBanlist.clear();
@@ -114,7 +114,7 @@ int BanTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant BanTableModel::data(const QModelIndex &index, int role) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return QVariant();
 
     CCombinedBan *rec = static_cast<CCombinedBan*>(index.internalPointer());
@@ -136,9 +136,9 @@ QVariant BanTableModel::data(const QModelIndex &index, int role) const
 
 QVariant BanTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if(orientation == Qt::Horizontal)
+    if (orientation == Qt::Horizontal)
     {
-        if(role == Qt::DisplayRole && section < columns.size())
+        if (role == Qt::DisplayRole && section < columns.size())
         {
             return columns[section];
         }
@@ -148,7 +148,7 @@ QVariant BanTableModel::headerData(int section, Qt::Orientation orientation, int
 
 Qt::ItemFlags BanTableModel::flags(const QModelIndex &index) const
 {
-    if(!index.isValid())
+    if (!index.isValid())
         return 0;
 
     Qt::ItemFlags retval = Qt::ItemIsSelectable | Qt::ItemIsEnabled;

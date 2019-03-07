@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -54,7 +54,7 @@ public:
         bool confirmed = index.data(TransactionTableModel::ConfirmedRole).toBool();
         QVariant value = index.data(Qt::ForegroundRole);
         QColor foreground = option.palette.color(QPalette::Text);
-        if(value.canConvert<QBrush>())
+        if (value.canConvert<QBrush>())
         {
             QBrush brush = qvariant_cast<QBrush>(value);
             foreground = brush.color();
@@ -71,11 +71,11 @@ public:
             iconWatchonly.paint(painter, watchonlyRect);
         }
 
-        if(amount < 0)
+        if (amount < 0)
         {
             foreground = COLOR_NEGATIVE;
         }
-        else if(!confirmed)
+        else if (!confirmed)
         {
             foreground = COLOR_UNCONFIRMED;
         }
@@ -85,7 +85,7 @@ public:
         }
         painter->setPen(foreground);
         QString amountText = GenesisUnits::formatWithUnit(unit, amount, true, GenesisUnits::separatorAlways);
-        if(!confirmed)
+        if (!confirmed)
         {
             amountText = QString("[") + amountText + QString("]");
         }
@@ -136,11 +136,15 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
 
+    // start with displaying the "out of sync" warnings
+    showOutOfSyncWarning(true);
+    connect(ui->labelWalletStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
+    connect(ui->labelTransactionsStatus, SIGNAL(clicked()), this, SLOT(handleOutOfSyncWarningClicks()));
 }
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
 {
-    if(filter)
+    if (filter)
         Q_EMIT transactionClicked(filter->mapToSource(index));
 }
 
@@ -200,7 +204,7 @@ void OverviewPage::updateWatchOnlyLabels(bool showWatchOnly)
 void OverviewPage::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
-    if(model)
+    if (model)
     {
         // Show warning if this is a prerelease version
         connect(model, SIGNAL(alertsChanged(QString)), this, SLOT(updateAlerts(QString)));
@@ -211,7 +215,7 @@ void OverviewPage::setClientModel(ClientModel *model)
 void OverviewPage::setWalletModel(WalletModel *model)
 {
     this->walletModel = model;
-    if(model && model->getOptionsModel())
+    if (model && model->getOptionsModel())
     {
         // Set up transaction list
         filter.reset(new TransactionFilterProxy());
@@ -242,9 +246,9 @@ void OverviewPage::setWalletModel(WalletModel *model)
 
 void OverviewPage::updateDisplayUnit()
 {
-    if(walletModel && walletModel->getOptionsModel())
+    if (walletModel && walletModel->getOptionsModel())
     {
-        if(currentBalance != -1)
+        if (currentBalance != -1)
             setBalance(currentBalance, currentUnconfirmedBalance, currentImmatureBalance,
                        currentWatchOnlyBalance, currentWatchUnconfBalance, currentWatchImmatureBalance);
 
@@ -261,3 +265,8 @@ void OverviewPage::updateAlerts(const QString &warnings)
     this->ui->labelAlerts->setText(warnings);
 }
 
+void OverviewPage::showOutOfSyncWarning(bool fShow)
+{
+    ui->labelWalletStatus->setVisible(fShow);
+    ui->labelTransactionsStatus->setVisible(fShow);
+}

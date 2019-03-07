@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +10,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <amount.h>
 
 /** Genesis Values */
 static const int BLOCK_REWARD_MAX = 1000;
@@ -82,7 +83,12 @@ struct Params {
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
-    // Params for Zawy's LWMA difficulty adjustment algorithm.
+    /** Coin maturity settings */
+    /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
+    int64_t nCoinbaseMaturity; 
+    /** Minimum Number of tx confirmations before a tx is considered confirmed */ 
+    int64_t nTxMinConfirmations; 
+    /** Params for Zawy's LWMA difficulty adjustment algorithm. */
     int64_t nZawyLwmaAveragingWindow;
 
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
@@ -135,6 +141,37 @@ struct Params {
             return false;
         }
     }
+
+    // Masternodes
+    int nMasternodePaymentsStartBlock;
+	int nGovernanceBlockOffset;
+    int nGovernanceMinQuorum; // Min absolute vote count to trigger an action
+    int nGovernanceFilterElements;
+    int nMasternodeMinimumConfirmations;
+    CAmount nMasternodeCollateral;
+    int nFulfilledRequestExpireTime;
+    int nBlockRewardGovernance;                         // 90
+    // Previously static masternode values              // Defaults for mainnet:
+    int nMasternodeCheckSeconds;                        // 5
+    int nMasternodeMinMnbSeconds;                       // 5 * 60
+    int nMasternodeMinMnpSeconds;                       // 10 * 60
+    int nMasternodeSentinelPingMaxSeconds;              // 60 * 60
+    int nMasternodeExpirationSeconds;                   // 120 * 60
+    int nMasternodeNewStartRequiredSeconds;             // 180 * 60
+    int nMasternodePoseBanMaxScore;                     // 5
+    int nMasternodeSignHashThreshold;                   // 600000
+    // Masternode maturity configuration
+    int nMasternodeMaturityBlockMultiplier;             // 1440 (Blocks per day)
+    int nMasternodeMaturityThreshold;                   // 336 Days (28 * 12)
+    int nMasternodeMaturitySecondariesMaxCount;         // the max number of secondary masternodes to pay
+    double aMasternodeMaturiySecondariesMinAmount;      // the minimum amount to pay a secondary masternode
+    // Block subsidy definition(s)
+    int nBlockRewardTotal;                              
+    double nBlockRewardMasternode;                       
+    double nBlockRewardFounders;                         
+    double nBlockRewardGiveaways;                        
+    double nBlockRewardInfrastructure;                   
+    double nBlockRewardFinder;                           
 };
 } // namespace Consensus
 

@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -87,6 +87,8 @@ public:
     std::vector<CTransactionRef> vtx;
 
     // memory only
+    mutable std::vector<CTxOut> vtxoutMasternode; // masternode payments
+    mutable std::vector<CTxOut> vtxoutGovernance; // Governance block payment
     mutable bool fChecked;
 
     CBlock()
@@ -112,6 +114,8 @@ public:
     {
         CBlockHeader::SetNull();
         vtx.clear();
+        vtxoutMasternode.clear();
+        vtxoutGovernance.clear();
         fChecked = false;
     }
 

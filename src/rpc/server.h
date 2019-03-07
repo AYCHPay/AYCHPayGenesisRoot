@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,6 +26,9 @@ namespace RPCServer
     void OnStarted(std::function<void ()> slot);
     void OnStopped(std::function<void ()> slot);
 }
+
+class CBlockIndex;
+class CNetAddr;
 
 /** Wrapper for UniValue::VType, which includes typeAny:
  * Used to denote don't care type. Only used by RPCTypeCheckObj */
@@ -187,6 +190,17 @@ extern std::vector<unsigned char> ParseHexO(const UniValue& o, std::string strKe
 extern CAmount AmountFromValue(const UniValue& value);
 extern std::string HelpExampleCli(const std::string& methodname, const std::string& args);
 extern std::string HelpExampleRpc(const std::string& methodname, const std::string& args);
+
+extern UniValue getpoolinfo(const JSONRPCRequest& request);
+extern UniValue masternode(const JSONRPCRequest& request);
+extern UniValue masternodelist(const JSONRPCRequest& request);
+extern UniValue masternodebroadcast(const JSONRPCRequest& request);
+extern UniValue gobject(const JSONRPCRequest& request);
+extern UniValue getgovernanceinfo(const JSONRPCRequest& request);
+extern UniValue getgovernanceblockbudget(const JSONRPCRequest& request);
+extern UniValue voteraw(const JSONRPCRequest& request);
+extern UniValue mnsync(const JSONRPCRequest& request);
+extern UniValue sentinelping(const JSONRPCRequest& request);
 
 bool StartRPC();
 void InterruptRPC();

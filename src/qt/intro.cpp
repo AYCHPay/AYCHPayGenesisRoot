@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -91,9 +91,9 @@ void FreespaceChecker::check()
 
     try {
         freeBytesAvailable = fs::space(parentDir).available;
-        if(fs::exists(dataDir))
+        if (fs::exists(dataDir))
         {
-            if(fs::is_directory(dataDir))
+            if (fs::is_directory(dataDir))
             {
                 QString separator = "<code>" + QDir::toNativeSeparators("/") + tr("name") + "</code>";
                 replyStatus = ST_OK;
@@ -169,7 +169,7 @@ QString Intro::getDataDirectory()
 void Intro::setDataDirectory(const QString &dataDir)
 {
     ui->dataDirectory->setText(dataDir);
-    if(dataDir == getDefaultDataDirectory())
+    if (dataDir == getDefaultDataDirectory())
     {
         ui->dataDirDefault->setChecked(true);
         ui->dataDirectory->setEnabled(false);
@@ -191,14 +191,14 @@ bool Intro::pickDataDirectory()
     QSettings settings;
     /* If data directory provided on command line, no need to look at settings
        or show a picking dialog */
-    if(!gArgs.GetArg("-datadir", "").empty())
+    if (!gArgs.GetArg("-datadir", "").empty())
         return true;
     /* 1) Default data directory for operating system */
     QString dataDir = getDefaultDataDirectory();
     /* 2) Allow QSettings to override default dir */
     dataDir = settings.value("strDataDir", dataDir).toString();
 
-    if(!fs::exists(GUIUtil::qstringToBoostPath(dataDir)) || gArgs.GetBoolArg("-choosedatadir", DEFAULT_CHOOSE_DATADIR) || settings.value("fReset", false).toBool() || gArgs.GetBoolArg("-resetguisettings", false))
+    if (!fs::exists(GUIUtil::qstringToBoostPath(dataDir)) || gArgs.GetBoolArg("-choosedatadir", DEFAULT_CHOOSE_DATADIR) || settings.value("fReset", false).toBool() || gArgs.GetBoolArg("-resetguisettings", false))
     {
         /* If current default data directory does not exist, let the user choose one */
         Intro intro;
@@ -207,7 +207,7 @@ bool Intro::pickDataDirectory()
 
         while(true)
         {
-            if(!intro.exec())
+            if (!intro.exec())
             {
                 /* Cancel clicked */
                 return false;
@@ -233,7 +233,7 @@ bool Intro::pickDataDirectory()
      * override -datadir in the genesis.conf file in the default data directory
      * (to be consistent with genesisd behavior)
      */
-    if(dataDir != getDefaultDataDirectory())
+    if (dataDir != getDefaultDataDirectory())
         gArgs.SoftSetArg("-datadir", GUIUtil::qstringToBoostPath(dataDir).string()); // use OS locale for path setting
     return true;
 }
@@ -252,12 +252,12 @@ void Intro::setStatus(int status, const QString &message, quint64 bytesAvailable
         break;
     }
     /* Indicate number of bytes available */
-    if(status == FreespaceChecker::ST_ERROR)
+    if (status == FreespaceChecker::ST_ERROR)
     {
         ui->freeSpace->setText("");
     } else {
         QString freeString = tr("%n GB of free space available", "", bytesAvailable/GB_BYTES);
-        if(bytesAvailable < requiredSpace * GB_BYTES)
+        if (bytesAvailable < requiredSpace * GB_BYTES)
         {
             freeString += " " + tr("(of %n GB needed)", "", requiredSpace);
             ui->freeSpace->setStyleSheet("QLabel { color: #800000 }");
@@ -280,7 +280,7 @@ void Intro::on_dataDirectory_textChanged(const QString &dataDirStr)
 void Intro::on_ellipsisButton_clicked()
 {
     QString dir = QDir::toNativeSeparators(QFileDialog::getExistingDirectory(0, "Choose data directory", ui->dataDirectory->text()));
-    if(!dir.isEmpty())
+    if (!dir.isEmpty())
         ui->dataDirectory->setText(dir);
 }
 
@@ -314,7 +314,7 @@ void Intro::checkPath(const QString &dataDir)
 {
     mutex.lock();
     pathToCheck = dataDir;
-    if(!signalled)
+    if (!signalled)
     {
         signalled = true;
         Q_EMIT requestCheck();

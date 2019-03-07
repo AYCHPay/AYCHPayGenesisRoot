@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2017 The Bitcoin Core developers
+// Copyright (c) 2014-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -29,7 +29,7 @@ NetworkStyle::NetworkStyle(const QString &_appName, const int iconColorHueShift,
     // load pixmap
     QPixmap pixmap(":/icons/genesis");
 
-    if(iconColorHueShift != 0 && iconColorSaturationReduction != 0)
+    if (iconColorHueShift != 0 && iconColorSaturationReduction != 0)
     {
         // generate QImage from QPixmap
         QImage img = pixmap.toImage();
@@ -56,7 +56,7 @@ NetworkStyle::NetworkStyle(const QString &_appName, const int iconColorHueShift,
                 h+=iconColorHueShift;
 
                 // change saturation value
-                if(s>iconColorSaturationReduction)
+                if (s>iconColorSaturationReduction)
                 {
                     s -= iconColorSaturationReduction;
                 }

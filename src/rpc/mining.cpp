@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,6 +26,11 @@
 #include <utilstrencodings.h>
 #include <validationinterface.h>
 #include <warnings.h>
+#include <script/standard.h>
+
+#include <masternodes/governance-classes.h>
+#include <masternodes/masternode-payments.h>
+#include <masternodes/masternode-sync.h>
 
 #include <memory>
 #include <stdint.h>
@@ -483,6 +488,35 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
             "  \"height\" : n                      (numeric) The height of the next block\n"
             "  \"equihashn\" : n                   (numeric) Equihash N\n"
             "  \"equihashk\" : n                   (numeric) Equihash K\n"
+            
+            "  \"finder\" : n                      (numeric) Amount to pay the miner / minter \n"
+            "  \"giveaways\" : n                   (numeric) Amount to pay towards giveaways \n"
+            "  \"infrastructure\" : n              (numeric) Amount to pay towards infrastructure \n"
+            "  \"founderstotal\" : n               (numeric) Total amount to pay to founders \n"
+            "  \"founders\" : {                    (json object) required founder payee that must be included in the next block\n"
+            "      \"payee\" : \"xxxx\",             (string) payee address\n"
+            "      \"script\" : \"xxxx\",            (string) payee scriptPubKey\n"
+            "      \"amount\": n                     (numeric) required amount to pay\n"
+            "  },\n"
+            "  \"masternodes_total\" : n           (numeric) Total amount to pay to masternodes \n"
+            "  \"masternodes\" : {                 (json object) required masternode payee that must be included in the next block\n"
+            "      \"payee\" : \"xxxx\",             (string) payee address\n"
+            "      \"script\" : \"xxxx\",            (string) payee scriptPubKey\n"
+            "      \"amount\": n                     (numeric) required amount to pay\n"
+            "  },\n"
+            "  \"masternode_payments_started\" :  true|false, (boolean) true, if masternode payments started\n"
+            "  \"masternode_payments_enforced\" : true|false, (boolean) true, if masternode payments are enforced\n"
+            "  \"governanceblock_amount\" : n      (numeric) Governance per block deduction \n"
+            "  \"governanceblock\" : [                  (array) required governanceblock payees that must be included in the next block\n"
+            "      {\n"
+            "         \"payee\" : \"xxxx\",          (string) payee address\n"
+            "         \"script\" : \"xxxx\",         (string) payee scriptPubKey\n"
+            "         \"amount\": n                  (numeric) required amount to pay\n"
+            "      }\n"
+            "      ,...\n"
+            "  ],\n"
+            "  \"governanceblocks_started\" : true|false, (boolean) true, if governanceblock payments started\n"
+            "  \"governanceblocks_enabled\" : true|false  (boolean) true, if governanceblock payments are enabled\n"
             "}\n"
 
             "\nExamples:\n"
@@ -558,7 +592,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     if (strMode != "template")
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
-    if(!g_connman)
+    if (!g_connman)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
 
     if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0)
@@ -566,6 +600,18 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
 
     if (IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis Official is downloading blocks...");
+
+    // when enforcement is on we need information about a masternode payee or otherwise our block is going to be orphaned by the network
+    CScript payee;
+    int payeeActivationHeight;
+    if (!masternodeSync.IsWinnersListSynced()
+        && !mnpayments.GetBlockPayees(chainActive.Height() + 1, payee, payeeActivationHeight))
+            throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is downloading masternode winners...");
+
+    // next bock is a governanceblock and we need governance info to correctly construct it
+    if (!masternodeSync.IsSynced()
+        && CGovernanceBlock::IsValidBlockHeight(chainActive.Height() + 1))
+            throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is syncing with network...");
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -772,7 +818,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0]->vout[0].nValue));
+    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0]->GetValueOut())); // GetValueOut()
     result.push_back(Pair("longpollid", chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
@@ -796,6 +842,73 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
     result.push_back(Pair("equihashn", (int64_t)(Params().EquihashN())));
     result.push_back(Pair("equihashk", (int64_t)(Params().EquihashK())));
+
+    // Explicit deduction amounts
+    CAmount finderAmount = Params().GetConsensus().nBlockRewardFinder * COIN ; // miner / minter
+    result.push_back(Pair("finder", (int64_t)finderAmount));
+
+    CAmount giveAwaysAmount = Params().GetConsensus().nBlockRewardGiveaways * COIN; // giveaways total
+    result.push_back(Pair("giveaways", (int64_t)giveAwaysAmount));
+
+    CAmount infrastructureAmount = Params().GetConsensus().nBlockRewardInfrastructure * COIN; // infrastructure total
+    result.push_back(Pair("infrastructure", (int64_t)infrastructureAmount));
+
+    CAmount founderTotalAmount = Params().GetConsensus().nBlockRewardFounders * COIN; // founder total
+    result.push_back(Pair("founderstotal", (int64_t)founderTotalAmount));
+    
+    std::vector<CScript> foundersScripts = Params().GetAllFounderScripts();
+    UniValue founderScriptsObjArray(UniValue::VARR);
+    if (foundersScripts.size()) {
+        CAmount founderItemAmount = founderTotalAmount / (int)foundersScripts.size();
+        for (const auto& scriptout : foundersScripts) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination dest;
+            ExtractDestination(scriptout, dest);
+            entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            entry.push_back(Pair("script", HexStr(scriptout)));
+            entry.push_back(Pair("amount", founderItemAmount));
+            founderScriptsObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("founders", founderScriptsObjArray));
+
+    CAmount masternodeTotalAmount = Params().GetConsensus().nBlockRewardMasternode * COIN; // masternode total amount
+    result.push_back(Pair("masternodes_total", (int64_t)masternodeTotalAmount));
+
+    UniValue masternodeObjArray(UniValue::VARR);
+    if (pblock->vtxoutMasternode.size()) {
+        for (const auto& txout : pblock->vtxoutMasternode) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination dest;
+            ExtractDestination(txout.scriptPubKey, dest);
+            entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            entry.push_back(Pair("script", HexStr(txout.scriptPubKey)));
+            entry.push_back(Pair("amount", txout.nValue));
+            masternodeObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("masternodes", masternodeObjArray));
+    result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
+    result.push_back(Pair("masternode_payments_enforced", true));
+
+    CAmount governannceBlockAmount = Params().GetConsensus().nBlockRewardGovernance * COIN; // governance per block amount
+    result.push_back(Pair("governanceblock_amount", (int64_t)governannceBlockAmount));
+
+    UniValue governanceblockObjArray(UniValue::VARR);
+    if (pblock->vtxoutGovernance.size()) {
+        for (const auto& txout : pblock->vtxoutGovernance) {
+            UniValue entry(UniValue::VOBJ);
+            CTxDestination dest;
+            ExtractDestination(txout.scriptPubKey, dest);
+            entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            entry.push_back(Pair("script", HexStr(txout.scriptPubKey)));
+            entry.push_back(Pair("amount", txout.nValue));
+            governanceblockObjArray.push_back(entry);
+        }
+    }
+    result.push_back(Pair("governanceblock", governanceblockObjArray));
+    result.push_back(Pair("governanceblocks_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
+    result.push_back(Pair("governanceblocks_enabled", true));
 
     if (!pblocktemplate->vchCoinbaseCommitment.empty() && fSupportsSegwit) {
         result.push_back(Pair("default_witness_commitment", HexStr(pblocktemplate->vchCoinbaseCommitment.begin(), pblocktemplate->vchCoinbaseCommitment.end())));
@@ -895,72 +1008,114 @@ UniValue submitblock(const JSONRPCRequest& request)
 
 UniValue getblocksubsidy(const JSONRPCRequest& request)
 {
-  if (request.fHelp || request.params.size() > 1)
-    throw std::runtime_error(
-      "getblocksubsidy height\n"
-      "\nReturns block subsidy reward of block at index provided, taking block deductions into account.\n"
-      "\nArguments:\n"
-      "1. height          (numeric, optional) The block height. If not provided, defaults to the current height of the chain.\n"
-      "\nResult:\n"
-      "{\n"
-      "\"miner\": n,    (numeric) The mining reward amount in genxis.\n"
-      "\"founders-chris\": f, (numeric) The founders reward in genxis (Chris) ()\n"
-      "\"founders-jimmy\": f, (numeric) The founders reward in genxis (Jimmy) ()\n"
-      "\"founders-scott\": f, (numeric) The founders reward in genxis (Scott) ()\n"
-      "\"founders-shelby\": f, (numeric) The founders reward in genxis (Shelby) ()\n"
-      "\"founders-loki\": f, (numeric) The founders reward in genxis (Loki) ()\n"
-      "\"infrastructure\": f, (numeric) Infrastructure deduction in genxis \n"
-      "\"giveaways\": f, (numeric) Giveaways deduction in genxis \n"
-      "}\n"
-      "\nExamples:\n"
-      + HelpExampleCli("getblocksubsidy", "1000")
-      + HelpExampleRpc("getblocksubsidy", "1000")
+    if (request.fHelp || request.params.size() > 1)
+        throw std::runtime_error(
+        "getblocksubsidy height\n"
+        "\nReturns block subsidy reward of block at index provided, taking block deductions into account.\n"
+        "\nArguments:\n"
+        "1. height          (numeric, optional) The block height. If not provided, defaults to the current height of the chain.\n"
+        "For blocks before masternodes and governance payments are enabled (" + itostr(Params().GetConsensus().nMasternodePaymentsStartBlock) + "):\n"
+        "\nResult:\n"
+        "{\n"
+        "\"height\": n,           (numeric) Block height\n"
+        "\"total\": n,            (numeric) Total block reward\n"
+        "\"deductions\": n,       (numeric) Total block deductions from the miner reward\n"
+        "\"miner\": n,            (numeric) The mining reward amount in genxis.\n"
+        "\"foundertotal\": n,     (numeric) The total (combined amount paid to the founders in genxis.\n"
+        "\"founders-chris\": f,   (numeric) The founders reward in genxis (Chris) ()\n"
+        "\"founders-jimmy\": f,   (numeric) The founders reward in genxis (Jimmy) ()\n"
+        "\"founders-scott\": f,   (numeric) The founders reward in genxis (Scott) ()\n"
+        "\"founders-shelby\": f,  (numeric) The founders reward in genxis (Shelby) ()\n"
+        "\"founders-loki\": f,    (numeric) The founders reward in genxis (Loki) ()\n"
+        "\"infrastructure\": f,   (numeric) Infrastructure deduction in genxis \n"
+        "\"giveaways\": f,        (numeric) Giveaways deduction in genxis \n"
+        "}\n"
+        "For blocks after masternodes and governance payments are enabled:\n"
+        "\nResult:\n"
+        "{\n"
+        "\"height\": n,           (numeric) Block height\n"
+        "\"total\": f,            (numeric) Total block reward\n"
+        "\"miner\": f,            (numeric) The mining / minting reward amount in genxis.\n"
+        "\"masternodestotal\": f, (numeric) The total (combined) amount paid to the masternodes in genxis.\n"
+        "\"governancetotal\": f,  (numeric) The total (combined) amount paid towards governance in genxis.\n"
+        "\"founderstotal\": f,    (numeric) The total (combined) amount paid to the founders in genxis.\n"
+        "\"founderamount\": f,    (numeric) The reward paid to each individual founder in genxis\n"
+        "\"infrastructure\": f,   (numeric) Infrastructure deduction in genxis \n"
+        "\"giveaways\": f,        (numeric) Giveaways deduction in genxis \n"
+        "}\n"
+        "\nExamples:\n"
+        + HelpExampleCli("getblocksubsidy", "1000")
+        + HelpExampleRpc("getblocksubsidy", "1000")
     );
 
-  RPCTypeCheck(request.params, {UniValue::VNUM});
+    RPCTypeCheck(request.params, {UniValue::VNUM});
 
-  LOCK(cs_main);
-  int nHeight = (request.params.size() == 1) ? request.params[0].get_int() : chainActive.Height() + 1;
-  if (nHeight < 0)
-    throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range.");
+    LOCK(cs_main);
+    int nHeight = (request.params.size() == 1) ? request.params[0].get_int() : chainActive.Height() + 1;
+    if (nHeight < 0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range.");
 
-  UniValue result(UniValue::VOBJ);
+    UniValue result(UniValue::VOBJ);
 
-  CAmount nReward = GetBlockSubsidy(nHeight, Params().GetConsensus());
-
-    CAmount deductions = nReward / 4;
-    CAmount miner = nReward - deductions;
-    auto deductionChange = deductions % 5;
-    // The change (remainder) gets re-added to the miner
-    miner += deductionChange;
-    // And removed from the deduction
-    deductions -= deductionChange;
-    // Founders : 40% of deduction (10% of total block)
-    auto vFounders = (deductions / 5) * 2;
-    // Check the division... see if we'll have any change left after the division
-    auto foundersChange = vFounders % 5;
-    if (foundersChange != 0)
+    if (nHeight < Params().GetConsensus().nMasternodePaymentsStartBlock)
     {
-        miner += foundersChange;
-        vFounders -= foundersChange;
+        CAmount nReward = GetBlockSubsidy(nHeight, Params().GetConsensus());
+        CAmount deductions = nReward / 4;
+        CAmount miner = nReward - deductions;
+        auto deductionChange = deductions % 5;
+        // The change (remainder) gets re-added to the miner
+        miner += deductionChange;
+        // And removed from the deduction
+        deductions -= deductionChange;
+        // Founders : 40% of deduction (10% of total block)
+        auto vFounders = (deductions / 5) * 2;
+        // Check the division... see if we'll have any change left after the division
+        auto foundersChange = vFounders % 5;
+        if (foundersChange != 0)
+        {
+            miner += foundersChange;
+            vFounders -= foundersChange;
+        }
+        // Calculate the individual founder's reward
+        auto ifr = vFounders / 5;
+
+        result.push_back(Pair("height", nHeight));
+        result.push_back(Pair("total", nReward));
+        result.push_back(Pair("deductions", deductions));
+        result.push_back(Pair("miner", miner));
+        result.push_back(Pair("foundertotal", vFounders));
+        result.push_back(Pair("founders-chris", ifr));
+        result.push_back(Pair("founders-jimmy", ifr));
+        result.push_back(Pair("founders-scott", ifr));
+        result.push_back(Pair("founders-shelby", ifr));
+        result.push_back(Pair("founders-loki", ifr));
+        result.push_back(Pair("infrastructure", (deductions / 5)));
+        result.push_back(Pair("giveaways", (deductions / 5) * 2));
     }
-    // Calculate the individual founder's reward
-    auto ifr = vFounders / 5;
+    else
+    {
+        CAmount subsidy = GetBlockSubsidy(nHeight, Params().GetConsensus());
+        CAmount miner = Params().GetConsensus().nBlockRewardFinder * COIN;
+        CAmount foundersTotal = Params().GetConsensus().nBlockRewardFounders * COIN;
+        CAmount giveawaysAmount = Params().GetConsensus().nBlockRewardGiveaways * COIN;
+        CAmount infrastructureAmount = Params().GetConsensus().nBlockRewardInfrastructure * COIN;
+        CAmount masternodesTotal = Params().GetConsensus().nBlockRewardMasternode * COIN;
+        // Calculate the individual founder's reward
+        CAmount ifr = foundersTotal / (int)Params().GetAllFounderScripts().size();
 
-    result.push_back(Pair("height", nHeight));
-    result.push_back(Pair("total", nReward));
-    result.push_back(Pair("deductions", deductions));
-    result.push_back(Pair("miner", miner));
-    result.push_back(Pair("foundertotal", vFounders));
-    result.push_back(Pair("founders-chris", ifr));
-    result.push_back(Pair("founders-jimmy", ifr));
-    result.push_back(Pair("founders-scott", ifr));
-    result.push_back(Pair("founders-shelby", ifr));
-    result.push_back(Pair("founders-loki", ifr));
-    result.push_back(Pair("infrastructure", (deductions / 5)));
-    result.push_back(Pair("giveaways", (deductions / 5) * 2));
+        result.push_back(Pair("height", nHeight));
+        result.push_back(Pair("total", subsidy));
+        result.push_back(Pair("deductions", subsidy - miner));
+        result.push_back(Pair("miner", miner));
+        result.push_back(Pair("masternodestotal", masternodesTotal));
+        result.push_back(Pair("governancetotal", GetBlockSubsidy(nHeight, Params().GetConsensus(), true)));
+        result.push_back(Pair("founderstotal", foundersTotal));
+        result.push_back(Pair("founderamount", ifr));
+        result.push_back(Pair("infrastructure", infrastructureAmount));
+        result.push_back(Pair("giveaways", giveawaysAmount));
+    }
 
-  return result;
+    return result;
 }
 
 UniValue estimatefee(const JSONRPCRequest& request)

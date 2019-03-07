@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -42,14 +42,14 @@ QRImageWidget::QRImageWidget(QWidget *parent):
 
 QImage QRImageWidget::exportImage()
 {
-    if(!pixmap())
+    if (!pixmap())
         return QImage();
     return pixmap()->toImage();
 }
 
 void QRImageWidget::mousePressEvent(QMouseEvent *event)
 {
-    if(event->button() == Qt::LeftButton && pixmap())
+    if (event->button() == Qt::LeftButton && pixmap())
     {
         event->accept();
         QMimeData *mimeData = new QMimeData;
@@ -65,7 +65,7 @@ void QRImageWidget::mousePressEvent(QMouseEvent *event)
 
 void QRImageWidget::saveImage()
 {
-    if(!pixmap())
+    if (!pixmap())
         return;
     QString fn = GUIUtil::getSaveFileName(this, tr("Save QR Code"), QString(), tr("PNG Image (*.png)"), nullptr);
     if (!fn.isEmpty())
@@ -76,14 +76,14 @@ void QRImageWidget::saveImage()
 
 void QRImageWidget::copyImage()
 {
-    if(!pixmap())
+    if (!pixmap())
         return;
     QApplication::clipboard()->setImage(exportImage());
 }
 
 void QRImageWidget::contextMenuEvent(QContextMenuEvent *event)
 {
-    if(!pixmap())
+    if (!pixmap())
         return;
     contextMenu->exec(event->globalPos());
 }
@@ -127,10 +127,10 @@ void ReceiveRequestDialog::setInfo(const SendCoinsRecipient &_info)
 
 void ReceiveRequestDialog::update()
 {
-    if(!model)
+    if (!model)
         return;
     QString target = info.label;
-    if(target.isEmpty())
+    if (target.isEmpty())
         target = info.address;
     setWindowTitle(tr("Request payment to %1").arg(target));
 
@@ -142,17 +142,17 @@ void ReceiveRequestDialog::update()
     html += "<b>"+tr("URI")+"</b>: ";
     html += "<a href=\""+uri+"\">" + GUIUtil::HtmlEscape(uri) + "</a><br>";
     html += "<b>"+tr("Address")+"</b>: " + GUIUtil::HtmlEscape(info.address) + "<br>";
-    if(info.amount)
+    if (info.amount)
         html += "<b>"+tr("Amount")+"</b>: " + GenesisUnits::formatHtmlWithUnit(model->getDisplayUnit(), info.amount) + "<br>";
-    if(!info.label.isEmpty())
+    if (!info.label.isEmpty())
         html += "<b>"+tr("Label")+"</b>: " + GUIUtil::HtmlEscape(info.label) + "<br>";
-    if(!info.message.isEmpty())
+    if (!info.message.isEmpty())
         html += "<b>"+tr("Message")+"</b>: " + GUIUtil::HtmlEscape(info.message) + "<br>";
     ui->outUri->setText(html);
 
 #ifdef USE_QRCODE
     ui->lblQRCode->setText("");
-    if(!uri.isEmpty())
+    if (!uri.isEmpty())
     {
         // limit URI length
         if (uri.length() > MAX_URI_LENGTH)

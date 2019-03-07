@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2017 The Bitcoin Core developers
+// Copyright (c) 2012-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(arena_tests)
         if (s & 0x80000000) {
             b.free(addr[idx]);
             addr[idx] = 0;
-        } else if(!addr[idx]) {
+        } else if (!addr[idx]) {
             addr[idx] = b.alloc((s >> 16) & 2047);
         }
         bool lsb = s & 1;

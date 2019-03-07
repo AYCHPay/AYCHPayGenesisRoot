@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -611,7 +611,7 @@ CSubNet::CSubNet(const CNetAddr &addr, int32_t mask)
     const int astartofs = network.IsIPv4() ? 12 : 0;
 
     int32_t n = mask;
-    if(n >= 0 && n <= (128 - astartofs*8)) // Only valid if in range of bits of address
+    if (n >= 0 && n <= (128 - astartofs*8)) // Only valid if in range of bits of address
     {
         n += astartofs*8;
         // Clear bits [n..127]

@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2009-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +17,7 @@
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
+#include <net.h>
 #include <policy/fees.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
@@ -40,11 +41,16 @@
 #include <validationinterface.h>
 #include <warnings.h>
 
+#include <masternodes/governance-classes.h>
+#include <masternodes/masternodeman.h>
+#include <masternodes/masternode-payments.h>
+
 #include <future>
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <boost/foreach.hpp>
 
@@ -424,13 +430,80 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool 
     return EvaluateSequenceLocks(index, lockPair);
 }
 
+// Masternodes
+// TODO check ~ maybe replaced by newer function
+bool GetUTXOCoin(const COutPoint& outpoint, Coin& coin)
+{
+    LOCK(cs_main);
+    if (!pcoinsTip->GetCoin(outpoint, coin))
+        return false;
+    if (coin.IsSpent())
+        return false;
+    return true;
+}
+
+int GetUTXOHeight(const COutPoint& outpoint)
+{
+    // -1 means UTXO is yet unknown or already spent
+    Coin coin;
+    return GetUTXOCoin(outpoint, coin) ? coin.nHeight : -1;
+}
+
+int GetUTXOConfirmations(const COutPoint& outpoint)
+{
+    // -1 means UTXO is yet unknown or already spent
+    LOCK(cs_main);
+    int nPrevoutHeight = GetUTXOHeight(outpoint);
+    return (nPrevoutHeight > -1 && chainActive.Tip()) ? chainActive.Height() - nPrevoutHeight + 1 : -1;
+}
+
+CAmount GetMasternodePayments(int nHeight, int activationHeight, CAmount blockValue)
+{
+    CAmount totalReward = Params().GetConsensus().nBlockRewardMasternode * COIN;
+    int blockAge = nHeight - activationHeight;
+    int thresholdAge = Params().GetConsensus().nMasternodeMaturityThreshold * Params().GetConsensus().nMasternodeMaturityBlockMultiplier;
+    CAmount minimumSecondaryDeduction = (Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount * Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount) * COIN;
+    CAmount minimumPrimaryPayment = Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount * COIN;
+    CAmount allowedPayment = totalReward - minimumSecondaryDeduction;
+    if (blockAge >= thresholdAge)
+    {
+        // This masternode has matured completely
+        return allowedPayment;
+    }
+    else
+    {
+        // This masternode must only be paid according to its maturity level
+        CAmount proratedPayment = ceil((allowedPayment / thresholdAge) * blockAge);
+        // Doing it this way makes the transition smooth-ish and avoids creating dust (<1 genx)
+        if ((proratedPayment + minimumPrimaryPayment) < (minimumPrimaryPayment * 2))
+        {
+            return minimumPrimaryPayment + proratedPayment;
+        }
+        else
+        {
+            return proratedPayment;            
+        }
+    }
+}
+
+// TODO replace by newer function
+bool GetBlockHash(uint256& hashRet, int nBlockHeight)
+{
+    LOCK(cs_main);
+    if (chainActive.Tip() == NULL) return false;
+    if (nBlockHeight < -1 || nBlockHeight > chainActive.Height()) return false;
+    if (nBlockHeight == -1) nBlockHeight = chainActive.Height();
+    hashRet = chainActive[nBlockHeight]->GetBlockHash();
+    return true;
+}
+
 // Returns the script flags which should be checked for a given block
 static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Consensus::Params& chainparams);
 
 static void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age) {
     int expired = pool.Expire(GetTime() - age);
     if (expired != 0) {
-        LogPrint(BCLog::MEMPOOL, "Expired %i transactions from the memory pool\n", expired);
+        LogPrint(BCLog::MEMPOOL, "[MemPool] Expired %i transactions from the memory pool\n", expired);
     }
 
     std::vector<COutPoint> vNoSpendsRemaining;
@@ -701,7 +774,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         pool.ApplyDelta(hash, nModifiedFees);
 
         // Keep track of transactions that spend a coinbase, which we re-scan
-        // during reorgs to ensure COINBASE_MATURITY is still met.
+        // during reorgs to ensure Params().GetConsensus().nCoinbaseMaturity is still met.
         bool fSpendsCoinbase = false;
         for (const CTxIn &txin : tx.vin) {
             const Coin &coin = view.AccessCoin(txin.prevout);
@@ -943,7 +1016,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                     return error("%s: ConnectInputs failed against MANDATORY but not STANDARD flags due to promiscuous mempool %s, %s",
                         __func__, hash.ToString(), FormatStateMessage(state));
                 } else {
-                    LogPrintf("Warning: -promiscuousmempool flags set to not include currently enforced soft forks, this may break mining or otherwise cause instability!\n");
+                    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Warning: -promiscuousmempool flags set to not include currently enforced soft forks, this may break mining or otherwise cause instability!\n");
                 }
             }
         }
@@ -951,7 +1024,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         // Remove conflicting transactions from the mempool
         for (const CTxMemPool::txiter it : allConflicting)
         {
-            LogPrint(BCLog::MEMPOOL, "replacing tx %s with %s for %s GENX additional fees, %d delta bytes\n",
+            LogPrint(BCLog::MEMPOOL, "[MemPool] Replacing tx %s with %s for %s GENX additional fees, %d delta bytes\n",
                     it->GetTx().GetHash().ToString(),
                     hash.ToString(),
                     FormatMoney(nModifiedFees - nConflictingFees),
@@ -1143,88 +1216,103 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     return true;
 }
 
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
+CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, bool fGovernanceBlockPartOnly)
 {
     int subsidy = 0;
+    int governanceBlockPart = 0;
 
     // Ignore the genesis block, which has no value
     if (nHeight == 0)
     {
         subsidy = 0;
     }
-    else if (nHeight > 0 && nHeight <= COINBASE_MATURITY)
+    else if (nHeight > 0 && nHeight <= Params().GetConsensus().nCoinbaseMaturity)
     {
         // There are no mature blocks yet...
         subsidy = BLOCK_REWARD_MAX;
     }
+    else if (nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == 0)
+    {
+        // ultra block (once a lunar year +/- 336 days)
+        subsidy = (consensusParams.GetUltraBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0)
+    {
+        // a mega block (once a lunar month +/- 28 days) 
+        subsidy = (consensusParams.GetMegaBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0)
+    {
+        // a weekly super block (+/- 7 days)
+        subsidy = (consensusParams.GetSuperBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+    }
+    else if (nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == 0)
+    {
+        // a daily bonus block
+        subsidy = (consensusParams.GetBonusBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
+        if (Params().NetworkIDString() == CBaseChainParams::TESTNET) 
+        {
+            subsidy += 1000;
+        }
+
+    }
+    else if(nHeight < consensusParams.nMasternodePaymentsStartBlock)
+    {
+        // A normal block... pre-masternodes
+        // Get the most recent confirmed block's hash
+        auto lookupBlockHeight = nHeight - Params().GetConsensus().nCoinbaseMaturity;
+        CBlockIndex* pblockindex = chainActive[lookupBlockHeight];
+        assert(pblockindex != nullptr);
+        uint256  confirmedHash = pblockindex->GetBlockHash();
+        //LogPrintf("Confirmed Hash for block %i: %s \n", nHeight - Params().GetConsensus().nCoinbaseMaturity, confirmedHash.GetHex());
+        // Get a sum of the significant bytes
+        // 7 23 3 2 27 4
+        unsigned int total = 0;
+        total += confirmedHash.GetUint64Char(7); 
+        total += confirmedHash.GetUint64Char(23);
+        total += confirmedHash.GetUint64Char(3); 
+        total += confirmedHash.GetUint64Char(2); 
+        total += confirmedHash.GetUint64Char(27); 
+        total += confirmedHash.GetUint64Char(4);
+
+        subsidy = total;
+
+        // sanity check... make sure it is not too little or too much
+        if (subsidy <= BLOCK_REWARD_MIN)
+        {
+            //LogPrintf("Subsidy %i too low, resetting to %i \n", subsidy, subsidy * BLOCK_REWARD_MIN);
+            if (subsidy == 0)
+            { 
+                subsidy++;
+            }
+            subsidy = subsidy * BLOCK_REWARD_MIN;
+        }
+        else if (subsidy > BLOCK_REWARD_MAX)
+        {
+            //LogPrintf("Subsidy %i too high, resetting to %i \n", subsidy, subsidy / 10);
+            subsidy = subsidy / 10;
+        }
+        // Make sure the subsidy divides by 4 to make the rest of the math work better
+        subsidy -= subsidy % 4;
+    }
+    else if (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    {
+        // governance block - once a lunar month, on the block following the mega block
+        subsidy = consensusParams.nBlockRewardTotal;
+        governanceBlockPart = consensusParams.GetMegaBlockInterval() * consensusParams.nBlockRewardGovernance;
+        subsidy += governanceBlockPart;
+    }
     else
     {
-        // Is this a superblock?
-        if (nHeight >= consensusParams.GetUltraBlockInterval() && (nHeight % consensusParams.GetUltraBlockInterval()) == 0)
-        {
-            // ultra block (once a lunar year +/- 354 days)
-            subsidy = (consensusParams.GetUltraBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else if (nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == 0)
-        {
-            // a mega block (once a lunar month +/- 28 days) 
-            subsidy = (consensusParams.GetMegaBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else if (nHeight >= consensusParams.GetSuperBlockInterval() && (nHeight % consensusParams.GetSuperBlockInterval()) == 0)
-        {
-            // a weekly super block (+/- 7 days)
-            subsidy = (consensusParams.GetSuperBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else if (nHeight >= consensusParams.GetBonusBlockInterval() && (nHeight % consensusParams.GetBonusBlockInterval()) == 0)
-        {
-            // a daily bonus block
-            subsidy = (consensusParams.GetBonusBlockInterval() * BLOCK_REWARD_MAX) / BONUS_DIVISOR;
-        }
-        else
-        {
-            // A normal block...
-            // Get the most recent confirmed block's hash
-            auto lookupBlockHeight = nHeight - COINBASE_MATURITY;
-            CBlockIndex* pblockindex = chainActive[lookupBlockHeight];
-            assert(pblockindex != nullptr);
-            uint256  confirmedHash = pblockindex->GetBlockHash();
-            //LogPrintf("Confirmed Hash for block %i: %s \n", nHeight - COINBASE_MATURITY, confirmedHash.GetHex());
-            
-            // Get a sum of the significant bytes
-            // 7 23 3 2 27 4
-            unsigned int total = 0;
-            total += confirmedHash.GetUint64Char(7); 
-            total += confirmedHash.GetUint64Char(23);
-            total += confirmedHash.GetUint64Char(3); 
-            total += confirmedHash.GetUint64Char(2); 
-            total += confirmedHash.GetUint64Char(27); 
-            total += confirmedHash.GetUint64Char(4);
-
-            subsidy = total;
-
-            // sanity check... make sure it is not too little or too much
-            if (subsidy <= BLOCK_REWARD_MIN)
-            {
-                //LogPrintf("Subsidy %i too low, resetting to %i \n", subsidy, subsidy * BLOCK_REWARD_MIN);
-                if (subsidy == 0)
-                { 
-                    subsidy++;
-                }
-                subsidy = subsidy * BLOCK_REWARD_MIN;
-            }
-            else if (subsidy > BLOCK_REWARD_MAX)
-            {
-                //LogPrintf("Subsidy %i too high, resetting to %i \n", subsidy, subsidy / 10);
-                subsidy = subsidy / 10;
-            }
-        }
+        // A normal block... with masternodes
+        subsidy = consensusParams.nBlockRewardTotal;
     }
-    // Make sure the subsidy divides by 4 to make the rest of the math work better
-    subsidy -= subsidy % 4;
 
-    //LogPrintf("Subsidy %i acceptable for block %i \n", subsidy, nHeight);
+    //LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Subsidy %i acceptable for block %i \n", subsidy, nHeight);
     CAmount nSubsidy = subsidy * COIN;
-    return nSubsidy;
+    CAmount nGovernanceBlockPart = governanceBlockPart * COIN;
+
+    return fGovernanceBlockPartOnly ? nGovernanceBlockPart :  nSubsidy;
 }
 
 bool IsInitialBlockDownload()
@@ -1246,7 +1334,7 @@ bool IsInitialBlockDownload()
         return true;
     if (chainActive.Tip()->nHeight > 0  && chainActive.Tip()->GetBlockTime() < (GetTime() - nMaxTipAge))
         return true;
-    LogPrintf("Leaving InitialBlockDownload (latching to false)\n");
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Leaving InitialBlockDownload (latching to false)\n");
     latchToFalse.store(true, std::memory_order_relaxed);
     return false;
 }
@@ -1293,14 +1381,14 @@ static void CheckForkWarningConditions()
         }
         if (pindexBestForkTip && pindexBestForkBase)
         {
-            LogPrintf("%s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
+            LogPrint(BCLog::BLOCKVALID, "[BlockValidation] %s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
                    pindexBestForkBase->nHeight, pindexBestForkBase->phashBlock->ToString(),
                    pindexBestForkTip->nHeight, pindexBestForkTip->phashBlock->ToString());
             SetfLargeWorkForkFound(true);
         }
         else
         {
-            LogPrintf("%s: Warning: Found invalid chain at least ~6 blocks longer than our best chain.\nChain state database corruption likely.\n", __func__);
+            LogPrint(BCLog::BLOCKVALID, "[BlockValidation] %s: Warning: Found invalid chain at least ~6 blocks longer than our best chain.\nChain state database corruption likely.\n", __func__);
             SetfLargeWorkInvalidChainFound(true);
         }
     }
@@ -1349,13 +1437,13 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     if (!pindexBestInvalid || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
         pindexBestInvalid = pindexNew;
 
-    LogPrintf("%s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] %s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
       log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
       pindexNew->GetBlockTime()));
     CBlockIndex *tip = chainActive.Tip();
     assert (tip);
-    LogPrintf("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] %s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
       tip->GetBlockHash().ToString(), chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
     CheckForkWarningConditions();
@@ -1414,7 +1502,7 @@ void InitScriptExecutionCache() {
     // setup_bytes creates the minimum possible cache (2 elements).
     size_t nMaxCacheSize = std::min(std::max((int64_t)0, gArgs.GetArg("-maxsigcachesize", DEFAULT_MAX_SIG_CACHE_SIZE) / 2), MAX_MAX_SIG_CACHE_SIZE) * ((size_t) 1 << 20);
     size_t nElems = scriptExecutionCache.setup_bytes(nMaxCacheSize);
-    LogPrintf("Using %zu MiB out of %zu/2 requested for script execution cache, able to store %zu elements\n",
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Using %zu MiB out of %zu/2 requested for script execution cache, able to store %zu elements\n",
             (nElems*sizeof(uint256)) >>20, (nMaxCacheSize*2)>>20, nElems);
 }
 
@@ -1579,7 +1667,7 @@ static bool UndoReadFromDisk(CBlockUndo& blockundo, const CBlockIndex *pindex)
 bool AbortNode(const std::string& strMessage, const std::string& userMessage="")
 {
     SetMiscWarning(strMessage);
-    LogPrintf("*** %s\n", strMessage);
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] *** %s\n", strMessage);
     uiInterface.ThreadSafeMessageBox(
         userMessage.empty() ? _("Error: A fatal internal error occurred, see debug.log for details") : userMessage,
         "", CClientUIInterface::MSG_ERROR);
@@ -1771,6 +1859,22 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
         ThresholdState state = VersionBitsState(pindexPrev, params, (Consensus::DeploymentPos)i, versionbitscache);
         if (state == THRESHOLD_LOCKED_IN || state == THRESHOLD_STARTED) {
             nVersion |= VersionBitsMask(params, (Consensus::DeploymentPos)i);
+
+            CScript payee;
+            int payeeActivationHeight;
+            masternode_info_t mnInfo;
+            if (!mnpayments.GetBlockPayees(pindexPrev->nHeight + 1, payee, payeeActivationHeight)) {
+                // no votes for this block
+                continue;
+            }
+            if (!mnodeman.GetMasternodeInfo(payee, mnInfo)) {
+                // unknown masternode
+                continue;
+            }
+            if (mnInfo.nProtocolVersion < BLOCKRESTRUCTURE_AND_MASTERNODES) {
+                // masternode is not upgraded yet
+                continue;
+            }
         }
     }
 
@@ -1919,7 +2023,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     }
 
     int64_t nTime1 = GetTimeMicros(); nTimeCheck += nTime1 - nTimeStart;
-    LogPrint(BCLog::BENCH, "    - Sanity checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime1 - nTimeStart), nTimeCheck * MICRO, nTimeCheck * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking]    - Sanity checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime1 - nTimeStart), nTimeCheck * MICRO, nTimeCheck * MILLI / nBlocksTotal);
 
     // Do not allow blocks that contain transactions which 'overwrite' older transactions,
     // unless those are already completely spent.
@@ -1969,7 +2073,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     unsigned int flags = GetBlockScriptFlags(pindex, chainparams.GetConsensus());
 
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
-    LogPrint(BCLog::BENCH, "    - Fork checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime2 - nTime1), nTimeForks * MICRO, nTimeForks * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking]    - Fork checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime2 - nTime1), nTimeForks * MICRO, nTimeForks * MILLI / nBlocksTotal);
 
     CBlockUndo blockundo;
 
@@ -2041,19 +2145,40 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
     }
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
-    LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking]      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    if (block.vtx[0]->GetValueOut() > blockReward)
-        return state.DoS(100,
-                         error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
-                               block.vtx[0]->GetValueOut(), blockReward),
-                               REJECT_INVALID, "bad-cb-amount");
+	if (!CGovernanceBlock::IsValidBlockHeight(pindex->nHeight))
+		if (block.vtx[0]->GetValueOut() > blockReward)
+		return state.DoS(100,
+						 error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
+							   block.vtx[0]->GetValueOut() / COIN, blockReward / COIN),
+							   REJECT_INVALID, "bad-cb-amount");
+
+    // Genesis Masternode : Modified to check masternode payments and governance blocks
+    // It's possible that we simply don't have enough data and this could fail
+    // (i.e. block itself could be a correct one and we need to store it),
+    // that's why this is in ConnectBlock. Could be the other way around however -
+    // the peer who sent us this block is missing some data and wasn't able
+    // to recognize that block is actually invalid.
+    // TODO: resync data (both ways?) and try to reprocess this block later.
+    std::string strError = "";
+    if (!IsBlockValueValid(block, pindex->nHeight, blockReward, strError)) {
+        return state.DoS(20, error("ConnectBlock(GENX): %s", strError), REJECT_INVALID, "bad-cb-amount");
+    }
+    
+    if (pindex->nHeight >= Params().GetConsensus().nMasternodePaymentsStartBlock) {
+        if (!IsBlockPayeeValid(block.vtx[0], pindex->nHeight, blockReward)) {
+            return state.DoS(20, error("ConnectBlock(GENX): couldn't find masternode or governance block payments"),
+                                    REJECT_INVALID, "bad-cb-payee");
+        }
+    }
+    // END Genesis Masternode
 
     if (!control.Wait())
         return state.DoS(100, error("%s: CheckQueue failed", __func__), REJECT_INVALID, "block-validation-failed");
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
-    LogPrint(BCLog::BENCH, "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking]    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
     if (fJustCheck)
         return true;
@@ -2073,11 +2198,14 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     // add this block to the view's block chain
     view.SetBestBlock(pindex->GetBlockHash());
 
+    // Update block tip in masternodeman
+    mnodeman.UpdatedBlockTip(pindex);
+
     int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
-    LogPrint(BCLog::BENCH, "    - Index writing: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5 - nTime4), nTimeIndex * MICRO, nTimeIndex * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking]    - Index writing: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5 - nTime4), nTimeIndex * MICRO, nTimeIndex * MILLI / nBlocksTotal);
 
     int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
-    LogPrint(BCLog::BENCH, "    - Callbacks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime6 - nTime5), nTimeCallbacks * MICRO, nTimeCallbacks * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking]    - Callbacks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime6 - nTime5), nTimeCallbacks * MICRO, nTimeCallbacks * MILLI / nBlocksTotal);
 
     return true;
 }
@@ -2264,14 +2392,14 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
             DoWarning(strWarning);
         }
     }
-    LogPrintf("%s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__,
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] %s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, pindexNew->nVersion,
       log(pindexNew->nChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexNew->GetBlockTime()),
       GuessVerificationProgress(chainParams.TxData(), pindexNew), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
     if (!warningMessages.empty())
-        LogPrintf(" warning='%s'", boost::algorithm::join(warningMessages, ", "));
-    LogPrintf("\n");
+        LogPrint(BCLog::BLOCKVALID, "[BlockValidation]  warning='%s'", boost::algorithm::join(warningMessages, ", "));
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] \n");
 
 }
 
@@ -2304,7 +2432,7 @@ bool CChainState::DisconnectTip(CValidationState& state, const CChainParams& cha
         bool flushed = view.Flush();
         assert(flushed);
     }
-    LogPrint(BCLog::BENCH, "- Disconnect block: %.2fms\n", (GetTimeMicros() - nStart) * MILLI);
+    LogPrint(BCLog::BENCH, "[Benchmarking] - Disconnect block: %.2fms\n", (GetTimeMicros() - nStart) * MILLI);
     // Write the chain state to disk, if necessary.
     if (!FlushStateToDisk(chainparams, state, FLUSH_STATE_IF_NEEDED))
         return false;
@@ -2426,7 +2554,7 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
-    LogPrint(BCLog::BENCH, "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * MILLI, nTimeReadFromDisk * MICRO);
+    LogPrint(BCLog::BENCH, "[Benchmarking] - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * MILLI, nTimeReadFromDisk * MICRO);
     {
         CCoinsViewCache view(pcoinsTip.get());
         bool rv = ConnectBlock(blockConnecting, state, pindexNew, view, chainparams);
@@ -2437,17 +2565,17 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;
-        LogPrint(BCLog::BENCH, "  - Connect total: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime3 - nTime2) * MILLI, nTimeConnectTotal * MICRO, nTimeConnectTotal * MILLI / nBlocksTotal);
+        LogPrint(BCLog::BENCH, "[Benchmarking] - Connect total: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime3 - nTime2) * MILLI, nTimeConnectTotal * MICRO, nTimeConnectTotal * MILLI / nBlocksTotal);
         bool flushed = view.Flush();
         assert(flushed);
     }
     int64_t nTime4 = GetTimeMicros(); nTimeFlush += nTime4 - nTime3;
-    LogPrint(BCLog::BENCH, "  - Flush: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime4 - nTime3) * MILLI, nTimeFlush * MICRO, nTimeFlush * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking] - Flush: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime4 - nTime3) * MILLI, nTimeFlush * MICRO, nTimeFlush * MILLI / nBlocksTotal);
     // Write the chain state to disk, if necessary.
     if (!FlushStateToDisk(chainparams, state, FLUSH_STATE_IF_NEEDED))
         return false;
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
-    LogPrint(BCLog::BENCH, "  - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking] - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
     // Remove conflicting transactions from the mempool.;
     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight);
     disconnectpool.removeForBlock(blockConnecting.vtx);
@@ -2456,8 +2584,8 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     UpdateTip(pindexNew, chainparams);
 
     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;
-    LogPrint(BCLog::BENCH, "  - Connect postprocess: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime5) * MILLI, nTimePostConnect * MICRO, nTimePostConnect * MILLI / nBlocksTotal);
-    LogPrint(BCLog::BENCH, "- Connect block: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime1) * MILLI, nTimeTotal * MICRO, nTimeTotal * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking] - Connect postprocess: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime5) * MILLI, nTimePostConnect * MICRO, nTimePostConnect * MILLI / nBlocksTotal);
+    LogPrint(BCLog::BENCH, "[Benchmarking] - Connect block: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime1) * MILLI, nTimeTotal * MICRO, nTimeTotal * MILLI / nBlocksTotal);
 
     connectTrace.BlockConnected(pindexNew, std::move(pthisBlock));
     return true;
@@ -2671,8 +2799,8 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
             SyncWithValidationInterfaceQueue();
         }
 
-        const CBlockIndex *pindexFork;
-        bool fInitialDownload;
+        // const CBlockIndex *pindexFork;
+        // bool fInitialDownload;
         {
             LOCK(cs_main);
             CBlockIndex* starting_tip = chainActive.Tip();
@@ -3059,20 +3187,21 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     {
         if (CheckEquihashSolution(&block, Params(), "GENX_PoW"))
         {
-            // LogPrintf("CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
+            // LogPrint(BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
         }
-        else if (IsInitialBlockDownload && CheckEquihashSolution(&block, Params(), "SafeCash"))
+        //else if (IsInitialBlockDownload() && CheckEquihashSolution(&block, Params(), "SafeCash"))
+        else if (CheckEquihashSolution(&block, Params(), "SafeCash"))
         {
-            // LogPrintf("CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
+            // LogPrint(BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
         }
         else if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
         {
-            // LogPrintf("Skipping genesis block\n");
+            // LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Skipping genesis block\n");
         }
         else
         {
             // Nothing worked... bugger.
-            LogPrintf("CheckBlockHeader(): Equihash solution invalid at height %d\n", block.nHeight);
+            LogPrint(BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Equihash solution invalid at height %d\n", block.nHeight);
             return state.DoS(100, error("CheckBlockHeader(): Equihash solution invalid"),
                     REJECT_INVALID, "invalid-solution");
         }
@@ -3248,7 +3377,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
 
     // Reject outdated version blocks when 95% (75% on testnet) of the network has upgraded:
     // check for version 2, 3 and 4 upgrades
-    if((block.nVersion < 2 && nHeight >= consensusParams.BIP34Height) ||
+    if ((block.nVersion < 2 && nHeight >= consensusParams.BIP34Height) ||
        (block.nVersion < 3 && nHeight >= consensusParams.BIP66Height) ||
        (block.nVersion < 4 && nHeight >= consensusParams.BIP65Height))
             return state.Invalid(false, REJECT_OBSOLETE, strprintf("bad-version(0x%08x)", block.nVersion),
@@ -3290,7 +3419,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         CScript expect = CScript() << nHeight;
         if (block.vtx[0]->vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0]->vin[0].scriptSig.begin())) {
-            LogPrintf("BIP34 Height Validation failed at: %d\n", nHeight);
+            LogPrint(BCLog::BLOCKVALID, "[BlockValidation] BIP34 Height Validation failed at: %d\n", nHeight);
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-height", false, "block height mismatch in coinbase");
         }
     }
@@ -3347,74 +3476,183 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
     // reward block or time is reached, with exception of the genesis block.
     bool found = false;
 
-    auto vBlockDeductionTotal =  GetBlockSubsidy(nHeight, consensusParams) / 4;
-    auto deductionChange = vBlockDeductionTotal % 5;
-    vBlockDeductionTotal -= deductionChange;
+    // Pre masternodes
+    if (nHeight < consensusParams.nMasternodePaymentsStartBlock)
+    {
+        auto vBlockDeductionTotal =  GetBlockSubsidy(nHeight, consensusParams) / 4;
+        auto deductionChange = vBlockDeductionTotal % 5;
+        vBlockDeductionTotal -= deductionChange;
 
-    // Founders Reward
-    auto vFounders = (vBlockDeductionTotal / 5) * 2;
-    std::vector<CScript> allFounderScripts = Params().GetAllFounderScripts();
-    // Check the division... see if we'll have any change left after the division
-    auto foundersChange = vFounders % allFounderScripts.size();
-    if (foundersChange != 0)
-    {
-        vFounders -= foundersChange;
-    }
-    // Calculate the individual founder's reward
-    auto ifr = vFounders / allFounderScripts.size();
-    // create the transactions
-    auto foundScripts = 0;
-    for (auto &founderScript : allFounderScripts)
-    {
+        // Founders Reward
+        auto vFounders = (vBlockDeductionTotal / 5) * 2;
+        std::vector<CScript> allFounderScripts = Params().GetAllFounderScripts();
+        // Check the division... see if we'll have any change left after the division
+        auto foundersChange = vFounders % allFounderScripts.size();
+        if (foundersChange != 0)
+        {
+            vFounders -= foundersChange;
+        }
+        // Calculate the individual founder's reward
+        int64_t ifr = vFounders / allFounderScripts.size();
+        // create the transactions
+        uint32_t foundScripts = 0;
+        for (auto &founderScript : allFounderScripts)
+        {
+            BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                if (output.scriptPubKey == founderScript) {
+                    if (output.nValue == ifr) 
+                    {
+                        foundScripts++;
+                        break;
+                    }
+                    else
+                    {
+                        LogPrintf("Wrong block founders value: %i should be %i \n", output.nValue, ifr);
+                    }
+                }
+            }
+        }
+        if (foundScripts == allFounderScripts.size())
+        {
+            found = true;
+        }
+
+        if (!found) {
+            return state.DoS(100, error("%s: founders payment missing", __func__), REJECT_INVALID, "cb-no-founders-payment");
+        }
+
+        // Infrastructure
         BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
-            if (output.scriptPubKey == founderScript) {
-                if (output.nValue == ifr) 
-                {
-                    foundScripts++;
+            if (output.scriptPubKey == Params().GetInfrastructureScriptAtHeight(nHeight)) {
+                if (output.nValue == (vBlockDeductionTotal / 5) * 1) {
+                    found = true;
                     break;
                 }
-                else
-                {
-                    LogPrintf("Wrong block founders value: %i should be %i \n", output.nValue, ifr);
+            }
+        }
+
+        if (!found) {
+            return state.DoS(100, error("%s: infrastructure payment missing", __func__), REJECT_INVALID, "cb-no-infrastructure-payment");
+        }
+
+        // Giveaways
+        BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+            if (output.scriptPubKey == Params().GetGiveawayScriptAtHeight(nHeight)) {
+                if (output.nValue == (vBlockDeductionTotal / 5) * 2) {
+                    found = true;
+                    break;
                 }
             }
         }
+
+        if (!found) {
+            return state.DoS(100, error("%s: giveaways payment missing", __func__), REJECT_INVALID, "cb-no-giveaways-payment");
+        }
+
     }
-    if (foundScripts == allFounderScripts.size())
+    // With masternodes
+    else
     {
-        found = true;
-    }
+        // The 'normal' deductions... i.e. without governance
+        auto vBlockDeductionTotal = (consensusParams.nBlockRewardTotal - consensusParams.nBlockRewardFinder) * COIN;
+        // In case of governance block, leave the normal amount for the miner
+        if (nHeight >= consensusParams.nMasternodePaymentsStartBlock 
+                && nHeight >= consensusParams.GetMegaBlockInterval() 
+                && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+        {
+            // Add the value of the governance block as well as the masternode amount to the deduction, 
+            // to ensure that the "base payments" are consistent
+            vBlockDeductionTotal += (GetBlockSubsidy(nHeight, consensusParams, true) + consensusParams.nBlockRewardMasternode * COIN);
+        }
 
-    if (!found) {
-        return state.DoS(100, error("%s: founders payment missing", __func__), REJECT_INVALID, "cb-no-founders-payment");
-    }
-
-    // Infrastructure
-    BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
-        if (output.scriptPubKey == Params().GetInfrastructureScriptAtHeight(nHeight)) {
-            if (output.nValue == (vBlockDeductionTotal / 5) * 1) {
+        if (consensusParams.nBlockRewardFounders > 0)
+        {
+            // Founders deduction
+            auto vFounders = (int)consensusParams.nBlockRewardFounders * COIN;
+            // Keep track of what has been paid
+            vBlockDeductionTotal -= vFounders;
+            // Each founder gets paid on each block
+            std::vector<CScript> allFounderScripts = Params().GetAllFounderScripts();
+            // Check the division... see if we'll have any change left after the division
+            auto foundersChange = vFounders % allFounderScripts.size();
+            if (foundersChange != 0)
+            {
+                vFounders -= foundersChange;
+            }
+            // Calculate the individual founder's reward
+            CAmount ifr = vFounders / allFounderScripts.size();
+            // create the transactions
+            uint32_t foundScripts = 0;
+            for (auto &founderScript : allFounderScripts)
+            {
+                BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                    if (output.scriptPubKey == founderScript) {
+                        if (output.nValue == ifr) 
+                        {
+                            foundScripts++;
+                            break;
+                        }
+                        else
+                        {
+                            LogPrintf("Wrong block founders value: %i should be %i \n", output.nValue, ifr);
+                        }
+                    }
+                }
+            }
+            if (foundScripts == allFounderScripts.size())
+            {
                 found = true;
-                break;
+            }
+
+            if (!found) {
+                return state.DoS(100, error("%s: founders payment missing", __func__), REJECT_INVALID, "cb-no-founders-payment");
             }
         }
-    }
 
-    if (!found) {
-        return state.DoS(100, error("%s: infrastructure payment missing", __func__), REJECT_INVALID, "cb-no-infrastructure-payment");
-    }
 
-    // Giveaways
-    BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
-        if (output.scriptPubKey == Params().GetGiveawayScriptAtHeight(nHeight)) {
-            if (output.nValue == (vBlockDeductionTotal / 5) * 2) {
-                found = true;
-                break;
+        if (consensusParams.nBlockRewardInfrastructure > 0)
+        {
+            // Infrastructure
+            auto infrastructureDeduction = consensusParams.nBlockRewardFounders * COIN;
+            // Keep track of what has been paid
+            vBlockDeductionTotal -= infrastructureDeduction;
+
+            BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                if (output.scriptPubKey == Params().GetInfrastructureScriptAtHeight(nHeight)) {
+                    if (output.nValue == infrastructureDeduction) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                return state.DoS(100, error("%s: infrastructure payment missing", __func__), REJECT_INVALID, "cb-no-infrastructure-payment");
             }
         }
-    }
 
-    if (!found) {
-        return state.DoS(100, error("%s: giveaways payment missing", __func__), REJECT_INVALID, "cb-no-giveaways-payment");
+        if (consensusParams.nBlockRewardGiveaways > 0)
+        {
+            // Giveaways
+            auto giveAwaysDeduction = consensusParams.nBlockRewardGiveaways * COIN;
+            // Keep track of what has been paid
+            vBlockDeductionTotal -= giveAwaysDeduction;
+
+            BOOST_FOREACH(const CTxOut& output, block.vtx[0]->vout) {
+                if (output.scriptPubKey == Params().GetGiveawayScriptAtHeight(nHeight)) {
+                    if (output.nValue == giveAwaysDeduction) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                return state.DoS(100, error("%s: giveaways payment missing", __func__), REJECT_INVALID, "cb-no-giveaways-payment");
+            }
+        }
+
+        // ToDo: Validate masternode and governance payments here...
     }
 
 
@@ -3546,7 +3784,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // not process unrequested blocks.
     bool fTooFarAhead = (pindex->nHeight > int(chainActive.Height() + MIN_BLOCKS_TO_KEEP));
     // We don't have enough blocks to generate the random reward... yet
-    bool fTooFarAheadOfProcessing = (pindex->nHeight > int(chainActive.Height() + COINBASE_MATURITY)); 
+    bool fTooFarAheadOfProcessing = (pindex->nHeight > int(chainActive.Height() + Params().GetConsensus().nCoinbaseMaturity)); 
 
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a
@@ -3722,7 +3960,7 @@ void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune)
         CDiskBlockPos pos(*it, 0);
         fs::remove(GetBlockPosFilename(pos, "blk"));
         fs::remove(GetBlockPosFilename(pos, "rev"));
-        LogPrintf("Prune: %s deleted blk/rev (%05u)\n", __func__, *it);
+        LogPrint(BCLog::PRUNE, "[Prune] %s deleted blk/rev (%05u)\n", __func__, *it);
     }
 }
 
@@ -3745,7 +3983,7 @@ static void FindFilesToPruneManual(std::set<int>& setFilesToPrune, int nManualPr
         setFilesToPrune.insert(fileNumber);
         count++;
     }
-    LogPrintf("Prune (Manual): prune_height=%d removed %d blk/rev pairs\n", nLastBlockWeCanPrune, count);
+    LogPrint(BCLog::PRUNE, "[Prune] (Manual) prune_height=%d removed %d blk/rev pairs\n", nLastBlockWeCanPrune, count);
 }
 
 /* This function is called from the RPC code for pruneblockchain */
@@ -3812,7 +4050,7 @@ static void FindFilesToPrune(std::set<int>& setFilesToPrune, uint64_t nPruneAfte
         }
     }
 
-    LogPrint(BCLog::PRUNE, "Prune: target=%dMiB actual=%dMiB diff=%dMiB max_prune_height=%d removed %d blk/rev pairs\n",
+    LogPrint(BCLog::PRUNE, "[Prune] target=%dMiB actual=%dMiB diff=%dMiB max_prune_height=%d removed %d blk/rev pairs\n",
            nPruneTarget/1024/1024, nCurrentUsage/1024/1024,
            ((int64_t)nPruneTarget - (int64_t)nCurrentUsage)/1024/1024,
            nLastBlockWeCanPrune, count);
@@ -3984,7 +4222,7 @@ bool static LoadBlockIndexDB(const CChainParams& chainparams)
     // Check whether we need to continue reindexing
     bool fReindexing = false;
     pblocktree->ReadReindexing(fReindexing);
-    if(fReindexing) fReindex = true;
+    if (fReindexing) fReindex = true;
 
     // Check whether we have a transaction index
     pblocktree->ReadFlag("txindex", fTxIndex);
@@ -4042,21 +4280,21 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     if (nCheckDepth <= 0 || nCheckDepth > chainActive.Height())
         nCheckDepth = chainActive.Height();
     nCheckLevel = std::max(0, std::min(4, nCheckLevel));
-    LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CCoinsViewCache coins(coinsview);
     CBlockIndex* pindexState = chainActive.Tip();
     CBlockIndex* pindexFailure = nullptr;
     int nGoodTransactions = 0;
     CValidationState state;
     int reportDone = 0;
-    LogPrintf("[0%%]...");
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] [0%%]...");
     for (CBlockIndex* pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
         int percentageDone = std::max(1, std::min(99, (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100))));
         if (reportDone < percentageDone/10) {
             // report every 10% step
-            LogPrintf("[%d%%]...", percentageDone);
+            LogPrint(BCLog::BLOCKVALID, "[BlockValidation] [%d%%]...", percentageDone);
             reportDone = percentageDone/10;
         }
         uiInterface.ShowProgress(_("Verifying blocks..."), percentageDone, false);
@@ -4064,7 +4302,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             break;
         if (fPruneMode && !(pindex->nStatus & BLOCK_HAVE_DATA)) {
             // If pruning, only go back as far as we have data.
-            LogPrintf("VerifyDB(): block verification stopping at height %d (pruning, no data)\n", pindex->nHeight);
+            LogPrint(BCLog::BLOCKVALID, "[BlockValidation] VerifyDB(): block verification stopping at height %d (pruning, no data)\n", pindex->nHeight);
             break;
         }
         CBlock block;
@@ -4120,8 +4358,8 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         }
     }
 
-    LogPrintf("[DONE].\n");
-    LogPrintf("No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] [DONE].\n");
+    LogPrint(BCLog::BLOCKVALID, "[BlockValidation] No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
 
     return true;
 }
@@ -4158,7 +4396,7 @@ bool CChainState::ReplayBlocks(const CChainParams& params, CCoinsView* view)
     if (hashHeads.size() != 2) return error("ReplayBlocks(): unknown inconsistent state");
 
     uiInterface.ShowProgress(_("Replaying blocks..."), 0, false);
-    LogPrintf("Replaying blocks\n");
+    LogPrint(BCLog::REINDEX, "[REINDEX] Replaying blocks\n");
 
     const CBlockIndex* pindexOld = nullptr;  // Old tip during the interrupted flush.
     const CBlockIndex* pindexNew;            // New tip during the interrupted flush.
@@ -4185,7 +4423,7 @@ bool CChainState::ReplayBlocks(const CChainParams& params, CCoinsView* view)
             if (!ReadBlockFromDisk(block, pindexOld, params.GetConsensus())) {
                 return error("RollbackBlock(): ReadBlockFromDisk() failed at %d, hash=%s", pindexOld->nHeight, pindexOld->GetBlockHash().ToString());
             }
-            LogPrintf("Rolling back %s (%i)\n", pindexOld->GetBlockHash().ToString(), pindexOld->nHeight);
+            LogPrint(BCLog::REINDEX, "[REINDEX] Rolling back %s (%i)\n", pindexOld->GetBlockHash().ToString(), pindexOld->nHeight);
             DisconnectResult res = DisconnectBlock(block, pindexOld, cache);
             if (res == DISCONNECT_FAILED) {
                 return error("RollbackBlock(): DisconnectBlock failed at %d, hash=%s", pindexOld->nHeight, pindexOld->GetBlockHash().ToString());
@@ -4372,7 +4610,7 @@ bool LoadBlockIndex(const CChainParams& chainparams)
         // instead only check it prior to LoadBlockIndexDB to set
         // needs_init.
 
-        LogPrintf("Initializing databases...\n");
+        LogPrint(BCLog::DB, "[WalletDatabase] Initializing databases...\n");
         // Use the provided setting for -txindex in the new database
         fTxIndex = gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX);
         pblocktree->WriteFlag("txindex", fTxIndex);
@@ -4461,7 +4699,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 // detect out of order blocks, and store them for later
                 uint256 hash = block.GetHash();
                 if (hash != chainparams.GetConsensus().hashGenesisBlock && mapBlockIndex.find(block.hashPrevBlock) == mapBlockIndex.end()) {
-                    LogPrint(BCLog::REINDEX, "%s: Out of order block %s, parent %s not known\n", __func__, hash.ToString(),
+                    LogPrint(BCLog::REINDEX, "[REINDEX] %s: Out of order block %s, parent %s not known\n", __func__, hash.ToString(),
                             block.hashPrevBlock.ToString());
                     if (dbp)
                         mapBlocksUnknownParent.insert(std::make_pair(block.hashPrevBlock, *dbp));
@@ -4477,7 +4715,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                     if (state.IsError())
                         break;
                 } else if (hash != chainparams.GetConsensus().hashGenesisBlock && mapBlockIndex[hash]->nHeight % 1000 == 0) {
-                    LogPrint(BCLog::REINDEX, "Block Import: already had block %s at height %d\n", hash.ToString(), mapBlockIndex[hash]->nHeight);
+                    LogPrint(BCLog::REINDEX, "[REINDEX] Block Import: already had block %s at height %d\n", hash.ToString(), mapBlockIndex[hash]->nHeight);
                 }
 
                 // Activate the genesis block so normal node progress can continue
@@ -4502,7 +4740,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                         std::shared_ptr<CBlock> pblockrecursive = std::make_shared<CBlock>();
                         if (ReadBlockFromDisk(*pblockrecursive, it->second, chainparams.GetConsensus()))
                         {
-                            LogPrint(BCLog::REINDEX, "%s: Processing out of order child %s of %s\n", __func__, pblockrecursive->GetHash().ToString(),
+                            LogPrint(BCLog::REINDEX, "[REINDEX] %s: Processing out of order child %s of %s\n", __func__, pblockrecursive->GetHash().ToString(),
                                     head.ToString());
                             LOCK(cs_main);
                             CValidationState dummy;
@@ -4518,14 +4756,14 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                     }
                 }
             } catch (const std::exception& e) {
-                LogPrintf("%s: Deserialize or I/O error - %s\n", __func__, e.what());
+                LogPrint(BCLog::REINDEX, "[REINDEX] %s: Deserialize or I/O error - %s\n", __func__, e.what());
             }
         }
     } catch (const std::runtime_error& e) {
         AbortNode(std::string("System error: ") + e.what());
     }
     if (nLoaded > 0)
-        LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
+        LogPrint(BCLog::REINDEX, "[REINDEX] Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
     return nLoaded > 0;
 }
 
@@ -4752,7 +4990,7 @@ bool LoadMempool(void)
     FILE* filestr = fsbridge::fopen(GetDataDir() / "mempool.dat", "rb");
     CAutoFile file(filestr, SER_DISK, CLIENT_VERSION);
     if (file.IsNull()) {
-        LogPrintf("Failed to open mempool file from disk. Continuing anyway.\n");
+        LogPrint(BCLog::MEMPOOL, "[MemPool] Failed to open mempool file from disk. Continuing anyway.\n");
         return false;
     }
 
@@ -4813,11 +5051,11 @@ bool LoadMempool(void)
             mempool.PrioritiseTransaction(i.first, i.second);
         }
     } catch (const std::exception& e) {
-        LogPrintf("Failed to deserialize mempool data on disk: %s. Continuing anyway.\n", e.what());
+        LogPrint(BCLog::MEMPOOL, "[MemPool] Failed to deserialize mempool data on disk: %s. Continuing anyway.\n", e.what());
         return false;
     }
 
-    LogPrintf("Imported mempool transactions from disk: %i succeeded, %i failed, %i expired, %i already there\n", count, failed, expired, already_there);
+    LogPrint(BCLog::MEMPOOL, "[MemPool] Imported mempool transactions from disk: %i succeeded, %i failed, %i expired, %i already there\n", count, failed, expired, already_there);
     return true;
 }
 
@@ -4862,9 +5100,9 @@ bool DumpMempool(void)
         file.fclose();
         RenameOver(GetDataDir() / "mempool.dat.new", GetDataDir() / "mempool.dat");
         int64_t last = GetTimeMicros();
-        LogPrintf("Dumped mempool: %gs to copy, %gs to dump\n", (mid-start)*MICRO, (last-mid)*MICRO);
+        LogPrint(BCLog::MEMPOOL, "[MemPool] Dumped mempool: %gs to copy, %gs to dump\n", (mid-start)*MICRO, (last-mid)*MICRO);
     } catch (const std::exception& e) {
-        LogPrintf("Failed to dump mempool: %s. Continuing anyway.\n", e.what());
+        LogPrint(BCLog::MEMPOOL, "[MemPool] Failed to dump mempool: %s. Continuing anyway.\n", e.what());
         return false;
     }
     return true;

@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2011-2019 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -33,7 +33,7 @@ QString OpenURIDialog::getURI()
 void OpenURIDialog::accept()
 {
     SendCoinsRecipient rcp;
-    if(GUIUtil::parseGenesisURI(getURI(), &rcp))
+    if (GUIUtil::parseGenesisURI(getURI(), &rcp))
     {
         /* Only accept value URIs */
         QDialog::accept();
@@ -45,7 +45,7 @@ void OpenURIDialog::accept()
 void OpenURIDialog::on_selectFileButton_clicked()
 {
     QString filename = GUIUtil::getOpenFileName(this, tr("Select payment request file to open"), "", "", nullptr);
-    if(filename.isEmpty())
+    if (filename.isEmpty())
         return;
     QUrl fileUri = QUrl::fromLocalFile(filename);
     ui->uriEdit->setText("genesis:?r=" + QUrl::toPercentEncoding(fileUri.toString()));
