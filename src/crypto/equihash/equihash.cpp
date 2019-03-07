@@ -445,7 +445,7 @@ bool Equihash<N,K>::BasicSolve(const eh_HashState& base_state,
     } 
     else
     {
-        LogPrint(BCLog::POW, "[ProofOfWork] - List is empty\n");
+        // LogPrint(BCLog::POW, "[ProofOfWork] - List is empty\n");
     }
 
     return false;
