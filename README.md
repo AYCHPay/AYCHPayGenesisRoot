@@ -15,7 +15,7 @@ Genesis Official
 |-----------------------|-----------------------------------------------|
 | Ticker                | GENX                                          |
 | Algorithm             | Equihash 192.7                                |
-| RPC Port              | 7423                                          |
+| RPC Port              | 7234                                          |
 | P2P Port              | 7233                                          |
 | Block Time            | 60 Seconds                                    |
 | Difficulty Algorithm  | Zawy12's LWMA                                 |
