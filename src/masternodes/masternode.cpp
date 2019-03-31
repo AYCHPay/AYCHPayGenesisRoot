@@ -284,17 +284,17 @@ bool CMasternode::IsValidNetAddr(CService addrIn)
 
 void CMasternode::IncreasePoSeBanScore() 
 { 
-    if (nPoSeBanScore > -Params().GetConsensus().nMasternodePoseBanMaxScore)
+    if (nPoSeBanScore < Params().GetConsensus().nMasternodePoseBanMaxScore)
     {
-        nPoSeBanScore--;
+        nPoSeBanScore++;
     }  
 }
 
 void CMasternode::DecreasePoSeBanScore() 
 { 
-    if (nPoSeBanScore < Params().GetConsensus().nMasternodePoseBanMaxScore)
+    if (nPoSeBanScore > -Params().GetConsensus().nMasternodePoseBanMaxScore)
     {
-        nPoSeBanScore++;
+        nPoSeBanScore--;
     }  
 }
 
