@@ -170,6 +170,7 @@ template<typename T, typename... Args> static inline void MarkUsed(const T& t, c
 #ifdef USE_COVERAGE
 #define LogPrintf(...) do { MarkUsed(__VA_ARGS__); } while(0)
 #define LogPrint(category, ...) do { MarkUsed(__VA_ARGS__); } while(0)
+#define LogPrintG(loglevel, category, ...) do { MarkUsed(__VA_ARGS__); } while(0)
 #else
 #define LogPrintf(...) do { \
     std::string _log_msg_; /* Unlikely name to avoid shadowing variables */ \
