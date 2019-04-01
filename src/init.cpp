@@ -214,8 +214,9 @@ void Shutdown()
   
     // STORE DATA CACHES INTO SERIALIZED DAT FILES
     if (!fLiteMode) {
-        CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
-        flatdb1.Dump(mnodeman);
+        // #2b*: Disable writing to the mncache file... because it is broken in ways I can't track down... yet 
+        // CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
+        // flatdb1.Dump(mnodeman);
         CFlatDB<CMasternodePayments> flatdb2("mnpayments.dat", "magicMasternodePaymentsCache");
         flatdb2.Dump(mnpayments);
         CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
@@ -1795,12 +1796,13 @@ bool AppInitMain()
         fs::path pathDB = GetDataDir();
         std::string strDBName;
 
-        strDBName = "mncache.dat";
-        uiInterface.InitMessage(_("Loading masternode cache..."));
-        CFlatDB<CMasternodeMan> flatdb1(strDBName, "magicMasternodeCache");
-        if (!flatdb1.Load(mnodeman)) {
-            return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
-        }
+        // mncache file disabled, because it pissed me off.
+        // strDBName = "mncache.dat";
+        // uiInterface.InitMessage(_("Loading masternode cache..."));
+        // CFlatDB<CMasternodeMan> flatdb1(strDBName, "magicMasternodeCache");
+        // if (!flatdb1.Load(mnodeman)) {
+        //     return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
+        // }
         
         if (mnodeman.size()) {
             strDBName = "mnpayments.dat";
