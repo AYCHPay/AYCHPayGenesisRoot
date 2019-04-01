@@ -1014,7 +1014,7 @@ bool AppInitParameterInteraction()
     }
     else
     {
-        logLevels = BCLogLevel::LOG_NOTICE;
+        logLevels |= BCLogLevel::LOG_NOTICE;
     }
     
 
@@ -1034,6 +1034,11 @@ bool AppInitParameterInteraction()
             }
         }
     }
+    else
+    {
+        logCategories |= BCLog::ALL;
+    }
+    
 
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : gArgs.GetArgs("-debugexclude")) {
