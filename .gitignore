@@ -116,4 +116,3 @@ test/cache/*
 .vs/
 libgenesisconsensus.pc
 contrib/devtools/split-debug.sh
-.vscode/
