@@ -48,7 +48,7 @@
 
 [[noreturn]] static void RandFailure()
 {
-    LogPrintG(BCLogLevel::DEBUG, BCLog::RAND, "[RAND] Failed to read randomness, aborting\n");
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RAND, "[RAND] Failed to read randomness, aborting\n");
     std::abort();
 }
 
@@ -81,7 +81,7 @@ static void RDRandInit()
 {
     uint32_t eax, ebx, ecx, edx;
     if (__get_cpuid(1, &eax, &ebx, &ecx, &edx) && (ecx & CPUID_F1_ECX_RDRAND)) {
-        LogPrintG(BCLogLevel::DEBUG, BCLog::RAND, "[RAND] Using RdRand as an additional entropy source\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RAND, "[RAND] Using RdRand as an additional entropy source\n");
         rdrand_supported = true;
     }
     hwrand_initialized.store(true);
@@ -164,11 +164,11 @@ static void RandAddSeedPerfmon()
     if (ret == ERROR_SUCCESS) {
         RAND_add(vData.data(), nSize, nSize / 100.0);
         memory_cleanse(vData.data(), nSize);
-        LogPrintG(BCLogLevel::DEBUG, BCLog::RAND, "[RAND] %s: %lu bytes\n", __func__, nSize);
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RAND, "[RAND] %s: %lu bytes\n", __func__, nSize);
     } else {
         static bool warned = false; // Warn only once
         if (!warned) {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::RAND, "[RAND] %s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RAND, "[RAND] %s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
             warned = true;
         }
     }

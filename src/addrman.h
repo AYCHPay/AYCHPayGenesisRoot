@@ -447,7 +447,7 @@ public:
             }
         }
         if (nLost + nLostUnk > 0) {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::ADDRMAN, "[AddressManager] Lost %i new and %i tried addresses due to collisions\n", nLostUnk, nLost);
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::ADDRMAN, "[AddressManager] Lost %i new and %i tried addresses due to collisions\n", nLostUnk, nLost);
         }
 
         Check();
@@ -502,7 +502,7 @@ public:
             LOCK(cs);
             int err;
             if ((err=Check_()))
-			    LogPrintG(BCLogLevel::DEBUG, BCLog::ADDRMAN, "[AddressManager] Consistency Check Failed! err=%i\n", err);
+			    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::ADDRMAN, "[AddressManager] Consistency Check Failed! err=%i\n", err);
         }
 #endif
     }
@@ -516,7 +516,7 @@ public:
         fRet |= Add_(addr, source, nTimePenalty);
         Check();
         if (fRet) {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::ADDRMAN, "[AddressManager] Added %s from %s: %i tried, %i new\n", addr.ToStringIPPort(), source.ToString(), nTried, nNew);
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::ADDRMAN, "[AddressManager] Added %s from %s: %i tried, %i new\n", addr.ToStringIPPort(), source.ToString(), nTried, nNew);
         }
         return fRet;
     }
@@ -531,7 +531,7 @@ public:
             nAdd += Add_(*it, source, nTimePenalty) ? 1 : 0;
         Check();
         if (nAdd) {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::ADDRMAN, "[AddressManager] Added %i addresses from %s: %i tried, %i new\n", nAdd, source.ToString(), nTried, nNew);
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::ADDRMAN, "[AddressManager] Added %i addresses from %s: %i tried, %i new\n", nAdd, source.ToString(), nTried, nNew);
         }
         return nAdd > 0;
     }

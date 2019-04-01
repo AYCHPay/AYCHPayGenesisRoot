@@ -538,7 +538,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         Dbc* pcursor = batch.GetCursor();
         if (!pcursor)
         {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] Error getting wallet database cursor\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
 
@@ -552,7 +552,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 break;
             else if (ret != 0)
             {
-                LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] Error reading next record from wallet database\n");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Error reading next record from wallet database\n");
                 return DB_CORRUPT;
             }
 
@@ -574,7 +574,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 }
             }
             if (!strErr.empty())
-                LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] %s\n", strErr);
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] %s\n", strErr);
         }
         pcursor->close();
     }
@@ -593,9 +593,9 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
     if (result != DB_LOAD_OK)
         return result;
 
-    LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] nFileVersion = %d\n", wss.nFileVersion);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] nFileVersion = %d\n", wss.nFileVersion);
 
-    LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\n",
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\n",
            wss.nKeys, wss.nCKeys, wss.nKeyMeta, wss.nKeys + wss.nCKeys);
 
     // nTimeFirstKey is only reliable if all keys have metadata
@@ -640,7 +640,7 @@ DBErrors CWalletDB::FindWalletTx(std::vector<uint256>& vTxHash, std::vector<CWal
         Dbc* pcursor = batch.GetCursor();
         if (!pcursor)
         {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] Error getting wallet database cursor\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
 
@@ -654,7 +654,7 @@ DBErrors CWalletDB::FindWalletTx(std::vector<uint256>& vTxHash, std::vector<CWal
                 break;
             else if (ret != 0)
             {
-                LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] Error reading next record from wallet database\n");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Error reading next record from wallet database\n");
                 return DB_CORRUPT;
             }
 
@@ -708,7 +708,7 @@ DBErrors CWalletDB::ZapSelectTx(std::vector<uint256>& vTxHashIn, std::vector<uin
         }
         else if ((*it) == hash) {
             if(!EraseTx(hash)) {
-                LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] Transaction was found for deletion but returned database error: %s\n", hash.GetHex());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Transaction was found for deletion but returned database error: %s\n", hash.GetHex());
                 delerror = true;
             }
             vTxHashOut.push_back(hash);
@@ -799,7 +799,7 @@ bool CWalletDB::RecoverKeysOnlyFilter(void *callbackData, CDataStream ssKey, CDa
         return false;
     if (!fReadOK)
     {
-        LogPrintG(BCLogLevel::DEBUG, BCLog::DB, "[WalletDatabase] WARNING: CWalletDB::Recover skipping %s: %s\n", strType, strErr);
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] WARNING: CWalletDB::Recover skipping %s: %s\n", strType, strErr);
         return false;
     }
 

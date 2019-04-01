@@ -315,7 +315,7 @@ public:
     {
         LOCK(cs);
 
-        LogPrintG(BCLogLevel::DEBUG, BCLog::GOV, "[Governance] Governance object manager was cleared\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] Governance object manager was cleared\n");
         mapObjects.clear();
         mapErasedGovernanceObjects.clear();
         cmapVoteToObject.Clear();

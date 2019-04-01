@@ -216,7 +216,7 @@ Result CreateTransaction(const CWallet* wallet, const uint256& txid, const CCoin
     // If the output would become dust, discard it (converting the dust to fee)
     poutput->nValue -= nDelta;
     if (poutput->nValue <= GetDustThreshold(*poutput, ::dustRelayFee)) {
-        LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] Bumping fee and discarding dust output\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Bumping fee and discarding dust output\n");
         new_fee += poutput->nValue;
         mtx.vout.erase(mtx.vout.begin() + nOutput);
     }

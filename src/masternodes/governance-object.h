@@ -350,12 +350,12 @@ public:
         }
         if (s.GetType() & SER_DISK) {
             // Only include these for the disk file format
-            LogPrintG(BCLogLevel::DEBUG, BCLog::GOV, "[Governance] CGovernanceObject::SerializationOp Reading/writing votes from/to disk\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceObject::SerializationOp Reading/writing votes from/to disk\n");
             READWRITE(nDeletionTime);
             READWRITE(fExpired);
             READWRITE(mapCurrentMNVotes);
             READWRITE(fileVotes);
-            LogPrintG(BCLogLevel::DEBUG, BCLog::GOV, "[Governance] CGovernanceObject::SerializationOp hash = %s, vote count = %d\n", GetHash().ToString(), fileVotes.GetVoteCount());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceObject::SerializationOp hash = %s, vote count = %d\n", GetHash().ToString(), fileVotes.GetVoteCount());
         }
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY

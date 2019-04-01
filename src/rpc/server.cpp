@@ -304,7 +304,7 @@ bool CRPCTable::appendCommand(const std::string& name, const CRPCCommand* pcmd)
 
 bool StartRPC()
 {
-    LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] Starting RPC\n");
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Starting RPC\n");
     fRPCRunning = true;
     g_rpcSignals.Started();
     return true;
@@ -312,14 +312,14 @@ bool StartRPC()
 
 void InterruptRPC()
 {
-    LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] Interrupting RPC\n");
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Interrupting RPC\n");
     // Interrupt e.g. running longpolls
     fRPCRunning = false;
 }
 
 void StopRPC()
 {
-    LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] Stopping RPC\n");
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Stopping RPC\n");
     deadlineTimers.clear();
     DeleteAuthCookie();
     g_rpcSignals.Stopped();
@@ -368,7 +368,7 @@ void JSONRPCRequest::parse(const UniValue& valRequest)
     if (!valMethod.isStr())
         throw JSONRPCError(RPC_INVALID_REQUEST, "Method must be a string");
     strMethod = valMethod.get_str();
-    LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] ThreadRPCServer method=%s\n", SanitizeString(strMethod));
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] ThreadRPCServer method=%s\n", SanitizeString(strMethod));
 
     // Parse params
     UniValue valParams = find_value(request, "params");
@@ -544,7 +544,7 @@ void RPCRunLater(const std::string& name, std::function<void(void)> func, int64_
     if (!timerInterface)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No timer handler registered for RPC");
     deadlineTimers.erase(name);
-    LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
     deadlineTimers.emplace(name, std::unique_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000)));
 }
 

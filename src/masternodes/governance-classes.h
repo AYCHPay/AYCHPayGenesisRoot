@@ -109,12 +109,12 @@ public:
         }
         catch (std::exception& e)
         {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::GOV, "[Governance] CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d, what = %s\n",
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d, what = %s\n",
                 addrIn, nAmountIn, e.what());
         }
         catch (...)
         {
-            LogPrintG(BCLogLevel::DEBUG, BCLog::GOV, "[Governance] CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d\n",
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernancePayment Payment not valid: addrIn = %s, nAmountIn = %d\n",
                 addrIn, nAmountIn);
         }
     }

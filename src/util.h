@@ -86,14 +86,14 @@ struct CLogCategoryActive
 
 namespace BCLogLevel {
     enum LogFlags : uint32_t {
-        EMERGENCY   = (1 <<  0),
-        ALERT       = (1 <<  1),
-        CRITICAL    = (1 <<  2),
-        ERROR       = (1 <<  3),
-        WARNING     = (1 <<  4),
-        NOTICE      = (1 <<  5),
-        INFO        = (1 <<  6),
-        DEBUG       = (1 <<  7)
+        LOG_EMERGENCY   = (1 <<  0),
+        LOG_ALERT       = (1 <<  1),
+        LOG_CRITICAL    = (1 <<  2),
+        LOG_ERROR       = (1 <<  3),
+        LOG_WARNING     = (1 <<  4),
+        LOG_NOTICE      = (1 <<  5),
+        LOG_INFO        = (1 <<  6),
+        LOG_DEBUG       = (1 <<  7)
     };
 }
 
