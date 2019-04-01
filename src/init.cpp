@@ -1012,6 +1012,11 @@ bool AppInitParameterInteraction()
             }
         }
     }
+    else
+    {
+        logLevels = BCLogLevel::LOG_NOTICE;
+    }
+    
 
     if (gArgs.IsArgSet("-debug")) {
         // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
