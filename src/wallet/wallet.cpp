@@ -2690,13 +2690,13 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const int nConfMin
             }
 
         if (LogAcceptCategory(BCLog::SELECTCOINS)) {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::SELECTCOINS, "[CoinSelection] SelectCoins() best subset: ");
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::SELECTCOINS, "[CoinSelection] SelectCoins() best subset: ");
             for (unsigned int i = 0; i < vValue.size(); i++) {
                 if (vfBest[i]) {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::SELECTCOINS, "[CoinSelection] %s ", FormatMoney(vValue[i].txout.nValue));
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::SELECTCOINS, "[CoinSelection] %s ", FormatMoney(vValue[i].txout.nValue));
                 }
             }
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::SELECTCOINS, "[CoinSelection] Total %s\n", FormatMoney(nBest));
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::SELECTCOINS, "[CoinSelection] Total %s\n", FormatMoney(nBest));
         }
     }
 

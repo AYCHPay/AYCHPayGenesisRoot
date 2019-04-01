@@ -161,7 +161,7 @@ static bool HTTPReq_JSONRPC(HTTPRequest* req, const std::string &)
 
     JSONRPCRequest jreq;
     if (!RPCAuthorized(authHeader.second, jreq.authUser)) {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] ThreadRPCServer incorrect password attempt from %s\n", req->GetPeer().ToString());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] ThreadRPCServer incorrect password attempt from %s\n", req->GetPeer().ToString());
 
         /* Deter brute-forcing
            If this results in a DoS the user really
@@ -214,7 +214,7 @@ static bool InitRPCAuthentication()
 {
     if (gArgs.GetArg("-rpcpassword", "") == "")
     {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] No rpcpassword set - using random cookie authentication\n");
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] No rpcpassword set - using random cookie authentication\n");
         if (!GenerateAuthCookie(&strRPCUserColonPass)) {
             uiInterface.ThreadSafeMessageBox(
                 _("Error: A fatal internal error occurred, see debug.log for details"), // Same message as AbortNode
@@ -222,7 +222,7 @@ static bool InitRPCAuthentication()
             return false;
         }
     } else {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Config options rpcuser and rpcpassword will soon be deprecated. Locally-run instances may remove rpcuser to use cookie-based auth, or may be replaced with rpcauth. Please see share/rpcuser for rpcauth auth generation.\n");
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Config options rpcuser and rpcpassword will soon be deprecated. Locally-run instances may remove rpcuser to use cookie-based auth, or may be replaced with rpcauth. Please see share/rpcuser for rpcauth auth generation.\n");
         strRPCUserColonPass = gArgs.GetArg("-rpcuser", "") + ":" + gArgs.GetArg("-rpcpassword", "");
     }
     return true;
@@ -230,7 +230,7 @@ static bool InitRPCAuthentication()
 
 bool StartHTTPRPC()
 {
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Starting HTTP RPC server\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Starting HTTP RPC server\n");
     if (!InitRPCAuthentication())
         return false;
 
@@ -247,12 +247,12 @@ bool StartHTTPRPC()
 
 void InterruptHTTPRPC()
 {
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Interrupting HTTP RPC server\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Interrupting HTTP RPC server\n");
 }
 
 void StopHTTPRPC()
 {
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Stopping HTTP RPC server\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Stopping HTTP RPC server\n");
     UnregisterHTTPHandler("/", true);
     if (httpRPCTimerInterface) {
         RPCUnsetTimerInterface(httpRPCTimerInterface.get());

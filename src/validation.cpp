@@ -503,7 +503,7 @@ static unsigned int GetBlockScriptFlags(const CBlockIndex* pindex, const Consens
 static void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age) {
     int expired = pool.Expire(GetTime() - age);
     if (expired != 0) {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Expired %i transactions from the memory pool\n", expired);
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Expired %i transactions from the memory pool\n", expired);
     }
 
     std::vector<COutPoint> vNoSpendsRemaining;
@@ -1016,7 +1016,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
                     return error("%s: ConnectInputs failed against MANDATORY but not STANDARD flags due to promiscuous mempool %s, %s",
                         __func__, hash.ToString(), FormatStateMessage(state));
                 } else {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] Warning: -promiscuousmempool flags set to not include currently enforced soft forks, this may break mining or otherwise cause instability!\n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] Warning: -promiscuousmempool flags set to not include currently enforced soft forks, this may break mining or otherwise cause instability!\n");
                 }
             }
         }
@@ -1024,7 +1024,7 @@ static bool AcceptToMemoryPoolWorker(const CChainParams& chainparams, CTxMemPool
         // Remove conflicting transactions from the mempool
         for (const CTxMemPool::txiter it : allConflicting)
         {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Replacing tx %s with %s for %s GENX additional fees, %d delta bytes\n",
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Replacing tx %s with %s for %s GENX additional fees, %d delta bytes\n",
                     it->GetTx().GetHash().ToString(),
                     hash.ToString(),
                     FormatMoney(nModifiedFees - nConflictingFees),
@@ -1308,7 +1308,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
         subsidy = consensusParams.nBlockRewardTotal;
     }
 
-    //LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] Subsidy %i acceptable for block %i \n", subsidy, nHeight);
+    //LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] Subsidy %i acceptable for block %i \n", subsidy, nHeight);
     CAmount nSubsidy = subsidy * COIN;
     CAmount nGovernanceBlockPart = governanceBlockPart * COIN;
 
@@ -1334,7 +1334,7 @@ bool IsInitialBlockDownload()
         return true;
     if (chainActive.Tip()->nHeight > 0  && chainActive.Tip()->GetBlockTime() < (GetTime() - nMaxTipAge))
         return true;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] Leaving InitialBlockDownload (latching to false)\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] Leaving InitialBlockDownload (latching to false)\n");
     latchToFalse.store(true, std::memory_order_relaxed);
     return false;
 }
@@ -1381,14 +1381,14 @@ static void CheckForkWarningConditions()
         }
         if (pindexBestForkTip && pindexBestForkBase)
         {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] %s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] %s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
                    pindexBestForkBase->nHeight, pindexBestForkBase->phashBlock->ToString(),
                    pindexBestForkTip->nHeight, pindexBestForkTip->phashBlock->ToString());
             SetfLargeWorkForkFound(true);
         }
         else
         {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] %s: Warning: Found invalid chain at least ~6 blocks longer than our best chain.\nChain state database corruption likely.\n", __func__);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] %s: Warning: Found invalid chain at least ~6 blocks longer than our best chain.\nChain state database corruption likely.\n", __func__);
             SetfLargeWorkInvalidChainFound(true);
         }
     }
@@ -1437,13 +1437,13 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     if (!pindexBestInvalid || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
         pindexBestInvalid = pindexNew;
 
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] %s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] %s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
       log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
       pindexNew->GetBlockTime()));
     CBlockIndex *tip = chainActive.Tip();
     assert (tip);
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] %s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] %s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
       tip->GetBlockHash().ToString(), chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
     CheckForkWarningConditions();
@@ -1502,7 +1502,7 @@ void InitScriptExecutionCache() {
     // setup_bytes creates the minimum possible cache (2 elements).
     size_t nMaxCacheSize = std::min(std::max((int64_t)0, gArgs.GetArg("-maxsigcachesize", DEFAULT_MAX_SIG_CACHE_SIZE) / 2), MAX_MAX_SIG_CACHE_SIZE) * ((size_t) 1 << 20);
     size_t nElems = scriptExecutionCache.setup_bytes(nMaxCacheSize);
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] Using %zu MiB out of %zu/2 requested for script execution cache, able to store %zu elements\n",
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] Using %zu MiB out of %zu/2 requested for script execution cache, able to store %zu elements\n",
             (nElems*sizeof(uint256)) >>20, (nMaxCacheSize*2)>>20, nElems);
 }
 
@@ -1667,7 +1667,7 @@ static bool UndoReadFromDisk(CBlockUndo& blockundo, const CBlockIndex *pindex)
 bool AbortNode(const std::string& strMessage, const std::string& userMessage="")
 {
     SetMiscWarning(strMessage);
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] *** %s\n", strMessage);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] *** %s\n", strMessage);
     uiInterface.ThreadSafeMessageBox(
         userMessage.empty() ? _("Error: A fatal internal error occurred, see debug.log for details") : userMessage,
         "", CClientUIInterface::MSG_ERROR);
@@ -2023,7 +2023,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     }
 
     int64_t nTime1 = GetTimeMicros(); nTimeCheck += nTime1 - nTimeStart;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking]    - Sanity checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime1 - nTimeStart), nTimeCheck * MICRO, nTimeCheck * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking]    - Sanity checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime1 - nTimeStart), nTimeCheck * MICRO, nTimeCheck * MILLI / nBlocksTotal);
 
     // Do not allow blocks that contain transactions which 'overwrite' older transactions,
     // unless those are already completely spent.
@@ -2073,7 +2073,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     unsigned int flags = GetBlockScriptFlags(pindex, chainparams.GetConsensus());
 
     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking]    - Fork checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime2 - nTime1), nTimeForks * MICRO, nTimeForks * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking]    - Fork checks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime2 - nTime1), nTimeForks * MICRO, nTimeForks * MILLI / nBlocksTotal);
 
     CBlockUndo blockundo;
 
@@ -2145,7 +2145,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
     }
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking]      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking]      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
 	if (!CGovernanceBlock::IsValidBlockHeight(pindex->nHeight))
@@ -2178,7 +2178,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     if (!control.Wait())
         return state.DoS(100, error("%s: CheckQueue failed", __func__), REJECT_INVALID, "block-validation-failed");
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking]    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking]    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs (%.2fms/blk)]\n", nInputs - 1, MILLI * (nTime4 - nTime2), nInputs <= 1 ? 0 : MILLI * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * MICRO, nTimeVerify * MILLI / nBlocksTotal);
 
     if (fJustCheck)
         return true;
@@ -2202,10 +2202,10 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     mnodeman.UpdatedBlockTip(pindex);
 
     int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking]    - Index writing: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5 - nTime4), nTimeIndex * MICRO, nTimeIndex * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking]    - Index writing: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime5 - nTime4), nTimeIndex * MICRO, nTimeIndex * MILLI / nBlocksTotal);
 
     int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking]    - Callbacks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime6 - nTime5), nTimeCallbacks * MICRO, nTimeCallbacks * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking]    - Callbacks: %.2fms [%.2fs (%.2fms/blk)]\n", MILLI * (nTime6 - nTime5), nTimeCallbacks * MICRO, nTimeCallbacks * MILLI / nBlocksTotal);
 
     return true;
 }
@@ -2392,14 +2392,14 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
             DoWarning(strWarning);
         }
     }
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] %s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__,
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] %s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, pindexNew->nVersion,
       log(pindexNew->nChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexNew->GetBlockTime()),
       GuessVerificationProgress(chainParams.TxData(), pindexNew), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
     if (!warningMessages.empty())
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation]  warning='%s'", boost::algorithm::join(warningMessages, ", "));
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] \n");
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation]  warning='%s'", boost::algorithm::join(warningMessages, ", "));
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] \n");
 
 }
 
@@ -2432,7 +2432,7 @@ bool CChainState::DisconnectTip(CValidationState& state, const CChainParams& cha
         bool flushed = view.Flush();
         assert(flushed);
     }
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Disconnect block: %.2fms\n", (GetTimeMicros() - nStart) * MILLI);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Disconnect block: %.2fms\n", (GetTimeMicros() - nStart) * MILLI);
     // Write the chain state to disk, if necessary.
     if (!FlushStateToDisk(chainparams, state, FLUSH_STATE_IF_NEEDED))
         return false;
@@ -2554,7 +2554,7 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * MILLI, nTimeReadFromDisk * MICRO);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * MILLI, nTimeReadFromDisk * MICRO);
     {
         CCoinsViewCache view(pcoinsTip.get());
         bool rv = ConnectBlock(blockConnecting, state, pindexNew, view, chainparams);
@@ -2565,17 +2565,17 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Connect total: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime3 - nTime2) * MILLI, nTimeConnectTotal * MICRO, nTimeConnectTotal * MILLI / nBlocksTotal);
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Connect total: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime3 - nTime2) * MILLI, nTimeConnectTotal * MICRO, nTimeConnectTotal * MILLI / nBlocksTotal);
         bool flushed = view.Flush();
         assert(flushed);
     }
     int64_t nTime4 = GetTimeMicros(); nTimeFlush += nTime4 - nTime3;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Flush: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime4 - nTime3) * MILLI, nTimeFlush * MICRO, nTimeFlush * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Flush: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime4 - nTime3) * MILLI, nTimeFlush * MICRO, nTimeFlush * MILLI / nBlocksTotal);
     // Write the chain state to disk, if necessary.
     if (!FlushStateToDisk(chainparams, state, FLUSH_STATE_IF_NEEDED))
         return false;
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
     // Remove conflicting transactions from the mempool.;
     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight);
     disconnectpool.removeForBlock(blockConnecting.vtx);
@@ -2584,8 +2584,8 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp
     UpdateTip(pindexNew, chainparams);
 
     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Connect postprocess: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime5) * MILLI, nTimePostConnect * MICRO, nTimePostConnect * MILLI / nBlocksTotal);
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] - Connect block: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime1) * MILLI, nTimeTotal * MICRO, nTimeTotal * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Connect postprocess: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime5) * MILLI, nTimePostConnect * MICRO, nTimePostConnect * MILLI / nBlocksTotal);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] - Connect block: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime1) * MILLI, nTimeTotal * MICRO, nTimeTotal * MILLI / nBlocksTotal);
 
     connectTrace.BlockConnected(pindexNew, std::move(pthisBlock));
     return true;
@@ -3187,21 +3187,21 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     {
         if (CheckEquihashSolution(&block, Params(), "GENX_PoW"))
         {
-            // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
+            // LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Found solution using GENX_PoW at height: %d\n", block.nHeight);
         }
         //else if (IsInitialBlockDownload() && CheckEquihashSolution(&block, Params(), "SafeCash"))
         else if (CheckEquihashSolution(&block, Params(), "SafeCash"))
         {
-            // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
+            // LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Found solution using SafeCash at height: %d\n", block.nHeight);
         }
         else if (block.GetHash() == Params().GetConsensus().hashGenesisBlock)
         {
-            // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] Skipping genesis block\n");
+            // LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] Skipping genesis block\n");
         }
         else
         {
             // Nothing worked... bugger.
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Equihash solution invalid at height %d\n", block.nHeight);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] CheckBlockHeader(): Equihash solution invalid at height %d\n", block.nHeight);
             return state.DoS(100, error("CheckBlockHeader(): Equihash solution invalid"),
                     REJECT_INVALID, "invalid-solution");
         }
@@ -3419,7 +3419,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         CScript expect = CScript() << nHeight;
         if (block.vtx[0]->vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0]->vin[0].scriptSig.begin())) {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] BIP34 Height Validation failed at: %d\n", nHeight);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] BIP34 Height Validation failed at: %d\n", nHeight);
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-height", false, "block height mismatch in coinbase");
         }
     }
@@ -3960,7 +3960,7 @@ void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune)
         CDiskBlockPos pos(*it, 0);
         fs::remove(GetBlockPosFilename(pos, "blk"));
         fs::remove(GetBlockPosFilename(pos, "rev"));
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::PRUNE, "[Prune] %s deleted blk/rev (%05u)\n", __func__, *it);
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::PRUNE, "[Prune] %s deleted blk/rev (%05u)\n", __func__, *it);
     }
 }
 
@@ -3983,7 +3983,7 @@ static void FindFilesToPruneManual(std::set<int>& setFilesToPrune, int nManualPr
         setFilesToPrune.insert(fileNumber);
         count++;
     }
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::PRUNE, "[Prune] (Manual) prune_height=%d removed %d blk/rev pairs\n", nLastBlockWeCanPrune, count);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::PRUNE, "[Prune] (Manual) prune_height=%d removed %d blk/rev pairs\n", nLastBlockWeCanPrune, count);
 }
 
 /* This function is called from the RPC code for pruneblockchain */
@@ -4050,7 +4050,7 @@ static void FindFilesToPrune(std::set<int>& setFilesToPrune, uint64_t nPruneAfte
         }
     }
 
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::PRUNE, "[Prune] target=%dMiB actual=%dMiB diff=%dMiB max_prune_height=%d removed %d blk/rev pairs\n",
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::PRUNE, "[Prune] target=%dMiB actual=%dMiB diff=%dMiB max_prune_height=%d removed %d blk/rev pairs\n",
            nPruneTarget/1024/1024, nCurrentUsage/1024/1024,
            ((int64_t)nPruneTarget - (int64_t)nCurrentUsage)/1024/1024,
            nLastBlockWeCanPrune, count);
@@ -4280,21 +4280,21 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     if (nCheckDepth <= 0 || nCheckDepth > chainActive.Height())
         nCheckDepth = chainActive.Height();
     nCheckLevel = std::max(0, std::min(4, nCheckLevel));
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CCoinsViewCache coins(coinsview);
     CBlockIndex* pindexState = chainActive.Tip();
     CBlockIndex* pindexFailure = nullptr;
     int nGoodTransactions = 0;
     CValidationState state;
     int reportDone = 0;
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] [0%%]...");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] [0%%]...");
     for (CBlockIndex* pindex = chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
         int percentageDone = std::max(1, std::min(99, (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100))));
         if (reportDone < percentageDone/10) {
             // report every 10% step
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] [%d%%]...", percentageDone);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] [%d%%]...", percentageDone);
             reportDone = percentageDone/10;
         }
         uiInterface.ShowProgress(_("Verifying blocks..."), percentageDone, false);
@@ -4302,7 +4302,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             break;
         if (fPruneMode && !(pindex->nStatus & BLOCK_HAVE_DATA)) {
             // If pruning, only go back as far as we have data.
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] VerifyDB(): block verification stopping at height %d (pruning, no data)\n", pindex->nHeight);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] VerifyDB(): block verification stopping at height %d (pruning, no data)\n", pindex->nHeight);
             break;
         }
         CBlock block;
@@ -4358,8 +4358,8 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
         }
     }
 
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] [DONE].\n");
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] [DONE].\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
 
     return true;
 }
@@ -4396,7 +4396,7 @@ bool CChainState::ReplayBlocks(const CChainParams& params, CCoinsView* view)
     if (hashHeads.size() != 2) return error("ReplayBlocks(): unknown inconsistent state");
 
     uiInterface.ShowProgress(_("Replaying blocks..."), 0, false);
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] Replaying blocks\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] Replaying blocks\n");
 
     const CBlockIndex* pindexOld = nullptr;  // Old tip during the interrupted flush.
     const CBlockIndex* pindexNew;            // New tip during the interrupted flush.
@@ -4423,7 +4423,7 @@ bool CChainState::ReplayBlocks(const CChainParams& params, CCoinsView* view)
             if (!ReadBlockFromDisk(block, pindexOld, params.GetConsensus())) {
                 return error("RollbackBlock(): ReadBlockFromDisk() failed at %d, hash=%s", pindexOld->nHeight, pindexOld->GetBlockHash().ToString());
             }
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] Rolling back %s (%i)\n", pindexOld->GetBlockHash().ToString(), pindexOld->nHeight);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] Rolling back %s (%i)\n", pindexOld->GetBlockHash().ToString(), pindexOld->nHeight);
             DisconnectResult res = DisconnectBlock(block, pindexOld, cache);
             if (res == DISCONNECT_FAILED) {
                 return error("RollbackBlock(): DisconnectBlock failed at %d, hash=%s", pindexOld->nHeight, pindexOld->GetBlockHash().ToString());
@@ -4610,7 +4610,7 @@ bool LoadBlockIndex(const CChainParams& chainparams)
         // instead only check it prior to LoadBlockIndexDB to set
         // needs_init.
 
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::DB, "[WalletDatabase] Initializing databases...\n");
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::DB, "[WalletDatabase] Initializing databases...\n");
         // Use the provided setting for -txindex in the new database
         fTxIndex = gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX);
         pblocktree->WriteFlag("txindex", fTxIndex);
@@ -4699,7 +4699,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 // detect out of order blocks, and store them for later
                 uint256 hash = block.GetHash();
                 if (hash != chainparams.GetConsensus().hashGenesisBlock && mapBlockIndex.find(block.hashPrevBlock) == mapBlockIndex.end()) {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] %s: Out of order block %s, parent %s not known\n", __func__, hash.ToString(),
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] %s: Out of order block %s, parent %s not known\n", __func__, hash.ToString(),
                             block.hashPrevBlock.ToString());
                     if (dbp)
                         mapBlocksUnknownParent.insert(std::make_pair(block.hashPrevBlock, *dbp));
@@ -4715,7 +4715,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                     if (state.IsError())
                         break;
                 } else if (hash != chainparams.GetConsensus().hashGenesisBlock && mapBlockIndex[hash]->nHeight % 1000 == 0) {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] Block Import: already had block %s at height %d\n", hash.ToString(), mapBlockIndex[hash]->nHeight);
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] Block Import: already had block %s at height %d\n", hash.ToString(), mapBlockIndex[hash]->nHeight);
                 }
 
                 // Activate the genesis block so normal node progress can continue
@@ -4740,7 +4740,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                         std::shared_ptr<CBlock> pblockrecursive = std::make_shared<CBlock>();
                         if (ReadBlockFromDisk(*pblockrecursive, it->second, chainparams.GetConsensus()))
                         {
-                            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] %s: Processing out of order child %s of %s\n", __func__, pblockrecursive->GetHash().ToString(),
+                            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] %s: Processing out of order child %s of %s\n", __func__, pblockrecursive->GetHash().ToString(),
                                     head.ToString());
                             LOCK(cs_main);
                             CValidationState dummy;
@@ -4756,14 +4756,14 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                     }
                 }
             } catch (const std::exception& e) {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] %s: Deserialize or I/O error - %s\n", __func__, e.what());
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] %s: Deserialize or I/O error - %s\n", __func__, e.what());
             }
         }
     } catch (const std::runtime_error& e) {
         AbortNode(std::string("System error: ") + e.what());
     }
     if (nLoaded > 0)
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::REINDEX, "[REINDEX] Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::REINDEX, "[REINDEX] Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
     return nLoaded > 0;
 }
 
@@ -4990,7 +4990,7 @@ bool LoadMempool(void)
     FILE* filestr = fsbridge::fopen(GetDataDir() / "mempool.dat", "rb");
     CAutoFile file(filestr, SER_DISK, CLIENT_VERSION);
     if (file.IsNull()) {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Failed to open mempool file from disk. Continuing anyway.\n");
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Failed to open mempool file from disk. Continuing anyway.\n");
         return false;
     }
 
@@ -5051,11 +5051,11 @@ bool LoadMempool(void)
             mempool.PrioritiseTransaction(i.first, i.second);
         }
     } catch (const std::exception& e) {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Failed to deserialize mempool data on disk: %s. Continuing anyway.\n", e.what());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Failed to deserialize mempool data on disk: %s. Continuing anyway.\n", e.what());
         return false;
     }
 
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Imported mempool transactions from disk: %i succeeded, %i failed, %i expired, %i already there\n", count, failed, expired, already_there);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Imported mempool transactions from disk: %i succeeded, %i failed, %i expired, %i already there\n", count, failed, expired, already_there);
     return true;
 }
 
@@ -5100,9 +5100,9 @@ bool DumpMempool(void)
         file.fclose();
         RenameOver(GetDataDir() / "mempool.dat.new", GetDataDir() / "mempool.dat");
         int64_t last = GetTimeMicros();
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Dumped mempool: %gs to copy, %gs to dump\n", (mid-start)*MICRO, (last-mid)*MICRO);
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Dumped mempool: %gs to copy, %gs to dump\n", (mid-start)*MICRO, (last-mid)*MICRO);
     } catch (const std::exception& e) {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MEMPOOL, "[MemPool] Failed to dump mempool: %s. Continuing anyway.\n", e.what());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MEMPOOL, "[MemPool] Failed to dump mempool: %s. Continuing anyway.\n", e.what());
         return false;
     }
     return true;

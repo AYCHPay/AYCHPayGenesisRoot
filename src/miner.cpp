@@ -313,7 +313,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // Sanity check
         // auto vMasternodeDeduction = round(totalSubsidy * chainparams.GetConsensus().nBlockRewardMasternode); // GetBlockSubsidy(nHeight, chainparams.GetConsensus(), true);
         // Reset the var, to make the sanity check work
-        // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Sanity Check Values:\nHeight          = %f\nTotal Subsidy   = %f\nTotal Deduction = %f\nMiner           = %f\nFounder Total   = %f\nFounder Split   = %f\nInfrastructure  = %f\nGiveaways       = %f\nMasternodes     = %f\n", nHeight, totalSubsidy / COIN, vBlockDeductionTotal / COIN, firstVal / COIN, vFounders / COIN, ifr / COIN, vInfrastructure / COIN, vGiveaways / COIN, vMasternodeDeduction / COIN);
+        // LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Sanity Check Values:\nHeight          = %f\nTotal Subsidy   = %f\nTotal Deduction = %f\nMiner           = %f\nFounder Total   = %f\nFounder Split   = %f\nInfrastructure  = %f\nGiveaways       = %f\nMasternodes     = %f\n", nHeight, totalSubsidy / COIN, vBlockDeductionTotal / COIN, firstVal / COIN, vFounders / COIN, ifr / COIN, vInfrastructure / COIN, vGiveaways / COIN, vMasternodeDeduction / COIN);
         // assert(vInfrastructure + vGiveaways + vFounders + firstVal + vMasternodeDeduction == totalSubsidy);
     }
 
@@ -349,7 +349,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     int64_t nTime2 = GetTimeMicros();
 
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BENCH, "[Benchmarking] CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n", 0.001 * (nTime1 - nTimeStart), nPackagesSelected, nDescendantsUpdated, 0.001 * (nTime2 - nTime1), 0.001 * (nTime2 - nTimeStart));
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BENCH, "[Benchmarking] CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n", 0.001 * (nTime1 - nTimeStart), nPackagesSelected, nDescendantsUpdated, 0.001 * (nTime2 - nTime1), 0.001 * (nTime2 - nTimeStart));
 
     return std::move(pblocktemplate);
 }
@@ -383,7 +383,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlockWithKey(CReserveKe
 
 bool BlockAssembler::ProcessBlockFound(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 {
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] %s\n", pblock->ToString());
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] %s\n", pblock->ToString());
 
     // Found a solution
     {
@@ -477,7 +477,7 @@ void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)
 
     bool fPrintPriority = gArgs.GetBoolArg("-printpriority", DEFAULT_PRINTPRIORITY);
     if (fPrintPriority) {
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] fee %s txid %s\n",
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] fee %s txid %s\n",
                   CFeeRate(iter->GetModifiedFee(), iter->GetTxSize()).ToString(),
                   iter->GetTx().GetHash().ToString());
     }
@@ -699,7 +699,7 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
 void static GenesisMiner(CWallet *pwallet)
 {
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Genesis Miner started\n");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Genesis Miner started\n");
     //SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("genesis-miner");
     const CChainParams& chainparams = Params();
@@ -715,7 +715,7 @@ void static GenesisMiner(CWallet *pwallet)
 
     std::string solver = gArgs.GetArg("-equihashsolver", "tromp");
     assert(solver == "tromp" || solver == "default");
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Using Equihash solver \"%s\" with n = %u, k = %u\n", solver, n, k);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Using Equihash solver \"%s\" with n = %u, k = %u\n", solver, n, k);
 
     std::mutex m_cs;
     bool cancelSolver = false;
@@ -737,7 +737,7 @@ void static GenesisMiner(CWallet *pwallet)
                 // Busy-wait for the network to come online so we don't waste time mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
                 //miningTimer.stop();
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Checking for peers before mining commences\n");
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Checking for peers before mining commences\n");
                 
                 do 
                 {
@@ -754,7 +754,7 @@ void static GenesisMiner(CWallet *pwallet)
                     }
                     else
                     {
-                        // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Waiting for peers...\n");
+                        // LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Waiting for peers...\n");
                     }
                     MilliSleep(1000);
                 } while (true);
@@ -764,18 +764,18 @@ void static GenesisMiner(CWallet *pwallet)
             // Make sure masternode stuff is synced before mining... otherwise payments will go wonky
             if (!masternodeSync.IsSynced())
             {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Waiting for masternode sync to complete before mining commences\n");
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Waiting for masternode sync to complete before mining commences\n");
                 do 
                 {
                     bool isMnStuffSynced = masternodeSync.IsSynced();
                     if (isMnStuffSynced)
                     {
-                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Masternode sync has completed. Commencing mining...\n");
+                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Masternode sync has completed. Commencing mining...\n");
                         break;
                     }
                     else
                     {
-                        // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Masternode sync has still not completed. Can not commence mining...\n");
+                        // LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Masternode sync has still not completed. Can not commence mining...\n");
                     }
                     // Wait for 5 seconds... masternode stuff takes a while....
                     MilliSleep(5000);
@@ -793,19 +793,19 @@ void static GenesisMiner(CWallet *pwallet)
             {
                 if (gArgs.GetArg("-mineraddress", "").empty()) 
                 {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 } 
                 else 
                 {
                     // Should never reach here, because -mineraddress validity is checked in init.cpp
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Invalid -mineraddress\n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Invalid -mineraddress\n");
                 }
                 return;
             }
             CBlock *pblock = &pblocktemplate->block;
             IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Running Genesis Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(), ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Running Genesis Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(), ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
             //
             // Search
@@ -858,8 +858,8 @@ void static GenesisMiner(CWallet *pwallet)
 
                     // Found a solution
                     //SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Genesis Miner:\n");
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Genesis Miner:\n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] proof-of-work found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex(), hashTarget.GetHex());
                     if (blockassembler.ProcessBlockFound(pblock, *pwallet, reservekey)) 
                     {
                         // Ignore chain updates caused by us
@@ -948,22 +948,22 @@ void static GenesisMiner(CWallet *pwallet)
                 // Regtest mode doesn't require peers
                 if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0 && chainparams.MiningRequiresPeers())
                 {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, as GetNodeCount is zero and mining requires peers \n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, as GetNodeCount is zero and mining requires peers \n");
                     break;
                 }
                 if ((UintToArith256(pblock->nNonce) & 0xffff) == 0xffff)
                 {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop \n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop \n");
                     break;
                 }
                 if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because GetTransactionsUpdated was incorrect \n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because GetTransactionsUpdated was incorrect \n");
                     break;
                 }
                 if (pindexPrev != chainActive.Tip())
                 {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because the previous index is not the active tip \n");
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Equihash solver broke out of the loop, because the previous index is not the active tip \n");
                     break;
                 }
 
@@ -977,14 +977,14 @@ void static GenesisMiner(CWallet *pwallet)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Genesis Miner thread terminated\n");
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Genesis Miner thread terminated\n");
         throw;
     }
     catch (const std::runtime_error &e)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Genesis Miner runtime error: %s\n", e.what());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Genesis Miner runtime error: %s\n", e.what());
         return;
     }
     //miningTimer.stop();
