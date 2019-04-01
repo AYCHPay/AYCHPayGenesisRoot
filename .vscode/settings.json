@@ -54,6 +54,10 @@
         "tuple": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "optional": "cpp",
+        "string_view": "cpp"
     }
 }

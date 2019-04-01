@@ -64,6 +64,7 @@ extern const char * const GENESIS_CONF_FILENAME;
 extern const char * const GENESIS_PID_FILENAME;
 
 extern std::atomic<uint32_t> logCategories;
+extern std::atomic<uint32_t> logLevels;
 
 /**
  * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
@@ -84,6 +85,11 @@ struct CLogCategoryActive
     bool active;
 };
 
+struct CLogLevelActive
+{
+    std::string logLevel;
+    bool active;
+};
 
 // Based on the Linux log level. Lower humber means higher priority.
 namespace BCLogLevel {
@@ -139,8 +145,7 @@ static inline bool LogAcceptCategory(uint32_t category)
 /** Return true if log accepts specified log level */
 static inline bool LogAcceptLogLevel(uint32_t loglevel)
 {
-    // FIXME: Implement actual log level checking
-    return true;
+    return loglevel <= logLevels;
 }
 
 /** Returns a string with the log categories. */
@@ -151,6 +156,9 @@ std::vector<CLogCategoryActive> ListActiveLogCategories();
 
 /** Return true if str parses as a log category and set the flags in f */
 bool GetLogCategory(uint32_t *f, const std::string *str);
+
+/** Return true if str parses as a log level and set the flags in f */
+bool GetLogLevel(uint32_t *f, const std::string *str);
 
 /** Send a string to the log output */
 int LogPrintStr(const std::string &str);

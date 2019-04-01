@@ -997,6 +997,22 @@ bool AppInitParameterInteraction()
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
 
     // ********************************************************* Step 3: parameter-to-internal-flags
+    if (gArgs.IsArgSet("-loglevel")) {
+        const std::vector<std::string> levels = gArgs.GetArgs("-loglevel");
+
+        if (std::none_of(levels.begin(), levels.end(),
+            [](std::string loglevel){return loglevel == "0" || loglevel == "none";})) {
+            for (const auto& loglevel : levels) {
+                uint32_t flag = 0;
+                if (!GetLogLevel(&flag, &loglevel)) {
+                    InitWarning(strprintf(_("Unsupported log level %s=%s."), "-loglevel", loglevel));
+                    continue;
+                }
+                logLevels |= flag;
+            }
+        }
+    }
+
     if (gArgs.IsArgSet("-debug")) {
         // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
         const std::vector<std::string> categories = gArgs.GetArgs("-debug");

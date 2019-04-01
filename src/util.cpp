@@ -107,6 +107,9 @@ CTranslationInterface translationInterface;
 /** Log categories bitfield. */
 std::atomic<uint32_t> logCategories(0);
 
+/** Log levels bitfield. */
+std::atomic<uint32_t> logLevels(0);
+
 /** Init OpenSSL library multithreading support */
 static std::unique_ptr<CCriticalSection[]> ppmutexOpenSSL;
 void locking_callback(int mode, int i, const char* file, int line) NO_THREAD_SAFETY_ANALYSIS
@@ -229,6 +232,24 @@ bool OpenDebugLog()
     return true;
 }
 
+struct CLogLevelDesc
+{
+    uint32_t flag;
+    std::string logLevel;
+};
+
+const CLogLevelDesc LogLevels[] =
+{
+    {BCLogLevel::LOG_EMERGENCY, "emergency"},
+    {BCLogLevel::LOG_ALERT, "alert"},
+    {BCLogLevel::LOG_CRITICAL, "critical"},
+    {BCLogLevel::LOG_ERROR, "error"},
+    {BCLogLevel::LOG_WARNING, "warning"},
+    {BCLogLevel::LOG_NOTICE, "notice"},
+    {BCLogLevel::LOG_INFO, "info"},
+    {BCLogLevel::LOG_DEBUG, "debug"}
+};
+
 struct CLogCategoryDesc
 {
     uint32_t flag;
@@ -268,6 +289,19 @@ const CLogCategoryDesc LogCategories[] =
     {BCLog::ALL, "all"},
 };
 
+bool GetLogLevel(uint32_t *f, const std::string *str)
+{
+    if (f && str) {
+        for (unsigned int i = 0; i < ARRAYLEN(LogLevels); i++) {
+            if (LogLevels[i].logLevel == *str) {
+                *f = LogLevels[i].flag;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool GetLogCategory(uint32_t *f, const std::string *str)
 {
     if (f && str) {
@@ -285,6 +319,18 @@ bool GetLogCategory(uint32_t *f, const std::string *str)
     return false;
 }
 
+std::string ListLogLevels()
+{
+    std::string ret;
+    int outcount = 0;
+    for (unsigned int i = 0; i < ARRAYLEN(LogLevels); i++) {
+        if (outcount != 0) ret += ", ";
+        ret += LogLevels[i].logLevel;
+        outcount++;
+    }
+    return ret;
+}
+
 std::string ListLogCategories()
 {
     std::string ret;
@@ -296,6 +342,18 @@ std::string ListLogCategories()
             ret += LogCategories[i].category;
             outcount++;
         }
+    }
+    return ret;
+}
+
+std::vector<CLogLevelActive> ListActiveLogLevels()
+{
+    std::vector<CLogLevelActive> ret;
+    for (unsigned int i = 0; i < ARRAYLEN(LogLevels); i++) {
+        CLogLevelActive levelActive;
+        levelActive.logLevel = LogLevels[i].logLevel;
+        levelActive.active = LogAcceptLogLevel(LogLevels[i].flag);
+        ret.push_back(levelActive);
     }
     return ret;
 }
