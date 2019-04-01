@@ -84,16 +84,18 @@ struct CLogCategoryActive
     bool active;
 };
 
+
+// Based on the Linux log level. Lower humber means higher priority.
 namespace BCLogLevel {
     enum LogFlags : uint32_t {
-        LOG_EMERGENCY   = (1 <<  0),
-        LOG_ALERT       = (1 <<  1),
-        LOG_CRITICAL    = (1 <<  2),
-        LOG_ERROR       = (1 <<  3),
-        LOG_WARNING     = (1 <<  4),
-        LOG_NOTICE      = (1 <<  5),
-        LOG_INFO        = (1 <<  6),
-        LOG_DEBUG       = (1 <<  7)
+        LOG_EMERGENCY   = (1 <<  0), // This is the highest level in order of severity: Pass the marshmallows... THE WORLD IS ON FIRE!!!!!
+        LOG_ALERT       = (1 <<  1), // This requires immediate attention... like *RIGHT NOW*!
+        LOG_CRITICAL    = (1 <<  2), // This is an important message
+        LOG_ERROR       = (1 <<  3), // Erm... an error.
+        LOG_WARNING     = (1 <<  4), // Almost an error
+        LOG_NOTICE      = (1 <<  5), // Pay attention to this, it is important
+        LOG_INFO        = (1 <<  6), // Just FYI stuff
+        LOG_DEBUG       = (1 <<  7)  // Spammy messages that will really clog up your logging shit... I mean stuff
     };
 }
 
