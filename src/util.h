@@ -84,6 +84,19 @@ struct CLogCategoryActive
     bool active;
 };
 
+namespace BCLogLevel {
+    enum LogFlags : uint32_t {
+        EMERGENCY   = (1 <<  0),
+        ALERT       = (1 <<  1),
+        CRITICAL    = (1 <<  2),
+        ERROR       = (1 <<  3),
+        WARNING     = (1 <<  4),
+        NOTICE      = (1 <<  5),
+        INFO        = (1 <<  6),
+        DEBUG       = (1 <<  7)
+    };
+}
+
 namespace BCLog {
     enum LogFlags : uint32_t {
         NONE        = 0,
@@ -119,6 +132,13 @@ namespace BCLog {
 static inline bool LogAcceptCategory(uint32_t category)
 {
     return (logCategories.load(std::memory_order_relaxed) & category) != 0;
+}
+
+/** Return true if log accepts specified log level */
+static inline bool LogAcceptLogLevel(uint32_t loglevel)
+{
+    // FIXME: Implement actual log level checking
+    return true;
 }
 
 /** Returns a string with the log categories. */
@@ -164,6 +184,12 @@ template<typename T, typename... Args> static inline void MarkUsed(const T& t, c
 
 #define LogPrint(category, ...) do { \
     if (LogAcceptCategory((category))) { \
+        LogPrintf(__VA_ARGS__); \
+    } \
+} while(0)
+// Add log levels
+#define LogPrintG(loglevel, category, ...) do { \
+    if (LogAcceptLogLevel((loglevel)) && LogAcceptCategory((category))) { \
         LogPrintf(__VA_ARGS__); \
     } \
 } while(0)
