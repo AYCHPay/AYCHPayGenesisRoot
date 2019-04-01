@@ -91,7 +91,7 @@ bool GenerateAuthCookie(std::string *cookie_out)
     fs::path filepath_tmp = GetAuthCookieFile(true);
     file.open(filepath_tmp.string().c_str());
     if (!file.is_open()) {
-        LogPrint(BCLog::RPC, "[RPC] Unable to open cookie authentication file %s for writing\n", filepath_tmp.string());
+        LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] Unable to open cookie authentication file %s for writing\n", filepath_tmp.string());
         return false;
     }
     file << cookie;
@@ -99,10 +99,10 @@ bool GenerateAuthCookie(std::string *cookie_out)
 
     fs::path filepath = GetAuthCookieFile(false);
     if (!RenameOver(filepath_tmp, filepath)) {
-        LogPrint(BCLog::RPC, "[RPC] Unable to rename cookie authentication file %s to %s\n", filepath_tmp.string(), filepath.string());
+        LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] Unable to rename cookie authentication file %s to %s\n", filepath_tmp.string(), filepath.string());
         return false;
     }
-    LogPrint(BCLog::RPC, "[RPC] enerated RPC authentication cookie %s\n", filepath.string());
+    LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] enerated RPC authentication cookie %s\n", filepath.string());
 
     if (cookie_out)
         *cookie_out = cookie;
@@ -130,7 +130,7 @@ void DeleteAuthCookie()
     try {
         fs::remove(GetAuthCookieFile());
     } catch (const fs::filesystem_error& e) {
-        LogPrint(BCLog::RPC, "[RPC] %s: Unable to remove random auth cookie file: %s\n", __func__, e.what());
+        LogPrintG(BCLogLevel::DEBUG, BCLog::RPC, "[RPC] %s: Unable to remove random auth cookie file: %s\n", __func__, e.what());
     }
 }
 

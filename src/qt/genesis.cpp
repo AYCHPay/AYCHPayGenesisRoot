@@ -85,7 +85,7 @@ Q_DECLARE_METATYPE(CAmount)
 
 static void InitMessage(const std::string &message)
 {
-    LogPrint(BCLog::QT, "[QT] init message: %s\n", message);
+    LogPrintG(BCLogLevel::DEBUG, BCLog::QT, "[QT] init message: %s\n", message);
 }
 
 /*
@@ -154,9 +154,9 @@ static void initTranslations(QTranslator &qtTranslatorBase, QTranslator &qtTrans
 void DebugMessageHandler(QtMsgType type, const char *msg)
 {
     if (type == QtDebugMsg) {
-        LogPrint(BCLog::QT, "[QT] %s\n", msg);
+        LogPrintG(BCLogLevel::DEBUG, BCLog::QT, "[QT] %s\n", msg);
     } else {
-        LogPrint(BCLog::QT, "[QT] %s\n", msg);
+        LogPrintG(BCLogLevel::DEBUG, BCLog::QT, "[QT] %s\n", msg);
     }
 }
 #else
@@ -164,9 +164,9 @@ void DebugMessageHandler(QtMsgType type, const QMessageLogContext& context, cons
 {
     Q_UNUSED(context);
     if (type == QtDebugMsg) {
-        LogPrint(BCLog::QT, "[QT] %s\n", msg.toStdString());
+        LogPrintG(BCLogLevel::DEBUG, BCLog::QT, "[QT] %s\n", msg.toStdString());
     } else {
-        LogPrint(BCLog::QT, "[QT] %s\n", msg.toStdString());
+        LogPrintG(BCLogLevel::DEBUG, BCLog::QT, "[QT] %s\n", msg.toStdString());
     }
 }
 #endif
