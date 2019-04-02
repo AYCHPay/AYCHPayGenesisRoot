@@ -652,11 +652,11 @@ void TorController::protocolinfo_cb(TorControlConnection& _conn, const TorContro
                 LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::TOR, "[Tor] Password provided with -torpassword, but HASHEDPASSWORD authentication is not available\n");
             }
         } else if (methods.count("NULL")) {
-            LogPrintG(BCLogLevel::, BCLog::TOR, "[Tor] Using NULL authentication\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::TOR, "[Tor] Using NULL authentication\n");
             _conn.Command("AUTHENTICATE", boost::bind(&TorController::auth_cb, this, _1, _2));
         } else if (methods.count("SAFECOOKIE")) {
             // Cookie: hexdump -e '32/1 "%02x""\n"'  ~/.tor/control_auth_cookie
-            LogPrintG(BCLogLevel::, BCLog::TOR, "[Tor] Using SAFECOOKIE authentication, reading cookie authentication from %s\n", cookiefile);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::TOR, "[Tor] Using SAFECOOKIE authentication, reading cookie authentication from %s\n", cookiefile);
             std::pair<bool,std::string> status_cookie = ReadBinaryFile(cookiefile, TOR_COOKIE_SIZE);
             if (status_cookie.first && status_cookie.second.size() == TOR_COOKIE_SIZE) {
                 // _conn.Command("AUTHENTICATE " + HexStr(status_cookie.second), boost::bind(&TorController::auth_cb, this, _1, _2));
