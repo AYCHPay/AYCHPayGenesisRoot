@@ -483,6 +483,7 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-limitdescendantsize=<n>", strprintf("Do not accept transactions if any ancestor would have more than <n> kilobytes of in-mempool descendants (default: %u).", DEFAULT_DESCENDANT_SIZE_LIMIT));
         strUsage += HelpMessageOpt("-vbparams=deployment:start:end", "Use given start/end times for specified version bits deployment (regtest-only)");
     }
+    strUsage += HelpMessageOpt("-loglevel=<loglevel>", strprintf(_("Set the log level for a category. Can be used in conjunction with -debug=<category> to manage the lovel of logging.")));
     strUsage += HelpMessageOpt("-debug=<category>", strprintf(_("Output debugging information (default: %u, supplying <category> is optional)"), 0) + ". " +
         _("If <category> is not supplied or if <category> = 1, output all debugging information.") + " " + _("<category> can be:") + " " + ListLogCategories() + ".");
     strUsage += HelpMessageOpt("-debugexclude=<category>", strprintf(_("Exclude debugging information for a category. Can be used in conjunction with -debug=1 to output debug logs for all categories except one or more specified categories.")));
@@ -997,6 +998,27 @@ bool AppInitParameterInteraction()
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
 
     // ********************************************************* Step 3: parameter-to-internal-flags
+    if (gArgs.IsArgSet("-loglevel")) {
+        const std::vector<std::string> levels = gArgs.GetArgs("-loglevel");
+
+        if (std::none_of(levels.begin(), levels.end(),
+            [](std::string loglevel){return loglevel == "0" || loglevel == "none";})) {
+            for (const auto& loglevel : levels) {
+                uint32_t flag = 0;
+                if (!GetLogLevel(&flag, &loglevel)) {
+                    InitWarning(strprintf(_("Unsupported log level %s=%s."), "-loglevel", loglevel));
+                    continue;
+                }
+                logLevels |= flag;
+            }
+        }
+    }
+    else
+    {
+        logLevels |= BCLogLevel::LOG_NOTICE;
+    }
+    
+
     if (gArgs.IsArgSet("-debug")) {
         // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
         const std::vector<std::string> categories = gArgs.GetArgs("-debug");
@@ -1013,6 +1035,11 @@ bool AppInitParameterInteraction()
             }
         }
     }
+    else
+    {
+        logCategories |= BCLog::ALL;
+    }
+    
 
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : gArgs.GetArgs("-debugexclude")) {
