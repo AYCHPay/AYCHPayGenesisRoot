@@ -15,15 +15,15 @@ CActiveMasternode activeMasternode;
 
 void CActiveMasternode::ManageState(CConnman& connman)
 {
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- Start\n");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- Start\n");
     if (!fMasternodeMode) {
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- Not a masternode, returning\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- Not a masternode, returning\n");
         return;
     }
 
     if (Params().NetworkIDString() != CBaseChainParams::REGTEST && !masternodeSync.IsBlockchainSynced()) {
         nState = ACTIVE_MASTERNODE_SYNC_IN_PROCESS;
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- %s: %s\n", GetStateString(), GetStatus());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- %s: %s\n", GetStateString(), GetStatus());
         return;
     }
 
@@ -31,7 +31,7 @@ void CActiveMasternode::ManageState(CConnman& connman)
         nState = ACTIVE_MASTERNODE_INITIAL;
     }
 
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageState -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
 
     if (eType == MASTERNODE_UNKNOWN) {
         ManageStateInitial(connman);
@@ -85,14 +85,14 @@ std::string CActiveMasternode::GetTypeString() const
 bool CActiveMasternode::SendMasternodePing(CConnman& connman)
 {
     if (!fPingerEnabled) {
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- %s: masternode ping service is disabled, skipping...\n", GetStateString());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- %s: masternode ping service is disabled, skipping...\n", GetStateString());
         return false;
     }
 
     if (!mnodeman.Has(outpoint)) {
         strNotCapableReason = "Masternode not in masternode list";
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- %s: %s\n", GetStateString(), strNotCapableReason);
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- %s: %s\n", GetStateString(), strNotCapableReason);
         return false;
     }
 
@@ -101,19 +101,19 @@ bool CActiveMasternode::SendMasternodePing(CConnman& connman)
     mnp.fSentinelIsCurrent =
             (abs(GetAdjustedTime() - nSentinelPingTime) < Params().GetConsensus().nMasternodeSentinelPingMaxSeconds);
     if (!mnp.Sign(keyMasternode, pubKeyMasternode)) {
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- ERROR: Couldn't sign Masternode Ping\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- ERROR: Couldn't sign Masternode Ping\n");
         return false;
     }
 
     // Update lastPing for our masternode in Masternode list
     if (mnodeman.IsMasternodePingedWithin(outpoint, Params().GetConsensus().nMasternodeMinMnpSeconds, mnp.sigTime)) {
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- Too early to send Masternode Ping\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- Too early to send Masternode Ping\n");
         return false;
     }
 
     mnodeman.SetMasternodeLastPing(outpoint, mnp);
 
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- Relaying ping, collateral=%s\n", outpoint.ToStringShort());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::SendMasternodePing -- Relaying ping, collateral=%s\n", outpoint.ToStringShort());
     mnp.Relay(connman);
 
     return true;
@@ -129,14 +129,14 @@ bool CActiveMasternode::UpdateSentinelPing(int version)
 
 void CActiveMasternode::ManageStateInitial(CConnman& connman)
 {
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
 
     // Check that our local network configuration is correct
     if (!fListen) {
         // listen option is probably overwritten by smth else, no good
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
         strNotCapableReason = "Masternode must accept connections from outside. Make sure listen configuration option is not overwritten by some another parameter.";
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
         return;
     }
 
@@ -155,7 +155,7 @@ void CActiveMasternode::ManageStateInitial(CConnman& connman)
         if (empty) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
             strNotCapableReason = "Can't detect valid external address. Will retry when there are some connections available.";
-            LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
             return;
         }
     }
@@ -163,7 +163,7 @@ void CActiveMasternode::ManageStateInitial(CConnman& connman)
     if (!fFoundLocal) {
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
         strNotCapableReason = "Can't detect valid external address. Please consider using the externalip configuration option if problem persists. Make sure to use IPv4 address only.";
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
         return;
     }
 
@@ -172,18 +172,18 @@ void CActiveMasternode::ManageStateInitial(CConnman& connman)
         if (service.GetPort() != mainnetDefaultPort) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
             strNotCapableReason = strprintf("Invalid port: %u - only %d is supported on mainnet.", service.GetPort(), mainnetDefaultPort);
-            LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
             return;
         }
     } else if (service.GetPort() == mainnetDefaultPort) {
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
         strNotCapableReason = strprintf("Invalid port: %u - %d is only supported on mainnet.", service.GetPort(), mainnetDefaultPort);
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- %s: %s\n", GetStateString(), strNotCapableReason);
         return;
     }
 
     // Check socket connectivity
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- Checking inbound connection to '%s'\n", service.ToString());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- Checking inbound connection to '%s'\n", service.ToString());
     SOCKET hSocket = CreateSocket(service);
     bool fConnected = ConnectSocketDirectly(service, hSocket, nConnectTimeout) && IsSelectableSocket(hSocket);
     CloseSocket(hSocket);
@@ -198,12 +198,12 @@ void CActiveMasternode::ManageStateInitial(CConnman& connman)
     // Default to REMOTE
     eType = MASTERNODE_REMOTE;
 
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- End status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateInitial -- End status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetTypeString(), fPingerEnabled);
 }
 
 void CActiveMasternode::ManageStateRemote()
 {
-    LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- Start status = %s, type = %s, pinger enabled = %d, pubKeyMasternode.GetID() = %s\n", 
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- Start status = %s, type = %s, pinger enabled = %d, pubKeyMasternode.GetID() = %s\n", 
              GetStatus(), GetTypeString(), fPingerEnabled, pubKeyMasternode.GetID().ToString());
 
     mnodeman.CheckMasternode(pubKeyMasternode, true);
@@ -212,23 +212,23 @@ void CActiveMasternode::ManageStateRemote()
         if (infoMn.nProtocolVersion != PROTOCOL_VERSION) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
             strNotCapableReason = "Invalid protocol version";
-            LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
             return;
         }
         if (service != infoMn.addr) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
             strNotCapableReason = "Broadcasted IP doesn't match our external address. Make sure you issued a new broadcast if IP of this masternode changed recently.";
-            LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
             return;
         }
         if (!CMasternode::IsValidStateForAutoStart(infoMn.nActiveState)) {
             nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
             strNotCapableReason = strprintf("Masternode in %s state", CMasternode::StateToString(infoMn.nActiveState));
-            LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
             return;
         }
         if (nState != ACTIVE_MASTERNODE_STARTED) {
-            LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- STARTED!\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- STARTED!\n");
             outpoint = infoMn.outpoint;
             service = infoMn.addr;
             activationBlockHeight = infoMn.activationBlockHeight;
@@ -239,6 +239,6 @@ void CActiveMasternode::ManageStateRemote()
     else {
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
         strNotCapableReason = "Masternode not in masternode list";
-        LogPrint(BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CActiveMasternode::ManageStateRemote -- %s: %s\n", GetStateString(), strNotCapableReason);
     }
 }

@@ -533,6 +533,7 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 objMN.push_back(Pair("activeseconds", (int64_t)(mn.lastPing.sigTime - mn.sigTime)));
                 objMN.push_back(Pair("lastpaidtime", mn.GetLastPaidTimePrimary()));
                 objMN.push_back(Pair("lastpaidblock", mn.GetLastPaidBlockPrimary()));
+                objMN.push_back(Pair("pose_ban_score", mn.nPoSeBanScore));
                 obj.push_back(Pair(strOutpoint, objMN));
             } else if (strMode == "lastpaidblock") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;

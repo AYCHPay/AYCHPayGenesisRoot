@@ -64,6 +64,7 @@ extern const char * const GENESIS_CONF_FILENAME;
 extern const char * const GENESIS_PID_FILENAME;
 
 extern std::atomic<uint32_t> logCategories;
+extern std::atomic<uint32_t> logLevels;
 
 /**
  * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
@@ -83,6 +84,26 @@ struct CLogCategoryActive
     std::string category;
     bool active;
 };
+
+struct CLogLevelActive
+{
+    std::string logLevel;
+    bool active;
+};
+
+// Based on the Linux log level. Lower humber means higher priority.
+namespace BCLogLevel {
+    enum LogFlags : uint32_t {
+        LOG_EMERGENCY   = (1 <<  0), // This is the highest level in order of severity: Pass the marshmallows... THE WORLD IS ON FIRE!!!!!
+        LOG_ALERT       = (1 <<  1), // This requires immediate attention... like *RIGHT NOW*!
+        LOG_CRITICAL    = (1 <<  2), // This is an important message
+        LOG_ERROR       = (1 <<  3), // Erm... an error.
+        LOG_WARNING     = (1 <<  4), // Almost an error
+        LOG_NOTICE      = (1 <<  5), // Pay attention to this, it is important
+        LOG_INFO        = (1 <<  6), // Just FYI stuff
+        LOG_DEBUG       = (1 <<  7)  // Spammy messages that will really clog up your logging shit... I mean stuff
+    };
+}
 
 namespace BCLog {
     enum LogFlags : uint32_t {
@@ -121,6 +142,12 @@ static inline bool LogAcceptCategory(uint32_t category)
     return (logCategories.load(std::memory_order_relaxed) & category) != 0;
 }
 
+/** Return true if log accepts specified log level */
+static inline bool LogAcceptLogLevel(uint32_t loglevel)
+{
+    return loglevel <= logLevels;
+}
+
 /** Returns a string with the log categories. */
 std::string ListLogCategories();
 
@@ -129,6 +156,9 @@ std::vector<CLogCategoryActive> ListActiveLogCategories();
 
 /** Return true if str parses as a log category and set the flags in f */
 bool GetLogCategory(uint32_t *f, const std::string *str);
+
+/** Return true if str parses as a log level and set the flags in f */
+bool GetLogLevel(uint32_t *f, const std::string *str);
 
 /** Send a string to the log output */
 int LogPrintStr(const std::string &str);
@@ -150,6 +180,7 @@ template<typename T, typename... Args> static inline void MarkUsed(const T& t, c
 #ifdef USE_COVERAGE
 #define LogPrintf(...) do { MarkUsed(__VA_ARGS__); } while(0)
 #define LogPrint(category, ...) do { MarkUsed(__VA_ARGS__); } while(0)
+#define LogPrintG(loglevel, category, ...) do { MarkUsed(__VA_ARGS__); } while(0)
 #else
 #define LogPrintf(...) do { \
     std::string _log_msg_; /* Unlikely name to avoid shadowing variables */ \
@@ -164,6 +195,12 @@ template<typename T, typename... Args> static inline void MarkUsed(const T& t, c
 
 #define LogPrint(category, ...) do { \
     if (LogAcceptCategory((category))) { \
+        LogPrintf(__VA_ARGS__); \
+    } \
+} while(0)
+// Add log levels
+#define LogPrintG(loglevel, category, ...) do { \
+    if (LogAcceptLogLevel((loglevel)) && LogAcceptCategory((category))) { \
         LogPrintf(__VA_ARGS__); \
     } \
 } while(0)

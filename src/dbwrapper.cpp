@@ -63,7 +63,7 @@ public:
 
                 assert(p <= limit);
                 base[std::min(bufsize - 1, (int)(p - base))] = '\0';
-                LogPrint(BCLog::LEVELDB, "[LevelDB] LevelDB: %s", base);
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::LEVELDB, "[LevelDB] LevelDB: %s", base);
                 if (base != buffer) {
                     delete[] base;
                 }
@@ -103,21 +103,21 @@ CDBWrapper::CDBWrapper(const fs::path& path, size_t nCacheSize, bool fMemory, bo
         options.env = penv;
     } else {
         if (fWipe) {
-            LogPrint(BCLog::LEVELDB, "[LevelDB] Wiping LevelDB in %s\n", path.string());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::LEVELDB, "[LevelDB] Wiping LevelDB in %s\n", path.string());
             leveldb::Status result = leveldb::DestroyDB(path.string(), options);
             dbwrapper_private::HandleError(result);
         }
         TryCreateDirectories(path);
-        LogPrint(BCLog::LEVELDB, "[LevelDB] Opening LevelDB in %s\n", path.string());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::LEVELDB, "[LevelDB] Opening LevelDB in %s\n", path.string());
     }
     leveldb::Status status = leveldb::DB::Open(options, path.string(), &pdb);
     dbwrapper_private::HandleError(status);
-    LogPrint(BCLog::LEVELDB, "[LevelDB] Opened LevelDB successfully\n");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::LEVELDB, "[LevelDB] Opened LevelDB successfully\n");
 
     if (gArgs.GetBoolArg("-forcecompactdb", false)) {
-        LogPrint(BCLog::CMPCTBLOCK, "[CompactBlocks] Starting database compaction of %s\n", path.string());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::CMPCTBLOCK, "[CompactBlocks] Starting database compaction of %s\n", path.string());
         pdb->CompactRange(nullptr, nullptr);
-        LogPrint(BCLog::CMPCTBLOCK, "[CompactBlocks] Finished database compaction of %s\n", path.string());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::CMPCTBLOCK, "[CompactBlocks] Finished database compaction of %s\n", path.string());
     }
 
     // The base-case obfuscation key, which is a noop.
@@ -199,7 +199,7 @@ void HandleError(const leveldb::Status& status)
 {
     if (status.ok())
         return;
-    LogPrint(BCLog::LEVELDB, "[LevelDB] %s\n", status.ToString());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::LEVELDB, "[LevelDB] %s\n", status.ToString());
     if (status.IsCorruption())
         throw dbwrapper_error("Database corrupted");
     if (status.IsIOError())

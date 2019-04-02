@@ -199,7 +199,7 @@ void AdvertiseLocal(CNode *pnode)
         }
         if (addrLocal.IsRoutable())
         {
-            LogPrint(BCLog::NET, "[Networking] AdvertiseLocal: advertising address %s\n", addrLocal.ToString());
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] AdvertiseLocal: advertising address %s\n", addrLocal.ToString());
             FastRandomContext insecure_rand;
             pnode->PushAddress(addrLocal, insecure_rand);
         }
@@ -218,7 +218,7 @@ bool AddLocal(const CService& addr, int nScore)
     if (IsLimited(addr))
         return false;
 
-    LogPrint(BCLog::NET, "[Networking] AddLocal(%s,%i)\n", addr.ToString(), nScore);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] AddLocal(%s,%i)\n", addr.ToString(), nScore);
 
     {
         LOCK(cs_mapLocalHost);
@@ -241,7 +241,7 @@ bool AddLocal(const CNetAddr &addr, int nScore)
 bool RemoveLocal(const CService& addr)
 {
     LOCK(cs_mapLocalHost);
-    LogPrint(BCLog::NET, "[Networking] RemoveLocal(%s)\n", addr.ToString());
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] RemoveLocal(%s)\n", addr.ToString());
     mapLocalHost.erase(addr);
     return true;
 }
@@ -365,7 +365,7 @@ static CAddress GetBindAddress(SOCKET sock)
         if (!getsockname(sock, (struct sockaddr*)&sockaddr_bind, &sockaddr_bind_len)) {
             addr_bind.SetSockAddr((const struct sockaddr*)&sockaddr_bind);
         } else {
-            LogPrint(BCLog::NET, "[Networking] Warning: getsockname failed\n");
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::NET, "[Networking] Warning: getsockname failed\n");
         }
     }
     return addr_bind;
@@ -385,13 +385,13 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
         CNode* pnode = FindNode((CService)addrConnect);
         if (pnode)
         {
-            LogPrint(BCLog::NET, "[Networking] Failed to open new connection, already connected\n");
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Failed to open new connection, already connected\n");
             return nullptr;
         }
     }
 
     /// debug print
-    LogPrint(BCLog::NET, "[Networking] Trying connection %s lastseen=%.1fhrs\n",
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString(),
         pszDest ? 0.0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
@@ -402,7 +402,7 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
         if (Lookup(pszDest, resolved,  default_port, fNameLookup && !HaveNameProxy(), 256) && !resolved.empty()) {
             addrConnect = CAddress(resolved[GetRand(resolved.size())], NODE_NONE);
             if (!addrConnect.IsValid()) {
-                LogPrint(BCLog::NET, "[Networking] Resolver returned invalid address %s for %s", addrConnect.ToString(), pszDest);
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Resolver returned invalid address %s for %s", addrConnect.ToString(), pszDest);
                 return nullptr;
             }
             // It is possible that we already have a connection to the IP/port pszDest resolved to.
@@ -414,7 +414,7 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
             if (pnode)
             {
                 pnode->MaybeSetAddrName(std::string(pszDest));
-                LogPrint(BCLog::NET, "[Networking] Failed to open new connection, already connected\n");
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Failed to open new connection, already connected\n");
                 return nullptr;
             }
         }
@@ -487,7 +487,7 @@ void CConnman::DumpBanlist()
         SetBannedSetDirty(false);
     }
 
-    LogPrint(BCLog::NET, "[Networking] Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
         banmap.size(), GetTimeMillis() - nStart);
 }
 
@@ -497,7 +497,7 @@ void CNode::CloseSocketDisconnect()
     LOCK(cs_hSocket);
     if (hSocket != INVALID_SOCKET)
     {
-        LogPrint(BCLog::NET, "[Networking] disconnecting peer=%d\n", id);
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] disconnecting peer=%d\n", id);
         CloseSocket(hSocket);
     }
 }
@@ -628,7 +628,7 @@ void CConnman::SweepBanned()
                 setBanned.erase(it++);
                 setBannedIsDirty = true;
                 notifyUI = true;
-                LogPrint(BCLog::NET, "[Networking] %s: Removed banned node ip/subnet from banlist.dat: %s\n", __func__, subNet.ToString());
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: Removed banned node ip/subnet from banlist.dat: %s\n", __func__, subNet.ToString());
             }
             else
                 ++it;
@@ -773,7 +773,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool& complete
             return false;
 
         if (msg.in_data && msg.hdr.nMessageSize > MAX_PROTOCOL_MESSAGE_LENGTH) {
-            LogPrint(BCLog::NET, "[Networking] Oversized message from peer=%i, disconnecting\n", GetId());
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Oversized message from peer=%i, disconnecting\n", GetId());
             return false;
         }
 
@@ -925,7 +925,7 @@ size_t CConnman::SocketSendData(CNode *pnode) const
                 int nErr = WSAGetLastError();
                 if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)
                 {
-                    LogPrint(BCLog::NET, "[Networking] Socket send error %s\n", NetworkErrorString(nErr));
+                    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Socket send error %s\n", NetworkErrorString(nErr));
                     pnode->CloseSocketDisconnect();
                 }
             }
@@ -1089,7 +1089,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
 
     if (hSocket != INVALID_SOCKET) {
         if (!addr.SetSockAddr((const struct sockaddr*)&sockaddr)) {
-            LogPrint(BCLog::NET, "[Networking] Warning: Unknown socket family\n");
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::NET, "[Networking] Warning: Unknown socket family\n");
         }
     }
 
@@ -1105,19 +1105,19 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     {
         int nErr = WSAGetLastError();
         if (nErr != WSAEWOULDBLOCK)
-            LogPrint(BCLog::NET, "[Networking] Socket error accept failed: %s\n", NetworkErrorString(nErr));
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Socket error accept failed: %s\n", NetworkErrorString(nErr));
         return;
     }
 
     if (!fNetworkActive) {
-        LogPrint(BCLog::NET, "[Networking] Connection from %s dropped: Not accepting new connections\n", addr.ToString());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s dropped: Not accepting new connections\n", addr.ToString());
         CloseSocket(hSocket);
         return;
     }
 
     if (!IsSelectableSocket(hSocket))
     {
-        LogPrint(BCLog::NET, "[Networking] Connection from %s dropped: Non-selectable socket\n", addr.ToString());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s dropped: Non-selectable socket\n", addr.ToString());
         CloseSocket(hSocket);
         return;
     }
@@ -1128,7 +1128,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
 
     if (IsBanned(addr) && !whitelisted)
     {
-        LogPrint(BCLog::NET, "[Networking] Connection from %s dropped (banned)\n", addr.ToString());
+        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s dropped: (banned)\n", addr.ToString());
         CloseSocket(hSocket);
         return;
     }
@@ -1137,7 +1137,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     {
         if (!AttemptToEvictConnection()) {
             // No connection to evict, disconnect the new connection
-            LogPrint(BCLog::NET, "[Networking] Failed to find an eviction candidate - connection dropped (full)\n");
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Failed to find an eviction candidate - connection dropped (full)\n");
             CloseSocket(hSocket);
             return;
         }
@@ -1159,7 +1159,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     pnode->fWhitelisted = whitelisted;
     m_msgproc->InitializeNode(pnode);
 
-    LogPrint(BCLog::NET, "[Networking] Connection from %s accepted\n", addr.ToString());
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s accepted\n", addr.ToString());
 
     {
         LOCK(cs_vNodes);
@@ -1306,7 +1306,7 @@ void CConnman::ThreadSocketHandler()
             if (have_fds)
             {
                 int nErr = WSAGetLastError();
-                LogPrint(BCLog::NET, "[Networking] Socket select error %s\n", NetworkErrorString(nErr));
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Socket select error %s\n", NetworkErrorString(nErr));
                 for (unsigned int i = 0; i <= hSocketMax; i++)
                     FD_SET(i, &fdsetRecv);
             }
@@ -1388,7 +1388,7 @@ void CConnman::ThreadSocketHandler()
                 {
                     // socket closed gracefully
                     if (!pnode->fDisconnect) {
-                        LogPrint(BCLog::NET, "[Networking] socket closed\n");
+                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] socket closed\n");
                     }
                     pnode->CloseSocketDisconnect();
                 }
@@ -1399,7 +1399,7 @@ void CConnman::ThreadSocketHandler()
                     if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)
                     {
                         if (!pnode->fDisconnect)
-                            LogPrint(BCLog::NET, "[Networking] Socket recv error %s\n", NetworkErrorString(nErr));
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Socket recv error %s\n", NetworkErrorString(nErr));
                         pnode->CloseSocketDisconnect();
                     }
                 }
@@ -1425,27 +1425,27 @@ void CConnman::ThreadSocketHandler()
             {
                 if (pnode->nLastRecv == 0 || pnode->nLastSend == 0)
                 {
-                    LogPrint(BCLog::NET, "[Networking] Socket no message in first 60 seconds, %d %d from %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->GetId());
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Socket no message in first 60 seconds, %d %d from %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->GetId());
                     pnode->fDisconnect = true;
                 }
                 else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL)
                 {
-                    LogPrint(BCLog::NET, "[Networking] Socket sending timeout: %is\n", nTime - pnode->nLastSend);
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Socket sending timeout: %is\n", nTime - pnode->nLastSend);
                     pnode->fDisconnect = true;
                 }
                 else if (nTime - pnode->nLastRecv > (pnode->nVersion > BIP0031_VERSION ? TIMEOUT_INTERVAL : 90*60))
                 {
-                    LogPrint(BCLog::NET, "[Networking] Socket receive timeout: %is\n", nTime - pnode->nLastRecv);
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Socket receive timeout: %is\n", nTime - pnode->nLastRecv);
                     pnode->fDisconnect = true;
                 }
                 else if (pnode->nPingNonceSent && pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 < GetTimeMicros())
                 {
-                    LogPrint(BCLog::NET, "[Networking] Ping timeout: %fs\n", 0.000001 * (GetTimeMicros() - pnode->nPingUsecStart));
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Ping timeout: %fs\n", 0.000001 * (GetTimeMicros() - pnode->nPingUsecStart));
                     pnode->fDisconnect = true;
                 }
                 else if (!pnode->fSuccessfullyConnected)
                 {
-                    LogPrint(BCLog::NET, "[Networking] Version handshake timeout from %d\n", pnode->GetId());
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Version handshake timeout from %d\n", pnode->GetId());
                     pnode->fDisconnect = true;
                 }
             }
@@ -1501,19 +1501,19 @@ void ThreadMapPort()
             char externalIPAddress[40];
             r = UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, externalIPAddress);
             if(r != UPNPCOMMAND_SUCCESS)
-                LogPrint(BCLog::NET, "[Networking] UPnP: GetExternalIPAddress() returned %d\n", r);
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] UPnP: GetExternalIPAddress() returned %d\n", r);
             else
             {
                 if (externalIPAddress[0])
                 {
                     CNetAddr resolved;
                     if(LookupHost(externalIPAddress, resolved, false)) {
-                        LogPrint(BCLog::NET, "[Networking] UPnP: ExternalIPAddress = %s\n", resolved.ToString().c_str());
+                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] UPnP: ExternalIPAddress = %s\n", resolved.ToString().c_str());
                         AddLocal(resolved, LOCAL_UPNP);
                     }
                 }
                 else
-                    LogPrint(BCLog::NET, "[Networking] UPnP: GetExternalIPAddress failed.\n");
+                    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] UPnP: GetExternalIPAddress failed.\n");
             }
         }
 
@@ -1532,10 +1532,10 @@ void ThreadMapPort()
 #endif
 
                 if(r!=UPNPCOMMAND_SUCCESS)
-                    LogPrint(BCLog::NET, "[Networking] AddPortMapping(%s, %s, %s) failed with code %d (%s)\n",
+                    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] AddPortMapping(%s, %s, %s) failed with code %d (%s)\n",
                         port, port, lanaddr, r, strupnperror(r));
                 else
-                    LogPrint(BCLog::NET, "[Networking] PnP Port Mapping successful.\n");
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] PnP Port Mapping successful.\n");
 
                 MilliSleep(20*60*1000); // Refresh every 20 minutes
             }
@@ -1543,13 +1543,13 @@ void ThreadMapPort()
         catch (const boost::thread_interrupted&)
         {
             r = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, port.c_str(), "TCP", 0);
-            LogPrint(BCLog::NET, "[Networking] UPNP_DeletePortMapping() returned: %d\n", r);
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] UPNP_DeletePortMapping() returned: %d\n", r);
             freeUPNPDevlist(devlist); devlist = nullptr;
             FreeUPNPUrls(&urls);
             throw;
         }
     } else {
-        LogPrint(BCLog::NET, "[Networking] No valid UPnP IGDs found\n");
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::NET, "[Networking] No valid UPnP IGDs found\n");
         freeUPNPDevlist(devlist); devlist = nullptr;
         if (r != 0)
             FreeUPNPUrls(&urls);
@@ -1604,7 +1604,7 @@ void CConnman::ThreadDNSAddressSeed()
             nRelevant += pnode->fSuccessfullyConnected && !pnode->fFeeler && !pnode->fOneShot && !pnode->m_manual_connection && !pnode->fInbound;
         }
         if (nRelevant >= 2) {
-            LogPrint(BCLog::NET, "[Networking] P2P peers available. Skipped DNS seeding.\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] P2P peers available. Skipped DNS seeding.\n");
             return;
         }
     }
@@ -1612,7 +1612,7 @@ void CConnman::ThreadDNSAddressSeed()
     const std::vector<std::string> &vSeeds = Params().DNSSeeds();
     int found = 0;
 
-    LogPrint(BCLog::NET, "[Networking] Loading addresses from DNS seeds (could take a while)\n");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Loading addresses from DNS seeds (could take a while)\n");
 
     for (const std::string &seed : vSeeds) {
         if (interruptNet) {
@@ -1649,7 +1649,7 @@ void CConnman::ThreadDNSAddressSeed()
         }
     }
 
-    LogPrint(BCLog::NET, "[Networking] %d addresses found from DNS seeds\n", found);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] %d addresses found from DNS seeds\n", found);
 }
 
 
@@ -1670,7 +1670,7 @@ void CConnman::DumpAddresses()
     CAddrDB adb;
     adb.Write(addrman);
 
-    LogPrint(BCLog::NET, "[Networking] Flushed %d addresses to peers.dat  %dms\n",
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Flushed %d addresses to peers.dat  %dms\n",
            addrman.size(), GetTimeMillis() - nStart);
 }
 
@@ -1705,7 +1705,7 @@ bool CConnman::GetTryNewOutboundPeer()
 void CConnman::SetTryNewOutboundPeer(bool flag)
 {
     m_try_another_outbound_peer = flag;
-    LogPrint(BCLog::NET, "[Networking] Setting try another outbound peer=%s\n", flag ? "true" : "false");
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Setting try another outbound peer=%s\n", flag ? "true" : "false");
 }
 
 // Return the number of peers we have over our outbound connection limit
@@ -1771,7 +1771,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
         if (addrman.size() == 0 && (GetTime() - nStart > 60)) {
             static bool done = false;
             if (!done) {
-                LogPrint(BCLog::NET, "[Networking] Adding fixed seed nodes as DNS doesn't seem to be available.\n");
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Adding fixed seed nodes as DNS doesn't seem to be available.\n");
                 CNetAddr local;
                 local.SetInternal("fixedseeds");
                 addrman.Add(convertSeed6(Params().FixedSeeds()), local);
@@ -1875,7 +1875,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
                 int randsleep = GetRandInt(FEELER_SLEEP_WINDOW * 1000);
                 if (!interruptNet.sleep_for(std::chrono::milliseconds(randsleep)))
                     return;
-                LogPrint(BCLog::NET, "[Networking] Making feeler connection to %s\n", addrConnect.ToString());
+                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Making feeler connection to %s\n", addrConnect.ToString());
             }
 
             OpenNetworkConnection(addrConnect, (int)setConnected.size() >= std::min(nMaxConnections - 1, 2), &grant, nullptr, false, fFeeler);
@@ -2108,7 +2108,7 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string& strError, b
     if (!addrBind.GetSockAddr((struct sockaddr*)&sockaddr, &len))
     {
         strError = strprintf("Error: Bind address family for %s not supported", addrBind.ToString());
-        LogPrint(BCLog::NET, "[Networking] %s\n", strError);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] %s\n", strError);
         return false;
     }
 
@@ -2116,7 +2116,7 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string& strError, b
     if (hListenSocket == INVALID_SOCKET)
     {
         strError = strprintf("Error: Couldn't open socket for incoming connections (socket returned error %s)", NetworkErrorString(WSAGetLastError()));
-        LogPrint(BCLog::NET, "[Networking] %s\n", strError);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] %s\n", strError);
         return false;
     }
 #ifndef WIN32
@@ -2150,17 +2150,17 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string& strError, b
             strError = strprintf(_("Unable to bind to %s on this computer. %s is probably already running."), addrBind.ToString(), _(PACKAGE_NAME));
         else
             strError = strprintf(_("Unable to bind to %s on this computer (bind returned error %s)"), addrBind.ToString(), NetworkErrorString(nErr));
-        LogPrint(BCLog::NET, "[Networking] %s\n", strError);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] %s\n", strError);
         CloseSocket(hListenSocket);
         return false;
     }
-    LogPrint(BCLog::NET, "[Networking] Bound to %s\n", addrBind.ToString());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Bound to %s\n", addrBind.ToString());
 
     // Listen for incoming connections
     if (listen(hListenSocket, SOMAXCONN) == SOCKET_ERROR)
     {
         strError = strprintf(_("Error: Listening for incoming connections failed (listen returned error %s)"), NetworkErrorString(WSAGetLastError()));
-        LogPrint(BCLog::NET, "[Networking] %s\n", strError);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] %s\n", strError);
         CloseSocket(hListenSocket);
         return false;
     }
@@ -2189,7 +2189,7 @@ void Discover(boost::thread_group& threadGroup)
             for (const CNetAddr &addr : vaddr)
             {
                 if (AddLocal(addr, LOCAL_IF))
-                    LogPrint(BCLog::NET, "[Networking] %s: %s - %s\n", __func__, pszHostName, addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: %s - %s\n", __func__, pszHostName, addr.ToString());
             }
         }
     }
@@ -2209,14 +2209,14 @@ void Discover(boost::thread_group& threadGroup)
                 struct sockaddr_in* s4 = (struct sockaddr_in*)(ifa->ifa_addr);
                 CNetAddr addr(s4->sin_addr);
                 if (AddLocal(addr, LOCAL_IF))
-                    LogPrint(BCLog::NET, "[Networking] %s: IPv4 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: IPv4 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
             }
             else if (ifa->ifa_addr->sa_family == AF_INET6)
             {
                 struct sockaddr_in6* s6 = (struct sockaddr_in6*)(ifa->ifa_addr);
                 CNetAddr addr(s6->sin6_addr);
                 if (AddLocal(addr, LOCAL_IF))
-                    LogPrint(BCLog::NET, "[Networking] %s: IPv6 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: IPv6 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
             }
         }
         freeifaddrs(myaddrs);
@@ -2226,7 +2226,7 @@ void Discover(boost::thread_group& threadGroup)
 
 void CConnman::SetNetworkActive(bool active)
 {
-    LogPrint(BCLog::NET, "[Networking] SetNetworkActive: %s\n", active);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] SetNetworkActive: %s\n", active);
 
     if (fNetworkActive == active) {
         return;
@@ -2332,10 +2332,10 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
     {
         CAddrDB adb;
         if (adb.Read(addrman))
-            LogPrint(BCLog::ADDRMAN, "[AddressManager] Loaded %i addresses from peers.dat  %dms\n", addrman.size(), GetTimeMillis() - nStart);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::ADDRMAN, "[AddressManager] Loaded %i addresses from peers.dat  %dms\n", addrman.size(), GetTimeMillis() - nStart);
         else {
             addrman.Clear(); // Addrman can be in an inconsistent state after failure, reset it
-            LogPrint(BCLog::ADDRMAN, "[AddressManager] Invalid or missing peers.dat; recreating\n");
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ADDRMAN, "[AddressManager] Invalid or missing peers.dat; recreating\n");
             DumpAddresses();
         }
     }
@@ -2350,10 +2350,10 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
         SetBannedSetDirty(false); // no need to write down, just read data
         SweepBanned(); // sweep out unused entries
 
-        LogPrint(BCLog::NET, "[Networking] Loaded %d banned node ips/subnets from banlist.dat  %dms\n",
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Loaded %d banned node ips/subnets from banlist.dat  %dms\n",
             banmap.size(), GetTimeMillis() - nStart);
     } else {
-        LogPrint(BCLog::NET, "[Networking] Invalid or missing banlist.dat; recreating\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] Invalid or missing banlist.dat; recreating\n");
         SetBannedSetDirty(true); // force write
         DumpBanlist();
     }
@@ -2393,7 +2393,7 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
     threadSocketHandler = std::thread(&TraceThread<std::function<void()> >, "net", std::function<void()>(std::bind(&CConnman::ThreadSocketHandler, this)));
 
     if (!gArgs.GetBoolArg("-dnsseed", true))
-        LogPrint(BCLog::NET, "[Networking] DNS seeding disabled\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] DNS seeding disabled\n");
     else
         threadDNSAddressSeed = std::thread(&TraceThread<std::function<void()> >, "dnsseed", std::function<void()>(std::bind(&CConnman::ThreadDNSAddressSeed, this)));
 
@@ -2494,7 +2494,7 @@ void CConnman::Stop()
     for (ListenSocket& hListenSocket : vhListenSocket)
         if (hListenSocket.socket != INVALID_SOCKET)
             if (!CloseSocket(hListenSocket.socket))
-                LogPrint(BCLog::NET, "[Networking] CloseSocket(hListenSocket) failed with error %s\n", NetworkErrorString(WSAGetLastError()));
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] CloseSocket(hListenSocket) failed with error %s\n", NetworkErrorString(WSAGetLastError()));
 
     // clean up some globals (to help leak detection)
     for (CNode *pnode : vNodes) {
@@ -2840,9 +2840,9 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn
     mapRecvBytesPerMsgCmd[NET_MESSAGE_COMMAND_OTHER] = 0;
 
     if (fLogIPs) {
-        LogPrint(BCLog::NET, "[Networking] Added connection to %s peer=%d\n", addrName, id);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Added connection to %s peer=%d\n", addrName, id);
     } else {
-        LogPrint(BCLog::NET, "[Networking] Added connection peer=%d\n", id);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Added connection peer=%d\n", id);
     }
 }
 
@@ -2870,7 +2870,7 @@ void CNode::AskFor(const CInv& inv)
         nRequestTime = it->second;
     else
         nRequestTime = 0;
-    LogPrint(BCLog::NET, "[Networking] AskFor %s  %d (%s) peer=%d\n", inv.ToString(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000), id);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] AskFor %s  %d (%s) peer=%d\n", inv.ToString(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000), id);
 
     // Make sure not to reuse time indexes to keep things in the same order
     int64_t nNow = GetTimeMicros() - 1000000;
@@ -2897,7 +2897,7 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
 {
     size_t nMessageSize = msg.data.size();
     size_t nTotalSize = nMessageSize + CMessageHeader::HEADER_SIZE;
-    LogPrint(BCLog::NET, "[Networking] Sending %s (%d bytes) peer=%d\n",  SanitizeString(msg.command.c_str()), nMessageSize, pnode->GetId());
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Sending %s (%d bytes) peer=%d\n",  SanitizeString(msg.command.c_str()), nMessageSize, pnode->GetId());
 
     std::vector<unsigned char> serializedHeader;
     serializedHeader.reserve(CMessageHeader::HEADER_SIZE);

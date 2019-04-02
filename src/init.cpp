@@ -153,7 +153,7 @@ public:
             return CCoinsViewBacked::GetCoin(outpoint, coin);
         } catch(const std::runtime_error& e) {
             uiInterface.ThreadSafeMessageBox(_("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
-            LogPrint(BCLog::LEVELDB, "[LevelDB] Error reading from database: %s\n", e.what());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::LEVELDB, "[LevelDB] Error reading from database: %s\n", e.what());
             // Starting the shutdown sequence and returning false to the caller would be
             // interpreted as 'entry not found' (as opposed to unable to read data), and
             // could lead to invalid interpretation. Just exit immediately, as we can't
@@ -183,7 +183,7 @@ void Interrupt()
 
 void Shutdown()
 {
-    LogPrint(BCLog::LEVELDB, "[LevelDB] %s: In progress...\n", __func__);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::LEVELDB, "[LevelDB] %s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
     if (!lockShutdown)
@@ -214,8 +214,9 @@ void Shutdown()
   
     // STORE DATA CACHES INTO SERIALIZED DAT FILES
     if (!fLiteMode) {
-        CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
-        flatdb1.Dump(mnodeman);
+        // #2b*: Disable writing to the mncache file... because it is broken in ways I can't track down... yet 
+        // CFlatDB<CMasternodeMan> flatdb1("mncache.dat", "magicMasternodeCache");
+        // flatdb1.Dump(mnodeman);
         CFlatDB<CMasternodePayments> flatdb2("mnpayments.dat", "magicMasternodePaymentsCache");
         flatdb2.Dump(mnpayments);
         CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
@@ -243,7 +244,7 @@ void Shutdown()
         if (!est_fileout.IsNull())
             ::feeEstimator.Write(est_fileout);
         else
-            LogPrint(BCLog::ESTIMATEFEE, "[FeeEstimation] %s: Failed to write fee estimates to %s\n", __func__, est_path.string());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] %s: Failed to write fee estimates to %s\n", __func__, est_path.string());
         fFeeEstimatesInitialized = false;
     }
 
@@ -347,7 +348,7 @@ void OnRPCStopped()
     uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
     RPCNotifyBlockChange(false, nullptr);
     cvBlockChange.notify_all();
-    LogPrint(BCLog::RPC, "[RPC] Stopped.\n");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::RPC, "[RPC] Stopped.\n");
 }
 
 std::string HelpMessage(HelpMessageMode mode)
@@ -482,6 +483,7 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-limitdescendantsize=<n>", strprintf("Do not accept transactions if any ancestor would have more than <n> kilobytes of in-mempool descendants (default: %u).", DEFAULT_DESCENDANT_SIZE_LIMIT));
         strUsage += HelpMessageOpt("-vbparams=deployment:start:end", "Use given start/end times for specified version bits deployment (regtest-only)");
     }
+    strUsage += HelpMessageOpt("-loglevel=<loglevel>", strprintf(_("Set the log level for a category. Can be used in conjunction with -debug=<category> to manage the lovel of logging.")));
     strUsage += HelpMessageOpt("-debug=<category>", strprintf(_("Output debugging information (default: %u, supplying <category> is optional)"), 0) + ". " +
         _("If <category> is not supplied or if <category> = 1, output all debugging information.") + " " + _("<category> can be:") + " " + ListLogCategories() + ".");
     strUsage += HelpMessageOpt("-debugexclude=<category>", strprintf(_("Exclude debugging information for a category. Can be used in conjunction with -debug=1 to output debug logs for all categories except one or more specified categories.")));
@@ -679,13 +681,13 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             FILE *file = OpenBlockFile(pos, true);
             if (!file)
                 break; // This error is logged in OpenBlockFile
-            LogPrint(BCLog::REINDEX, "[Reindex] Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::REINDEX, "[Reindex] Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
             LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
         pblocktree->WriteReindexing(false);
         fReindex = false;
-        LogPrint(BCLog::REINDEX, "[Reindex] Reindexing finished\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::REINDEX, "[Reindex] Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
         LoadGenesisBlock(chainparams);
     }
@@ -996,6 +998,27 @@ bool AppInitParameterInteraction()
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
 
     // ********************************************************* Step 3: parameter-to-internal-flags
+    if (gArgs.IsArgSet("-loglevel")) {
+        const std::vector<std::string> levels = gArgs.GetArgs("-loglevel");
+
+        if (std::none_of(levels.begin(), levels.end(),
+            [](std::string loglevel){return loglevel == "0" || loglevel == "none";})) {
+            for (const auto& loglevel : levels) {
+                uint32_t flag = 0;
+                if (!GetLogLevel(&flag, &loglevel)) {
+                    InitWarning(strprintf(_("Unsupported log level %s=%s."), "-loglevel", loglevel));
+                    continue;
+                }
+                logLevels |= flag;
+            }
+        }
+    }
+    else
+    {
+        logLevels |= BCLogLevel::LOG_NOTICE;
+    }
+    
+
     if (gArgs.IsArgSet("-debug")) {
         // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
         const std::vector<std::string> categories = gArgs.GetArgs("-debug");
@@ -1012,6 +1035,11 @@ bool AppInitParameterInteraction()
             }
         }
     }
+    else
+    {
+        logCategories |= BCLog::ALL;
+    }
+    
 
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : gArgs.GetArgs("-debugexclude")) {
@@ -1101,14 +1129,14 @@ bool AppInitParameterInteraction()
     }
     nPruneTarget = (uint64_t) nPruneArg * 1024 * 1024;
     if (nPruneArg == 1) {  // manual pruning: -prune=1
-        LogPrint(BCLog::PRUNE, "[Prune] Block pruning enabled. Use RPC call pruneblockchain(height) to manually prune block and undo files.\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::PRUNE, "[Prune] Block pruning enabled. Use RPC call pruneblockchain(height) to manually prune block and undo files.\n");
         nPruneTarget = std::numeric_limits<uint64_t>::max();
         fPruneMode = true;
     } else if (nPruneTarget) {
         if (nPruneTarget < MIN_DISK_SPACE_FOR_BLOCK_FILES) {
             return InitError(strprintf(_("Prune configured below the minimum of %d MiB.  Please use a higher number."), MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024));
         }
-        LogPrint(BCLog::PRUNE, "[Prune] Configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::PRUNE, "[Prune] Configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
         fPruneMode = true;
     }
 
@@ -1593,7 +1621,7 @@ bool AppInitMain()
                 if (!is_coinsview_empty) {
                     uiInterface.InitMessage(_("Verifying blocks..."));
                     if (fHavePruned && gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS) > MIN_BLOCKS_TO_KEEP) {
-                        LogPrint(BCLog::PRUNE, "[Prune] Pruned datadir may not have more than %d blocks; only checking available blocks",
+                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::PRUNE, "[Prune] Pruned datadir may not have more than %d blocks; only checking available blocks",
                             MIN_BLOCKS_TO_KEEP);
                     }
 
@@ -1635,7 +1663,7 @@ bool AppInitMain()
                     fReindex = true;
                     fRequestShutdown = false;
                 } else {
-                    LogPrint(BCLog::REINDEX, "[Reindex] Aborted block database rebuild. Exiting.\n");
+                    LogPrintG(BCLogLevel::LOG_WARNING, BCLog::REINDEX, "[Reindex] Aborted block database rebuild. Exiting.\n");
                     return false;
                 }
             } else {
@@ -1676,7 +1704,7 @@ bool AppInitMain()
     // if pruning, unset the service bit and perform the initial blockstore prune
     // after any wallet rescanning has taken place.
     if (fPruneMode) {
-        LogPrint(BCLog::PRUNE, "[Prune] Unsetting NODE_NETWORK on prune mode\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::PRUNE, "[Prune] Unsetting NODE_NETWORK on prune mode\n");
         nLocalServices = ServiceFlags(nLocalServices & ~NODE_NETWORK);
         if (!fReindex) {
             uiInterface.InitMessage(_("Pruning blockstore..."));
@@ -1795,12 +1823,13 @@ bool AppInitMain()
         fs::path pathDB = GetDataDir();
         std::string strDBName;
 
-        strDBName = "mncache.dat";
-        uiInterface.InitMessage(_("Loading masternode cache..."));
-        CFlatDB<CMasternodeMan> flatdb1(strDBName, "magicMasternodeCache");
-        if (!flatdb1.Load(mnodeman)) {
-            return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
-        }
+        // mncache file disabled, because it pissed me off.
+        // strDBName = "mncache.dat";
+        // uiInterface.InitMessage(_("Loading masternode cache..."));
+        // CFlatDB<CMasternodeMan> flatdb1(strDBName, "magicMasternodeCache");
+        // if (!flatdb1.Load(mnodeman)) {
+        //     return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
+        // }
         
         if (mnodeman.size()) {
             strDBName = "mnpayments.dat";
