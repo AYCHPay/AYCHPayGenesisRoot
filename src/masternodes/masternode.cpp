@@ -159,17 +159,19 @@ void CMasternode::Check(bool fForce)
     }
 
     if (IsPoSeBanned()) {
-        if (nHeight < nPoSeBanHeight) return; // too early?
+        // Re-enable pose_banned masternodes
+        //if (nHeight < nPoSeBanHeight) return; // too early?
         // Otherwise give it a chance to proceed further to do all the usual checks and to change its state.
         // Masternode still will be on the edge and can be banned back easily if it keeps ignoring mnverify
         // or connect attempts. Will require few mnverify messages to strengthen its position in mn list.
         LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::Check -- Masternode %s is unbanned and back in list now\n", outpoint.ToStringShort());
         DecreasePoSeBanScore();
     } else if (nPoSeBanScore >= Params().GetConsensus().nMasternodePoseBanMaxScore) {
-        nActiveState = MASTERNODE_POSE_BAN;
+        // Dont use pose_ban
+        //nActiveState = MASTERNODE_POSE_BAN;
         // ban for the whole payment cycle
-        nPoSeBanHeight = nHeight + mnodeman.size();
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::Check -- Masternode %s is banned till block %d now\n", outpoint.ToStringShort(), nPoSeBanHeight);
+        //nPoSeBanHeight = nHeight + mnodeman.size();
+        //LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::Check -- Masternode %s is banned till block %d now\n", outpoint.ToStringShort(), nPoSeBanHeight);
         return;
     }
 
