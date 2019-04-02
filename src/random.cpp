@@ -48,7 +48,7 @@
 
 [[noreturn]] static void RandFailure()
 {
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RAND, "[RAND] Failed to read randomness, aborting\n");
+    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::RAND, "[RAND] Failed to read randomness, aborting\n");
     std::abort();
 }
 
@@ -168,7 +168,7 @@ static void RandAddSeedPerfmon()
     } else {
         static bool warned = false; // Warn only once
         if (!warned) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RAND, "[RAND] %s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::RAND, "[RAND] %s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\n", __func__, ret);
             warned = true;
         }
     }

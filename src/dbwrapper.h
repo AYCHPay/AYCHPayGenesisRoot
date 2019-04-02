@@ -234,7 +234,7 @@ public:
         if (!status.ok()) {
             if (status.IsNotFound())
                 return false;
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::LEVELDB, "[LevelDB] Read Failure: %s\n", status.ToString());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::LEVELDB, "[LevelDB] Read Failure: %s\n", status.ToString());
             dbwrapper_private::HandleError(status);
         }
         try {
@@ -268,7 +268,7 @@ public:
         if (!status.ok()) {
             if (status.IsNotFound())
                 return false;
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::LEVELDB, "[LevelDB] Read failure: %s\n", status.ToString());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::LEVELDB, "[LevelDB] Read failure: %s\n", status.ToString());
             dbwrapper_private::HandleError(status);
         }
         return true;

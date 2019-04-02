@@ -57,7 +57,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
     // Add data
     static CMedianFilter<int64_t> vTimeOffsets(GENESIS_TIMEDATA_MAX_SAMPLES, 0);
     vTimeOffsets.input(nOffsetSample);
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET,"added time data, samples %d, offset %+d (%+d minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET,"[Networking] Added time data, samples %d, offset %+d (%+d minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample/60);
 
     // There is a known issue here (see issue #4521):
     //
@@ -110,11 +110,11 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
 
         if (LogAcceptCategory(BCLog::NET)) {
             for (int64_t n : vSorted) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %+d  ", n);
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %+d  ", n);
             }
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] |  ");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] |  ");
 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] nTimeOffset = %+d  (%+d minutes)\n", nTimeOffset, nTimeOffset/60);
+            LogPrintG(BCLogLevel::LoG_INFO, BCLog::NET, "[Networking] nTimeOffset = %+d  (%+d minutes)\n", nTimeOffset, nTimeOffset/60);
         }
     }
 }

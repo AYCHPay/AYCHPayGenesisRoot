@@ -127,7 +127,7 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     // Check range
     if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] CheckProofOfWork failed the first check: \n");
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::POW, "[ProofOfWork] CheckProofOfWork failed the first check: \n");
         if (fNegative)
         {
             LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] fNegative is true \n");

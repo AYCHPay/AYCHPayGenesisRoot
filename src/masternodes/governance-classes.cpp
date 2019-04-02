@@ -110,11 +110,11 @@ bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
         pGovernanceBlock = pGovernanceBlockTmp;
     }
     catch (std::exception& e) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::AddNewTrigger -- Error creating governance block: %s\n", e.what());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceTriggerManager::AddNewTrigger -- Error creating governance block: %s\n", e.what());
         return false;
     }
     catch (...) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::AddNewTrigger: Unknown Error creating governance block\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceTriggerManager::AddNewTrigger: Unknown Error creating governance block\n");
         return false;
     }
 
@@ -133,11 +133,11 @@ bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
 
 void CGovernanceTriggerManager::CleanAndRemove()
 {
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Start\n");
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Start\n");
     AssertLockHeld(governance.cs);
 
     // Remove triggers that are invalid or expired
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- mapTrigger.size() = %d\n", mapTrigger.size());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- mapTrigger.size() = %d\n", mapTrigger.size());
 
     trigger_m_it it = mapTrigger.begin();
     while(it != mapTrigger.end()) {
@@ -145,19 +145,19 @@ void CGovernanceTriggerManager::CleanAndRemove()
         CGovernanceObject* pObj = nullptr;
         CGovernanceBlock_sptr& pGovernanceBlock = it->second;
         if (!pGovernanceBlock) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- NULL governance block marked for removal\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- NULL governance block marked for removal\n");
             remove = true;
         } else {
             pObj = governance.FindGovernanceObject(it->first);
             if (!pObj || pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Unknown or non-trigger governance block\n");
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Unknown or non-trigger governance block\n");
                 pGovernanceBlock->SetStatus(SEEN_OBJECT_ERROR_INVALID);
             }
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- governance block status = %d\n", pGovernanceBlock->GetStatus());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- governance block status = %d\n", pGovernanceBlock->GetStatus());
             switch (pGovernanceBlock->GetStatus()) {
             case SEEN_OBJECT_ERROR_INVALID:
             case SEEN_OBJECT_UNKNOWN:
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Unknown or invalid trigger found\n");
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Unknown or invalid trigger found\n");
                 remove = true;
                 break;
             case SEEN_OBJECT_IS_VALID:
@@ -171,7 +171,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
         LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- %smarked for removal\n", remove ? "" : "NOT ");
 
         if (remove) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Removing trigger object\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Removing trigger object\n");
             // mark corresponding object for deletion
             if (pObj) {
                 pObj->fCachedDelete = true;
@@ -223,7 +223,7 @@ std::vector<CGovernanceBlock_sptr> CGovernanceTriggerManager::GetActiveTriggers(
 
 bool CGovernanceBlockManager::IsGovernanceBlockTriggered(int nBlockHeight)
 {
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- Start nBlockHeight = %d\n", nBlockHeight);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- Start nBlockHeight = %d\n", nBlockHeight);
     if (!CGovernanceBlock::IsValidBlockHeight(nBlockHeight)) {
         return false;
     }
@@ -232,28 +232,28 @@ bool CGovernanceBlockManager::IsGovernanceBlockTriggered(int nBlockHeight)
     // GET ALL ACTIVE TRIGGERS
     std::vector<CGovernanceBlock_sptr> vecTriggers = triggerman.GetActiveTriggers();
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- vecTriggers.size() = %d\n", vecTriggers.size());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- vecTriggers.size() = %d\n", vecTriggers.size());
 
     for (const auto& pGovernanceBlock : vecTriggers)
     {
         if (!pGovernanceBlock) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- Non-governance block found, continuing\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- Non-governance block found, continuing\n");
             continue;
         }
 
         CGovernanceObject* pObj = pGovernanceBlock->GetGovernanceObject();
 
         if (!pObj) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- pObj == NULL, continuing\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- pObj == NULL, continuing\n");
             continue;
         }
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- data = %s\n", pObj->GetDataAsPlainString());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- data = %s\n", pObj->GetDataAsPlainString());
 
         // note : 12.1 - is epoch calculation correct?
 
         if (nBlockHeight != pGovernanceBlock->GetBlockHeight()) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- block height doesn't match nBlockHeight = %d, blockStart = %d, continuing\n",
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- block height doesn't match nBlockHeight = %d, blockStart = %d, continuing\n",
                      nBlockHeight,
                      pGovernanceBlock->GetBlockHeight());
             continue;
@@ -264,11 +264,11 @@ bool CGovernanceBlockManager::IsGovernanceBlockTriggered(int nBlockHeight)
         pObj->UpdateSentinelVariables();
 
         if (pObj->IsSetCachedFunding()) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- fCacheFunding = true, returning true\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- fCacheFunding = true, returning true\n");
             return true;
         }
         else  {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- fCacheFunding = false, continuing\n");
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlockManager::IsGovernanceBlockTriggered -- fCacheFunding = false, continuing\n");
         }
     }
 
@@ -327,7 +327,7 @@ void CGovernanceBlockManager::CreateGovernanceBlock(CMutableTransaction& txNewRe
 
     CGovernanceBlock_sptr pGovernanceBlock;
     if (!CGovernanceBlockManager::GetBestGovernanceBlock(pGovernanceBlock, nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::CreateGovernanceBlock -- Can't find governance block for height %d\n", nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlockManager::CreateGovernanceBlock -- Can't find governance block for height %d\n", nBlockHeight);
         return;
     }
 
@@ -356,7 +356,7 @@ void CGovernanceBlockManager::CreateGovernanceBlock(CMutableTransaction& txNewRe
 
             // TODO: PRINT NICE N.N MAC OUTPUT
 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] NEW GovernanceBlock : output %d (addr %s, amount %d)\n", i, EncodeDestination(address1), payment.nAmount);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] NEW GovernanceBlock : output %d (addr %s, amount %d)\n", i, EncodeDestination(address1), payment.nAmount);
         }
     }
 }
@@ -421,7 +421,7 @@ CGovernanceBlock(uint256& nHash)
     std::string strAmounts = obj["payment_amounts"].get_str();
     ParsePaymentSchedule(strAddresses, strAmounts);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock -- nBlockHeight = %d, strAddresses = %s, strAmounts = %s, vecPayments.size() = %d\n",
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlock -- nBlockHeight = %d, strAddresses = %s, strAmounts = %s, vecPayments.size() = %d\n",
         nBlockHeight, strAddresses, strAmounts, vecPayments.size());
 }
 
@@ -470,7 +470,7 @@ CAmount CGovernanceBlock::GetPaymentsLimit(int nBlockHeight)
 
     // As we are calculating the amount in the same way as the bonus blocks, we can simply get the appropriate value for the current block
     CAmount nPaymentsLimit = GetBlockSubsidy(nBlockHeight, consensusParams, true);
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::GetPaymentsLimit -- Valid governance block height %d, payments max %lld\n", nBlockHeight, nPaymentsLimit);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlock::GetPaymentsLimit -- Valid governance block height %d, payments max %lld\n", nBlockHeight, nPaymentsLimit);
 
     return nPaymentsLimit;
 }
@@ -489,14 +489,14 @@ void CGovernanceBlock::ParsePaymentSchedule(const std::string& strPaymentAddress
     if (vecParsed1.size() != vecParsed2.size()) {
         std::ostringstream ostr;
         ostr << "CGovernanceBlock::ParsePaymentSchedule -- Mismatched payments and amounts";
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::GOV, "[Governance] %s\n", ostr.str());
         throw std::runtime_error(ostr.str());
     }
 
     if (vecParsed1.size() == 0) {
         std::ostringstream ostr;
         ostr << "CGovernanceBlock::ParsePaymentSchedule -- Error no payments";
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::GOV, "[Governance] %s\n", ostr.str());
         throw std::runtime_error(ostr.str());
     }
 
@@ -511,7 +511,7 @@ void CGovernanceBlock::ParsePaymentSchedule(const std::string& strPaymentAddress
         if (!IsValidDestinationString(vecParsed1[i])) {
             std::ostringstream ostr;
             ostr << "CGovernanceBlock::ParsePaymentSchedule -- Invalid Genesis Masternode Address : " << vecParsed1[i];
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::GOV, "[Governance] %s\n", ostr.str());
             throw std::runtime_error(ostr.str());
         }
 
@@ -526,7 +526,7 @@ void CGovernanceBlock::ParsePaymentSchedule(const std::string& strPaymentAddress
             std::ostringstream ostr;
             ostr << "CGovernanceBlock::ParsePaymentSchedule -- Invalid payment found: address = " << vecParsed1[i]
                 << ", amount = " << nAmount;
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::GOV, "[Governance] %s\n", ostr.str());
             throw std::runtime_error(ostr.str());
         }
     }
@@ -568,7 +568,7 @@ bool CGovernanceBlock::IsValid(const CTransactionRef& txNew, int nBlockHeight, C
     // shared pointers there's no way our object can get deleted while this
     // code is running.
     if (!IsValidBlockHeight(nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, incorrect block height\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, incorrect block height\n");
         return false;
     }
 
@@ -580,7 +580,7 @@ bool CGovernanceBlock::IsValid(const CTransactionRef& txNew, int nBlockHeight, C
     int nPayments = CountPayments();
     int nMinerPayments = nOutputs - nPayments;
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid nOutputs = %d, nPayments = %d, GetDataAsHexString = %s\n",
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid nOutputs = %d, nPayments = %d, GetDataAsHexString = %s\n",
         nOutputs, nPayments, GetGovernanceObject()->GetDataAsHexString());
 
     // We require an exact match (including order) between the expected
@@ -590,7 +590,7 @@ bool CGovernanceBlock::IsValid(const CTransactionRef& txNew, int nBlockHeight, C
         // This means the block cannot have all the governance block payments
         // so it is not valid.
         // TODO: could that be that we just hit coinbase size limit?
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, too few governance block payments\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, too few governance block payments\n");
         return false;
     }
 
@@ -598,14 +598,14 @@ bool CGovernanceBlock::IsValid(const CTransactionRef& txNew, int nBlockHeight, C
     CAmount nPaymentsTotalAmount = GetPaymentsTotalAmount();
     CAmount nPaymentsLimit = GetPaymentsLimit(nBlockHeight);
     if (nPaymentsTotalAmount > nPaymentsLimit) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, payments limit exceeded: payments %lld, limit %lld\n", nPaymentsTotalAmount, nPaymentsLimit);
         return false;
     }
 
     // miner should not get more than he would usually get
     CAmount nBlockValue = txNew->GetValueOut();
     if (nBlockValue > blockReward + nPaymentsTotalAmount) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + nPaymentsTotalAmount);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid, block value limit exceeded: block %lld, limit %lld\n", nBlockValue, blockReward + nPaymentsTotalAmount);
         return false;
     }
 
@@ -614,7 +614,7 @@ bool CGovernanceBlock::IsValid(const CTransactionRef& txNew, int nBlockHeight, C
         CGovernancePayment payment;
         if (!GetPayment(i, payment)) {
             // This shouldn't happen so log a warning
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- WARNING: Failed to find payment: %d of %d total payments\n", i, nPayments);
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- WARNING: Failed to find payment: %d of %d total payments\n", i, nPayments);
             continue;
         }
 
@@ -636,7 +636,7 @@ bool CGovernanceBlock::IsValid(const CTransactionRef& txNew, int nBlockHeight, C
 
             CTxDestination address1;
             ExtractDestination(payment.script, address1);
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nAmount, EncodeDestination(address1));
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlock::IsValid -- ERROR: Block invalid: %d payment %d to %s not found\n", i, payment.nAmount, EncodeDestination(address1));
 
             return false;
         }
@@ -668,11 +668,11 @@ bool CGovernanceBlock::IsExpired()
     LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- nBlockHeight = %d, nExpirationBlock = %d\n", nBlockHeight, nExpirationBlock);
 
     if (governance.GetCachedBlockHeight() > nExpirationBlock) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- Outdated trigger found\n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- Outdated trigger found\n");
         fExpired = true;
         CGovernanceObject* pgovobj = GetGovernanceObject();
         if (pgovobj) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- Expiring outdated object: %s\n", pgovobj->GetHash().ToString());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- Expiring outdated object: %s\n", pgovobj->GetHash().ToString());
             pgovobj->fExpired = true;
             pgovobj->nDeletionTime = GetAdjustedTime();
         }
@@ -696,7 +696,7 @@ std::string CGovernanceBlockManager::GetRequiredPaymentsString(int nBlockHeight)
 
     CGovernanceBlock_sptr pGovernanceBlock;
     if (!GetBestGovernanceBlock(pGovernanceBlock, nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlockManager::GetRequiredPaymentsString -- Can't find governance block for height %d\n", nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::GOV, "[Governance] CGovernanceBlockManager::GetRequiredPaymentsString -- Can't find governance block for height %d\n", nBlockHeight);
         return "error";
     }
 
