@@ -2060,7 +2060,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 return true;
 
             bool fAlreadyHave = AlreadyHave(inv);
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom->GetId());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom->GetId());
 
             if (inv.type == MSG_TX) {
                 inv.type |= nFetchFlags;

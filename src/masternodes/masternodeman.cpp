@@ -1776,11 +1776,11 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
         for (auto& mnpair : mapMasternodes) {
             if (mnpair.second.addr != mnv.addr)
             { 
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Skip (Addresses do not match) \n");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Skip (Addresses do not match) \n");
                 continue; 
             } else if (mnpair.first == mnv.masternodeOutpoint1)
             { 
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Skip (Outpoints match) \n");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Skip (Outpoints match) \n");
                 continue; 
             }
             mnpair.second.IncreasePoSeBanScore();
