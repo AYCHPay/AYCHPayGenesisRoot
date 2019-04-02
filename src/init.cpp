@@ -1015,7 +1015,7 @@ bool AppInitParameterInteraction()
     }
     else
     {
-        logLevels |= BCLogLevel::LOG_NOTICE;
+        logLevels |= BCLogLevel::LOG_WARNING;
     }
     
 
