@@ -304,7 +304,7 @@ bool CRPCTable::appendCommand(const std::string& name, const CRPCCommand* pcmd)
 
 bool StartRPC()
 {
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Starting RPC\n");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::RPC, "[RPC] Starting RPC\n");
     fRPCRunning = true;
     g_rpcSignals.Started();
     return true;
@@ -319,7 +319,7 @@ void InterruptRPC()
 
 void StopRPC()
 {
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Stopping RPC\n");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::RPC, "[RPC] Stopping RPC\n");
     deadlineTimers.clear();
     DeleteAuthCookie();
     g_rpcSignals.Stopped();

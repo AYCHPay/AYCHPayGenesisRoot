@@ -931,7 +931,7 @@ UniValue pruneblockchain(const JSONRPCRequest& request)
     else if (height > chainHeight)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Blockchain is shorter than the attempted prune height.");
     else if (height > chainHeight - MIN_BLOCKS_TO_KEEP) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Attempt to prune blocks close to the tip.  Retaining the minimum number of blocks.");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::RPC, "[RPC] Attempt to prune blocks close to the tip.  Retaining the minimum number of blocks.");
         height = chainHeight - MIN_BLOCKS_TO_KEEP;
     }
 

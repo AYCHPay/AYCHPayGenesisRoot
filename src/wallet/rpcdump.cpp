@@ -596,7 +596,7 @@ UniValue importwallet(const JSONRPCRequest& request)
                    continue;
                }
                if(!pwallet->AddCScript(script)) {
-                   LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Error importing script %s\n", vstr[0]);
+                   LogPrintG(BCLogLevel::LOG_ERROR, BCLog::RPC, "[RPC] Error importing script %s\n", vstr[0]);
                    fGood = false;
                    continue;
                }

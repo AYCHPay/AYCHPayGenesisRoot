@@ -474,7 +474,7 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
     if (nBestSeenHeight == 0)  // the BlockPolicyEstimator hasn't seen any blocks yet
         blocksAgo = 0;
     if (blocksAgo < 0) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, blocks ago is negative for mempool tx\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, blocks ago is negative for mempool tx\n");
         return;  //This can't happen because we call this with our best seen height, no entries can have higher
     }
 
@@ -482,7 +482,7 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
         if (oldUnconfTxs[bucketindex] > 0) {
             oldUnconfTxs[bucketindex]--;
         } else {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, mempool tx removed from >25 blocks,bucketIndex=%u already\n",
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, mempool tx removed from >25 blocks,bucketIndex=%u already\n",
                      bucketindex);
         }
     }
@@ -491,7 +491,7 @@ void TxConfirmStats::removeTx(unsigned int entryHeight, unsigned int nBestSeenHe
         if (unconfTxs[blockIndex][bucketindex] > 0) {
             unconfTxs[blockIndex][bucketindex]--;
         } else {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, mempool tx removed from blockIndex=%u,bucketIndex=%u already\n",
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error, mempool tx removed from blockIndex=%u,bucketIndex=%u already\n",
                      blockIndex, bucketindex);
         }
     }
@@ -552,7 +552,7 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo
     unsigned int txHeight = entry.GetHeight();
     uint256 hash = entry.GetTx().GetHash();
     if (mapMemPoolTxs.count(hash)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error mempool tx %s already being tracked\n",
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error mempool tx %s already being tracked\n",
                  hash.ToString().c_str());
         return;
     }
@@ -599,7 +599,7 @@ bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxM
     if (blocksToConfirm <= 0) {
         // This can't happen because we don't process transactions from a block with a height
         // lower than our greatest seen height
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error Transaction had negative blocksToConfirm\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] Blockpolicy error Transaction had negative blocksToConfirm\n");
         return false;
     }
 
@@ -915,7 +915,7 @@ bool CBlockPolicyEstimator::Write(CAutoFile& fileout) const
         longStats->Write(fileout);
     }
     catch (const std::exception&) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] CBlockPolicyEstimator::Write(): unable to write policy estimator data (non-fatal)\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] CBlockPolicyEstimator::Write(): unable to write policy estimator data (non-fatal)\n");
         return false;
     }
     return true;
@@ -975,7 +975,7 @@ bool CBlockPolicyEstimator::Read(CAutoFile& filein)
         }
     }
     catch (const std::exception& e) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::ESTIMATEFEE, "[FeeEstimation] CBlockPolicyEstimator::Read(): unable to read policy estimator data (non-fatal): %s\n",e.what());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::ESTIMATEFEE, "[FeeEstimation] CBlockPolicyEstimator::Read(): unable to read policy estimator data (non-fatal): %s\n",e.what());
         return false;
     }
     return true;

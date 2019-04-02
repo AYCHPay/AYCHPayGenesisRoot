@@ -77,11 +77,11 @@ bool CMasternodeMan::Add(CMasternode &mn)
 
     if (Has(mn.outpoint))
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::Add -- NOT Adding new Masternode (already exists): addr=%s, %i now\n", mn.addr.ToString(), size());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::Add -- NOT Adding new Masternode (already exists): addr=%s, %i now\n", mn.addr.ToString(), size());
         return false;
     } 
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::Add -- Adding new Masternode: addr=%s, %i now\n", mn.addr.ToString(), size() + 1);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::Add -- Adding new Masternode: addr=%s, %i now\n", mn.addr.ToString(), size() + 1);
     mapMasternodes[mn.outpoint] = mn;
     fMasternodesAdded = true;
     return true;
@@ -91,7 +91,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, const COutPoint& outpoint, CConnman&
 {
     if (!pnode)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- pnode is invalid \n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- pnode is invalid \n");
         return;
     } 
         
@@ -104,7 +104,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, const COutPoint& outpoint, CConnman&
         auto it2 = it1->second.find(addrSquashed);
         if (it2 != it1->second.end()) {
             if (GetTime() < it2->second) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Skip (Last Request Too Recent): %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Skip (Last Request Too Recent): %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
                 // we've asked recently, should not repeat too often or we could get banned
                 return;
             }
@@ -112,11 +112,11 @@ void CMasternodeMan::AskForMN(CNode* pnode, const COutPoint& outpoint, CConnman&
             LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Asking same peer %s for missing masternode entry again: %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
         } else {
             // we already asked for this outpoint but not this node
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Asking new peer %s for missing masternode entry: %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Asking new peer %s for missing masternode entry: %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
         }
     } else {
         // we never asked any node for this outpoint
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Asking peer %s for missing masternode entry for the first time: %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Asking peer %s for missing masternode entry for the first time: %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
     }
     mWeAskedForMasternodeListEntry[outpoint][addrSquashed] = GetTime() + DSEG_UPDATE_SECONDS;
 
@@ -134,7 +134,7 @@ bool CMasternodeMan::PoSeBan(const COutPoint &outpoint)
     LOCK(cs);
     CMasternode* pmn = Find(outpoint);
     if (!pmn) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::PoSeBan -- Masternode not found \n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::PoSeBan -- Masternode not found \n");
         return false;
     }
     pmn->PoSeBan();
@@ -159,7 +159,7 @@ void CMasternodeMan::CheckAndRemove(CConnman& connman)
 {
     if (!masternodeSync.IsMasternodeListSynced())
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CheckAndRemove -- Masternode list is not synced \n");
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CMasternodeMan::CheckAndRemove -- Masternode list is not synced \n");
         return;
     } 
 
@@ -690,7 +690,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
     // Calcualte the primary
     uint256 blockHash;
     if (!GetBlockHash(blockHash, nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1))) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::GetNextMasternodesInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1));
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::GetNextMasternodesInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1));
         return false;
     }
     // Look at 1/10 of the oldest nodes (by last payment), calculate their scores and pay the best one
@@ -795,7 +795,7 @@ masternode_info_t CMasternodeMan::FindRandomNotInVec(const std::vector<COutPoint
         return pmn->GetInfo();
     }
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::FindRandomNotInVec -- failed\n");
+    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::FindRandomNotInVec -- failed\n");
     return masternode_info_t();
 }
 
@@ -841,7 +841,7 @@ bool CMasternodeMan::GetMasternodeRank(const COutPoint& outpoint, int& nRankRet,
     // make sure we know about this block
     uint256 nBlockHash = uint256();
     if (!GetBlockHash(nBlockHash, nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::%s -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", __func__, nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::%s -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", __func__, nBlockHeight);
         return false;
     }
 
@@ -878,7 +878,7 @@ bool CMasternodeMan::GetMasternodeRanks(CMasternodeMan::rank_pair_vec_t& vecMast
     // make sure we know about this block
     uint256 nBlockHash = uint256();
     if (!GetBlockHash(nBlockHash, nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetMasternodeRanks %s -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", __func__, nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::GetMasternodeRanks %s -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", __func__, nBlockHeight);
         return false;
     }
 
@@ -986,7 +986,7 @@ void CMasternodeMan::ProcessPendingMnbRequests(CConnman& connman)
         int64_t nTimeAdded = itPendingMNB->second.first;
         if (fDone || (GetTime() - nTimeAdded > 15)) {
             if (!fDone) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::%s -- failed to connect to %s\n", __func__, itPendingMNB->first.ToString());
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::%s -- failed to connect to %s\n", __func__, itPendingMNB->first.ToString());
             }
             mapPendingMNB.erase(itPendingMNB++);
         } else {
@@ -1457,7 +1457,7 @@ void CMasternodeMan::ProcessPendingMnvRequests(CConnman& connman)
         int64_t nTimeAdded = itPendingMNV->second.first;
         if (fDone || (GetTime() - nTimeAdded > 15)) {
             if (!fDone) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::%s -- failed to connect to %s\n", __func__, itPendingMNV->first.ToString());
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::%s -- failed to connect to %s\n", __func__, itPendingMNV->first.ToString());
             }
             mapPendingMNV.erase(itPendingMNV++);
         } else {
@@ -1481,14 +1481,14 @@ void CMasternodeMan::SendVerifyReply(CNode* pnode, CMasternodeVerification& mnv,
 
     if (netfulfilledman.HasFulfilledRequest(pnode->addr, strprintf("%s", NetMsgType::MNVERIFY)+"-reply")) {
         // peer should not ask us that often
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MasternodeMan::SendVerifyReply -- ERROR: peer already asked me recently, peer=%d\n", pnode->GetId());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] MasternodeMan::SendVerifyReply -- ERROR: peer already asked me recently, peer=%d\n", pnode->GetId());
         Misbehaving(pnode->GetId(), 20);
         return;
     }
 
     uint256 blockHash;
     if (!GetBlockHash(blockHash, mnv.nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MasternodeMan::SendVerifyReply -- can't get block hash for unknown block height %d, peer=%d\n", mnv.nBlockHeight, pnode->GetId());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] MasternodeMan::SendVerifyReply -- can't get block hash for unknown block height %d, peer=%d\n", mnv.nBlockHeight, pnode->GetId());
         return;
     }
 
@@ -1497,23 +1497,23 @@ void CMasternodeMan::SendVerifyReply(CNode* pnode, CMasternodeVerification& mnv,
     if (chainActive.Height() > Params().GetConsensus().nMasternodeSignHashThreshold) {
         uint256 hash = mnv.GetSignatureHash1(blockHash);
         if (!CHashSigner::SignHash(hash, activeMasternode.keyMasternode, mnv.vchSig1)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- SignHash() failed\n");
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- SignHash() failed\n");
             return;
         }
         if (!CHashSigner::VerifyHash(hash, activeMasternode.pubKeyMasternode, mnv.vchSig1, strError)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- VerifyHash() failed, error: %s\n", strError);
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- VerifyHash() failed, error: %s\n", strError);
             return;
         }
     } else {
         std::string strMessage = strprintf("%s%d%s", activeMasternode.service.ToString(), mnv.nonce, blockHash.ToString());
 
         if (!CMessageSigner::SignMessage(strMessage, mnv.vchSig1, activeMasternode.keyMasternode)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- SignMessage() failed\n");
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- SignMessage() failed\n");
             return;
         }
 
         if (!CMessageSigner::VerifyMessage(activeMasternode.pubKeyMasternode, mnv.vchSig1, strMessage, strError)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::SendVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
             return;
         }
     }
@@ -1531,14 +1531,14 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
 
     // did we even ask for it? if that's the case we should have matching fulfilled request
     if (!netfulfilledman.HasFulfilledRequest(pnode->addr, strprintf("%s", NetMsgType::MNVERIFY)+"-request")) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: we didn't ask for verification of %s, peer=%d\n", pnode->addr.ToString(), pnode->GetId());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: we didn't ask for verification of %s, peer=%d\n", pnode->addr.ToString(), pnode->GetId());
         Misbehaving(pnode->GetId(), 20);
         return;
     }
 
     // Received nonce for a known address must match the one we sent
     if (mWeAskedForVerification[pnode->addr].nonce != mnv.nonce) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: wrong nounce: requested=%d, received=%d, peer=%d\n",
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: wrong nounce: requested=%d, received=%d, peer=%d\n",
                     mWeAskedForVerification[pnode->addr].nonce, mnv.nonce, pnode->GetId());
         Misbehaving(pnode->GetId(), 20);
         return;
@@ -1546,7 +1546,7 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
 
     // Received nBlockHeight for a known address must match the one we sent
     if (mWeAskedForVerification[pnode->addr].nBlockHeight != mnv.nBlockHeight) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: wrong nBlockHeight: requested=%d, received=%d, peer=%d\n",
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: wrong nBlockHeight: requested=%d, received=%d, peer=%d\n",
                     mWeAskedForVerification[pnode->addr].nBlockHeight, mnv.nBlockHeight, pnode->GetId());
         Misbehaving(pnode->GetId(), 20);
         return;
@@ -1555,13 +1555,13 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
     uint256 blockHash;
     if (!GetBlockHash(blockHash, mnv.nBlockHeight)) {
         // this shouldn't happen...
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MasternodeMan::ProcessVerifyReply -- can't get block hash for unknown block height %d, peer=%d\n", mnv.nBlockHeight, pnode->GetId());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] MasternodeMan::ProcessVerifyReply -- can't get block hash for unknown block height %d, peer=%d\n", mnv.nBlockHeight, pnode->GetId());
         return;
     }
 
     // we already verified this address, why node is spamming?
     if (netfulfilledman.HasFulfilledRequest(pnode->addr, strprintf("%s", NetMsgType::MNVERIFY)+"-done")) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: already verified %s recently\n", pnode->addr.ToString());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: already verified %s recently\n", pnode->addr.ToString());
         Misbehaving(pnode->GetId(), 20);
         return;
     }
@@ -1610,12 +1610,12 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
                         uint256 hash2 = mnv.GetSignatureHash2(blockHash);
 
                         if (!CHashSigner::SignHash(hash2, activeMasternode.keyMasternode, mnv.vchSig2)) {
-                            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- SignHash() failed\n");
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- SignHash() failed\n");
                             return;
                         }
 
                         if (!CHashSigner::VerifyHash(hash2, activeMasternode.pubKeyMasternode, mnv.vchSig2, strError)) {
-                            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- VerifyHash() failed, error: %s\n", strError);
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- VerifyHash() failed, error: %s\n", strError);
                             return;
                         }
                     } else {
@@ -1623,12 +1623,12 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
                                                 mnv.masternodeOutpoint1.ToStringShort(), mnv.masternodeOutpoint2.ToStringShort());
 
                         if (!CMessageSigner::SignMessage(strMessage2, mnv.vchSig2, activeMasternode.keyMasternode)) {
-                            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- SignMessage() failed\n");
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- SignMessage() failed\n");
                             return;
                         }
 
                         if (!CMessageSigner::VerifyMessage(activeMasternode.pubKeyMasternode, mnv.vchSig2, strMessage2, strError)) {
-                            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- VerifyMessage() failed, error: %s\n", strError);
                             return;
                         }
                     }
@@ -1646,7 +1646,7 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
         if (!prealMasternode) {
             // this should never be the case normally,
             // only if someone is trying to game the system in some way or smth like that
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: no real masternode found for addr %s\n", pnode->addr.ToString());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyReply -- ERROR: no real masternode found for addr %s\n", pnode->addr.ToString());
             Misbehaving(pnode->GetId(), 20);
             return;
         }
@@ -1685,7 +1685,7 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
     }
 
     if (mnv.masternodeOutpoint1 == mnv.masternodeOutpoint2) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- ERROR: same outpoints %s, peer=%d\n",
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- ERROR: same outpoints %s, peer=%d\n",
                     mnv.masternodeOutpoint1.ToStringShort(), pnode->GetId());
         // that was NOT a good idea to cheat and verify itself,
         // ban the node we received such message from
@@ -1696,14 +1696,14 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
     uint256 blockHash;
     if (!GetBlockHash(blockHash, mnv.nBlockHeight)) {
         // this shouldn't happen...
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Can't get block hash for unknown block height %d, peer=%d\n", mnv.nBlockHeight, pnode->GetId());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Can't get block hash for unknown block height %d, peer=%d\n", mnv.nBlockHeight, pnode->GetId());
         return;
     }
 
     int nRank;
 
     if (!GetMasternodeRank(mnv.masternodeOutpoint2, nRank, mnv.nBlockHeight, MIN_POSE_PROTO_VERSION)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Can't calculate rank for masternode %s\n",
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Can't calculate rank for masternode %s\n",
                     mnv.masternodeOutpoint2.ToStringShort());
         return;
     }
@@ -1719,13 +1719,13 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
 
         CMasternode* pmn1 = Find(mnv.masternodeOutpoint1);
         if (!pmn1) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode1 %s\n", mnv.masternodeOutpoint1.ToStringShort());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode1 %s\n", mnv.masternodeOutpoint1.ToStringShort());
             return;
         }
 
         CMasternode* pmn2 = Find(mnv.masternodeOutpoint2);
         if (!pmn2) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode2 %s\n", mnv.masternodeOutpoint2.ToStringShort());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- can't find masternode2 %s\n", mnv.masternodeOutpoint2.ToStringShort());
             return;
         }
 
@@ -1739,12 +1739,12 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
             uint256 hash2 = mnv.GetSignatureHash2(blockHash);
 
             if (!CHashSigner::VerifyHash(hash1, pmn1->pubKeyMasternode, mnv.vchSig1, strError)) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
                 return;
             }
 
             if (!CHashSigner::VerifyHash(hash2, pmn2->pubKeyMasternode, mnv.vchSig2, strError)) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyHash() failed, error: %s\n", strError);
                 return;
             }
         } else {
@@ -1753,12 +1753,12 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
                                     mnv.masternodeOutpoint1.ToStringShort(), mnv.masternodeOutpoint2.ToStringShort());
 
             if (!CMessageSigner::VerifyMessage(pmn1->pubKeyMasternode, mnv.vchSig1, strMessage1, strError)) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyMessage() for masternode1 failed, error: %s\n", strError);
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyMessage() for masternode1 failed, error: %s\n", strError);
                 return;
             }
 
             if (!CMessageSigner::VerifyMessage(pmn2->pubKeyMasternode, mnv.vchSig2, strMessage2, strError)) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyMessage() for masternode2 failed, error: %s\n", strError);
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- VerifyMessage() for masternode2 failed, error: %s\n", strError);
                 return;
             }
         }
@@ -1853,7 +1853,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
         LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s new\n", mnb.outpoint.ToStringShort());
 
         if (!mnb.SimpleCheck(nDos)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode=%s\n", mnb.outpoint.ToStringShort());
+            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- SimpleCheck() failed, masternode=%s\n", mnb.outpoint.ToStringShort());
             return false;
         }
 
@@ -1862,7 +1862,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
         if (pmn) {
             CMasternodeBroadcast mnbOld = mapSeenMasternodeBroadcast[CMasternodeBroadcast(*pmn).GetHash()].second;
             if (!mnb.Update(pmn, nDos, connman)) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode=%s\n", mnb.outpoint.ToStringShort());
+                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Update() failed, masternode=%s\n", mnb.outpoint.ToStringShort());
                 return false;
             }
             if (hash != mnbOld.GetHash()) {
@@ -1892,7 +1892,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
         }
         mnb.Relay(connman);
     } else {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Rejected Masternode entry: %s  addr=%s\n", mnb.outpoint.ToStringShort(), mnb.addr.ToString());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- Rejected Masternode entry: %s  addr=%s\n", mnb.outpoint.ToStringShort(), mnb.addr.ToString());
         return false;
     }
 

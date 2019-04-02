@@ -793,12 +793,12 @@ void static GenesisMiner(CWallet *pwallet)
             {
                 if (gArgs.GetArg("-mineraddress", "").empty()) 
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+                    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
                 } 
                 else 
                 {
                     // Should never reach here, because -mineraddress validity is checked in init.cpp
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Invalid -mineraddress\n");
+                    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::POW, "[ProofOfWork] Error in Genesis Miner: Invalid -mineraddress\n");
                 }
                 return;
             }
@@ -984,7 +984,7 @@ void static GenesisMiner(CWallet *pwallet)
     {
         //miningTimer.stop();
         //c.disconnect();
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::POW, "[ProofOfWork] Genesis Miner runtime error: %s\n", e.what());
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::POW, "[ProofOfWork] Genesis Miner runtime error: %s\n", e.what());
         return;
     }
     //miningTimer.stop();
