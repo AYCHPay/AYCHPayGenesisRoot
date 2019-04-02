@@ -955,7 +955,7 @@ void CMasternodeMan::ProcessPendingMnbRequests(CConnman& connman)
     if (!(p.first == CService() || p.second.empty())) {
         if (connman.IsMasternodeOrDisconnectRequested(p.first))
         {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMasternodeConnections -- Skipped (IsMasternodeOrDisconnectRequested) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMasternodeConnections -- Skipped (IsMasternodeOrDisconnectRequested) \n");
             return;
         }
         mapPendingMNB.insert(std::make_pair(p.first, std::make_pair(GetTime(), p.second)));
@@ -972,7 +972,7 @@ void CMasternodeMan::ProcessPendingMnbRequests(CConnman& connman)
             while(it != setHashes.end()) {
                 if (*it != uint256()) {
                     vToFetch.push_back(CInv(MSG_MASTERNODE_ANNOUNCE, *it));
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] -- asking for mnb %s from addr=%s\n", it->ToString(), pnode->addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] -- asking for mnb %s from addr=%s\n", it->ToString(), pnode->addr.ToString());
                 }
                 ++it;
             }
@@ -993,14 +993,14 @@ void CMasternodeMan::ProcessPendingMnbRequests(CConnman& connman)
             ++itPendingMNB;
         }
     }
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] %s -- mapPendingMNB size: %d\n", __func__, mapPendingMNB.size());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] %s -- mapPendingMNB size: %d\n", __func__, mapPendingMNB.size());
 }
 
 void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, CConnman& connman)
 {  
     if (fLiteMode)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMessage -- Skipped (Lite Mode Detected) \n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMessage -- Skipped (Lite Mode Detected) \n");
         return;
     } // disable all Genesis masternode specific functionality
 
@@ -1672,7 +1672,7 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
 
     if (mapSeenMasternodeVerification.find(mnv.GetHash()) != mapSeenMasternodeVerification.end()) {
         // we already have one
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Skip (We already have a verification) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessVerifyBroadcast -- Skip (We already have a verification) \n");
         return;
     }
     mapSeenMasternodeVerification[mnv.GetHash()] = mnv;
@@ -1886,7 +1886,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
             } else {
                 // ... otherwise we need to reactivate our node, do not add it to the list and do not relay
                 // but also do not ban the node we get this message from
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- wrong PROTOCOL_VERSION, re-activate your MN: message nProtocolVersion=%d  PROTOCOL_VERSION=%d\n", mnb.nProtocolVersion, PROTOCOL_VERSION);
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::CheckMnbAndUpdateMasternodeList -- wrong PROTOCOL_VERSION, re-activate your MN: message nProtocolVersion=%d  PROTOCOL_VERSION=%d\n", mnb.nProtocolVersion, PROTOCOL_VERSION);
                 return false;
             }
         }
@@ -1917,7 +1917,7 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex, bool lock)
 
     if (mapMasternodes.empty())
     { 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::UpdateLastPaid -- Skipped (Masternodes map is empty) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::UpdateLastPaid -- Skipped (Masternodes map is empty) \n");
         return;
     }
 
@@ -1954,7 +1954,7 @@ bool CMasternodeMan::AddGovernanceVote(const COutPoint& outpoint, uint256 nGover
     LOCK(cs);
     CMasternode* pmn = Find(outpoint);
     if (!pmn) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::AddGovernanceVote -- Skip (Masternode not found) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::AddGovernanceVote -- Skip (Masternode not found) \n");
         return false;
     }
     pmn->AddGovernanceVote(nGovernanceObjectHash);
@@ -1992,7 +1992,7 @@ void CMasternodeMan::SetMasternodeLastPing(const COutPoint& outpoint, const CMas
     LOCK(cs);
     CMasternode* pmn = Find(outpoint);
     if (!pmn) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::SetMasternodeLastPing -- Skip (Masternode not found) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::SetMasternodeLastPing -- Skip (Masternode not found) \n");
         return;
     }
     pmn->lastPing = mnp;
@@ -2030,19 +2030,19 @@ void CMasternodeMan::WarnMasternodeDaemonUpdates()
 
     if (fWarned)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Warned) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Warned) \n");
         return;
     }
 
     if (!size())
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Invalid Size) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Invalid Size) \n");
         return;
     }
 
     if (!masternodeSync.IsMasternodeListSynced())
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Masternode list not synced) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Masternode list not synced) \n");
         return;
     }
 
@@ -2057,7 +2057,7 @@ void CMasternodeMan::WarnMasternodeDaemonUpdates()
     // Warn only when at least half of known masternodes already updated
     if (nUpdatedMasternodes < size() / 2)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Not enough updated masternodes to do a meaningful update) \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::WarnMasternodeDaemonUpdates -- Skip (Not enough updated masternodes to do a meaningful update) \n");
         return;
     }
 

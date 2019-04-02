@@ -44,7 +44,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
     strErrorRet = "";
 
     bool isBlockRewardValueMet = (block.vtx[0]->GetValueOut() <= blockReward);
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] block.vtx[0]->GetValueOut() %lld <= blockReward %lld\n", block.vtx[0]->GetValueOut(), blockReward);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] block.vtx[0]->GetValueOut() %lld <= blockReward %lld\n", block.vtx[0]->GetValueOut(), blockReward);
 
     // governanceblocks started
 
@@ -138,14 +138,14 @@ void FillBlockPayments(CMutableTransaction& txNew, int nBlockHeight, CAmount blo
     // only create governanceblocks if governanceblock is actually triggered
     // (height should be validated inside)
     if (CGovernanceBlockManager::IsGovernanceBlockTriggered(nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] FillBlockPayments -- triggered governanceblock creation at height %d\n", nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] FillBlockPayments -- triggered governanceblock creation at height %d\n", nBlockHeight);
         CGovernanceBlockManager::CreateGovernanceBlock(txNew, nBlockHeight, vtxoutGovernanceRet);
         return;
     }
     else
     {
         // FILL BLOCK PAYEE WITH MASTERNODE PAYMENT OTHERWISE
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] FillBlockPayments -- triggered masternode block creation at height %d\n", nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] FillBlockPayments -- triggered masternode block creation at height %d\n", nBlockHeight);
         mnpayments.FillBlockPayees(txNew, nBlockHeight, blockReward, vtxoutMasternodeRet);
     }
 }
@@ -154,13 +154,13 @@ std::string GetRequiredPaymentsString(int nBlockHeight)
 {
     // IF WE HAVE A ACTIVATED TRIGGER FOR THIS HEIGHT - IT IS A GOVERNANCEBLOCK, GET THE REQUIRED PAYEES
     if (CGovernanceBlockManager::IsGovernanceBlockTriggered(nBlockHeight)) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] GetRequiredPaymentsString - getting governance payees at height %d\n", nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] GetRequiredPaymentsString - getting governance payees at height %d\n", nBlockHeight);
         return CGovernanceBlockManager::GetRequiredPaymentsString(nBlockHeight);
     }
     else
     {
         // OTHERWISE, PAY MASTERNODE
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] GetRequiredPaymentsString - getting masternode payees at height %d\n", nBlockHeight);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] GetRequiredPaymentsString - getting masternode payees at height %d\n", nBlockHeight);
         return mnpayments.GetRequiredPaymentsString(nBlockHeight);
     }
 }
@@ -242,7 +242,7 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
     CTxOut masternodePaymentTx = CTxOut(primaryMasternodePayment, payee);
     vtxoutMasternodeRet.push_back(masternodePaymentTx);
     txNew.vout.push_back(masternodePaymentTx);
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Masternode payment %lld to %s\n", primaryMasternodePayment / COIN, EncodeDestination(CScriptID(payee)));
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Masternode payment %lld to %s\n", primaryMasternodePayment / COIN, EncodeDestination(CScriptID(payee)));
 
     // Work on secondaries...
     if ((int)secondaryMnInfoRet.size() == 0)
@@ -285,11 +285,11 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
                 CTxOut masternodeSecondaryPaymentTx = CTxOut(secondaryItemPayment, secondaryPayees[i]);
                 vtxoutMasternodeRet.push_back(masternodeSecondaryPaymentTx);
                 txNew.vout.push_back(masternodeSecondaryPaymentTx);
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Secondary Masternode payment %lld to %s\n", amountToPaySecondary / COIN, EncodeDestination(CScriptID(secondaryPayees[i])));
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Secondary Masternode payment %lld to %s\n", amountToPaySecondary / COIN, EncodeDestination(CScriptID(secondaryPayees[i])));
             }
         }
     }
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Found %i secondary masternodes to pay\n", (int)secondaryPayees.size());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Found %i secondary masternodes to pay\n", (int)secondaryPayees.size());
 }
 
 int CMasternodePayments::GetMinMasternodePaymentsProto() const {
