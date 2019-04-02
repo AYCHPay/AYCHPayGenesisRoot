@@ -114,7 +114,7 @@ void AddTimeData(const CNetAddr& ip, int64_t nOffsetSample)
             }
             LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] |  ");
 
-            LogPrintG(BCLogLevel::LoG_INFO, BCLog::NET, "[Networking] nTimeOffset = %+d  (%+d minutes)\n", nTimeOffset, nTimeOffset/60);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] nTimeOffset = %+d  (%+d minutes)\n", nTimeOffset, nTimeOffset/60);
         }
     }
 }
