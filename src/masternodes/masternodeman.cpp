@@ -383,7 +383,7 @@ int CMasternodeMan::CountEnabled(int nProtocolVersion)
     for (const auto& mnpair : mapMasternodes) {
         if (mnpair.second.nProtocolVersion < nProtocolVersion || !mnpair.second.IsEnabled())
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CountEnabled -- Skip (Protocol version too low or masternode not enabled)\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::CountEnabled -- Skip (Protocol version too low or masternode not enabled)\n");
             continue; 
         }
         nCount++;
