@@ -170,6 +170,11 @@ public:
     bool GetMasternodeInfo(const COutPoint& outpoint, masternode_info_t& mnInfoRet);
     bool GetMasternodeInfo(const CPubKey& pubKeyMasternode, masternode_info_t& mnInfoRet);
     bool GetMasternodeInfo(const CScript& payee, masternode_info_t& mnInfoRet);
+    bool GetMasternodeInfoFromCollateral(const CPubKey& pubKeyCollateralAddress, masternode_info_t& mnInfoRet);
+    bool GetMasternodeInfoFromCollateral(const CScript& payee, masternode_info_t& mnInfoRet);
+
+    int GetNodeActivationHeight(const CPubKey& pubKeyMasternode);
+    int GetNodeActivationHeight(const CScript& payee);
 
     /// Find an entry in the masternode list that is next to be paid as a primary
     bool GetNextMasternodesInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCountRet, masternode_info_t& mnInfoRet, std::vector<masternode_info_t>& vSecondaryMnInfoRet);

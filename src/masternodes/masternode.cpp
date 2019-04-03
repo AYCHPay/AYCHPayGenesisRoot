@@ -35,7 +35,6 @@ CMasternode::CMasternode(const CMasternode& other) :
     lastPing(other.lastPing),
     vchSig(other.vchSig),
     nCollateralMinConfBlockHash(other.nCollateralMinConfBlockHash),
-    nCollateralMinConfBlockHeight(other.nCollateralMinConfBlockHeight),
     nBlockLastPaidPrimary(other.nBlockLastPaidPrimary),
     nBlockLastPaidSecondary(other.nBlockLastPaidSecondary),
     nPoSeBanScore(other.nPoSeBanScore),
@@ -146,7 +145,7 @@ void CMasternode::Check(bool fForce)
     //once spent, stop doing the checks
     if (IsOutpointSpent()) return;
 
-    int nHeight = 0;
+    // int nHeight = 0;
     if (!fUnitTest) {
         Coin coin;
         if (!GetUTXOCoin(outpoint, coin)) {
@@ -154,8 +153,12 @@ void CMasternode::Check(bool fForce)
             LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::Check -- Failed to find Masternode UTXO, masternode=%s\n", outpoint.ToStringShort());
             return;
         }
+        else
+        {
+            activationBlockHeight = coin.nHeight;
+        }       
 
-        nHeight = chainActive.Height();
+        // nHeight = chainActive.Height();
     }
 
     if (IsPoSeBanned()) {
@@ -655,7 +658,7 @@ bool CMasternodeBroadcast::CheckOutpoint(int& nDos)
 
     // remember the block hash when collateral for this masternode had minimum required confirmations
     nCollateralMinConfBlockHash = pRequiredConfIndex->GetBlockHash();
-    nCollateralMinConfBlockHeight = pRequiredConfIndex->nHeight;
+    activationBlockHeight = pRequiredConfIndex->nHeight;
 
     return true;
 }

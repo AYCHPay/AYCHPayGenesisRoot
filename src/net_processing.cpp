@@ -901,7 +901,7 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std:
         if (state.fPreferHeaderAndIDs && (!fWitnessEnabled || state.fWantsCmpctWitness) &&
                 !PeerHasHeader(&state, pindex) && PeerHasHeader(&state, pindex->pprev)) {
 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s sending header-and-ids %s to peer=%d\n", "PeerLogicValidation::NewPoWValidBlock",
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s sending header-and-ids %s to peer=%d\n", "PeerLogicValidation::NewPoWValidBlock",
                     hashBlock.ToString(), pnode->GetId());
             connman->PushMessage(pnode, msgMaker.Make(NetMsgType::CMPCTBLOCK, *pcmpctblock));
             state.pindexBestHeaderSent = pindex;
@@ -1165,7 +1165,7 @@ void static ProcessGetBlockData(CNode* pfrom, const Consensus::Params& consensus
     // never disconnect whitelisted nodes
     if (send && connman->OutboundTargetReached(true) && ( ((pindexBestHeader != nullptr) && (pindexBestHeader->GetBlockTime() - mi->second->GetBlockTime() > HISTORICAL_BLOCK_AGE)) || inv.type == MSG_FILTERED_BLOCK) && !pfrom->fWhitelisted)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] historical block serving limit reached, disconnect peer=%d\n", pfrom->GetId());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] historical block serving limit reached, disconnect peer=%d\n", pfrom->GetId());
 
         //disconnect node
         pfrom->fDisconnect = true;
@@ -1607,7 +1607,7 @@ bool static ProcessHeadersMessage(CNode *pfrom, CConnman *connman, const std::ve
             // the main chain -- this shouldn't really happen.  Bail out on the
             // direct fetch and rely on parallel download instead.
             if (!chainActive.Contains(pindexWalk)) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Large reorg, won't direct fetch to %s (%d)\n",
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Large reorg, won't direct fetch to %s (%d)\n",
                         pindexLast->GetBlockHash().ToString(),
                         pindexLast->nHeight);
             } else {
@@ -1797,7 +1797,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         // Disconnect if we connected to ourself
         if (pfrom->fInbound && !connman->CheckIncomingNonce(nNonce))
         {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connected to self at %s, disconnecting\n", pfrom->addr.ToString());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Connected to self at %s, disconnecting\n", pfrom->addr.ToString());
             pfrom->fDisconnect = true;
             return true;
         }
@@ -1852,11 +1852,11 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 FastRandomContext insecure_rand;
                 if (addr.IsRoutable())
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] ProcessMessages: advertising address %s\n", addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] ProcessMessages: advertising address %s\n", addr.ToString());
                     pfrom->PushAddress(addr, insecure_rand);
                 } else if (IsPeerAddrLocalGood(pfrom)) {
                     addr.SetIP(addrMe);
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] rocessMessages: advertising address %s\n", addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] rocessMessages: advertising address %s\n", addr.ToString());
                     pfrom->PushAddress(addr, insecure_rand);
                 }
             }
@@ -1874,7 +1874,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         if (fLogIPs)
             remoteAddr = ", peeraddr=" + pfrom->addr.ToString();
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Receive version message: %s: version %d, blocks=%d, us=%s, peer=%d%s\n",
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Receive version message: %s: version %d, blocks=%d, us=%s, peer=%d%s\n",
                   cleanSubVer, pfrom->nVersion,
                   pfrom->nStartingHeight, addrMe.ToString(), pfrom->GetId(),
                   remoteAddr);
@@ -1917,7 +1917,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             // Mark this node as currently connected, so we update its timestamp later.
             LOCK(cs_main);
             State(pfrom->GetId())->fCurrentlyConnected = true;
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] New outbound peer connected: version: %d, blocks=%d, peer=%d%s\n",
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] New outbound peer connected: version: %d, blocks=%d, peer=%d%s\n",
                       pfrom->nVersion.load(), pfrom->nStartingHeight, pfrom->GetId(),
                       (fLogIPs ? strprintf(", peeraddr=%s", pfrom->addr.ToString()) : ""));
         }
@@ -2075,14 +2075,14 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                     // we now only provide a getheaders response here. When we receive the headers, we will
                     // then ask for the blocks we need.
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
                 }
             }
             else
             {
                 pfrom->AddInventoryKnown(inv);
                 if (fBlocksOnly) {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Transaction (%s) inv sent in violation of protocol peer=%d\n", inv.hash.ToString(), pfrom->GetId());
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Transaction (%s) inv sent in violation of protocol peer=%d\n", inv.hash.ToString(), pfrom->GetId());
                 } else if (!fAlreadyHave && !fImporting && !fReindex && !IsInitialBlockDownload()) {
                     pfrom->AskFor(inv);
                 }
@@ -2145,12 +2145,12 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         if (pindex)
             pindex = chainActive.Next(pindex);
         int nLimit = 500;
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] getblocks %d to %s limit %d from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString(), nLimit, pfrom->GetId());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] getblocks %d to %s limit %d from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString(), nLimit, pfrom->GetId());
         for (; pindex; pindex = chainActive.Next(pindex))
         {
             if (pindex->GetBlockHash() == hashStop)
             {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
                 break;
             }
             // If pruning, don't inv blocks unless we have on disk and are likely to still have
@@ -2166,7 +2166,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             {
                 // When this block is requested, we'll send an inv that'll
                 // trigger the peer to getblocks the next batch of inventory.
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
                 pfrom->hashContinue = pindex->GetBlockHash();
                 break;
             }
@@ -3174,17 +3174,17 @@ bool PeerLogicValidation::ProcessMessages(CNode* pfrom, std::atomic<bool>& inter
         if (strstr(e.what(), "end of data"))
         {
             // Allow exceptions from under-length message on vRecv
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s(%s, %u bytes): Exception '%s' caught, normally caused by a message being shorter than its stated length\n", __func__, SanitizeString(strCommand), nMessageSize, e.what());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] %s(%s, %u bytes): Exception '%s' caught, normally caused by a message being shorter than its stated length\n", __func__, SanitizeString(strCommand), nMessageSize, e.what());
         }
         else if (strstr(e.what(), "size too large"))
         {
             // Allow exceptions from over-long size
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s(%s, %u bytes): Exception '%s' caught\n", __func__, SanitizeString(strCommand), nMessageSize, e.what());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] %s(%s, %u bytes): Exception '%s' caught\n", __func__, SanitizeString(strCommand), nMessageSize, e.what());
         }
         else if (strstr(e.what(), "non-canonical ReadCompactSize()"))
         {
             // Allow exceptions from non-canonical encoding
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s(%s, %u bytes): Exception '%s' caught\n", __func__, SanitizeString(strCommand), nMessageSize, e.what());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] %s(%s, %u bytes): Exception '%s' caught\n", __func__, SanitizeString(strCommand), nMessageSize, e.what());
         }
         else
         {
@@ -3245,7 +3245,7 @@ void PeerLogicValidation::ConsiderEviction(CNode *pto, int64_t time_in_seconds)
                 pto->fDisconnect = true;
             } else {
                 assert(state.m_chain_sync.m_work_header);
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Sending getheaders to outbound peer=%d to verify chain work (current best known block:%s, benchmark blockhash: %s)\n", pto->GetId(), state.pindexBestKnownBlock != nullptr ? state.pindexBestKnownBlock->GetBlockHash().ToString() : "<none>", state.m_chain_sync.m_work_header->GetBlockHash().ToString());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Sending getheaders to outbound peer=%d to verify chain work (current best known block:%s, benchmark blockhash: %s)\n", pto->GetId(), state.pindexBestKnownBlock != nullptr ? state.pindexBestKnownBlock->GetBlockHash().ToString() : "<none>", state.m_chain_sync.m_work_header->GetBlockHash().ToString());
                 connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(state.m_chain_sync.m_work_header->pprev), uint256()));
                 state.m_chain_sync.m_sent_getheaders = true;
                 constexpr int64_t HEADERS_RESPONSE_TIME = 120; // 2 minutes
@@ -3295,11 +3295,11 @@ void PeerLogicValidation::EvictExtraOutboundPeers(int64_t time_in_seconds)
                 // block from.
                 CNodeState &state = *State(pnode->GetId());
                 if (time_in_seconds - pnode->nTimeConnected > MINIMUM_CONNECT_TIME && state.nBlocksInFlight == 0) {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Disconnecting extra outbound peer=%d (last block announcement received at time %d)\n", pnode->GetId(), oldest_block_announcement);
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Disconnecting extra outbound peer=%d (last block announcement received at time %d)\n", pnode->GetId(), oldest_block_announcement);
                     pnode->fDisconnect = true;
                     return true;
                 } else {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Keeping outbound peer=%d chosen for eviction (connect time: %d, blocks_in_flight: %d)\n", pnode->GetId(), pnode->nTimeConnected, state.nBlocksInFlight);
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Keeping outbound peer=%d chosen for eviction (connect time: %d, blocks_in_flight: %d)\n", pnode->GetId(), pnode->nTimeConnected, state.nBlocksInFlight);
                     return false;
                 }
             });
@@ -3328,7 +3328,7 @@ void PeerLogicValidation::CheckForStaleTipAndEvictPeers(const Consensus::Params 
         // Check whether our tip is stale, and if so, allow using an extra
         // outbound peer
         if (TipMayBeStale(consensusParams)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Potential stale tip detected, will try using extra outbound peer (last tip update: %d seconds ago)\n", time_in_seconds - g_last_tip_update);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Potential stale tip detected, will try using extra outbound peer (last tip update: %d seconds ago)\n", time_in_seconds - g_last_tip_update);
             connman->SetTryNewOutboundPeer(true);
         } else if (connman->GetTryNewOutboundPeer()) {
             connman->SetTryNewOutboundPeer(false);
@@ -3458,7 +3458,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
                    got back an empty response.  */
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
                 connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));
             }
         }
@@ -3542,7 +3542,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
                 if (vHeaders.size() == 1 && state.fPreferHeaderAndIDs) {
                     // We only send up to 1 block as header-and-ids, as otherwise
                     // probably means we're doing an initial-ish-sync or they're slow
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s sending header-and-ids %s to peer=%d\n", __func__,
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s sending header-and-ids %s to peer=%d\n", __func__,
                             vHeaders.front().GetHash().ToString(), pto->GetId());
 
                     int nSendFlags = state.fWantsCmpctWitness ? 0 : SERIALIZE_TRANSACTION_NO_WITNESS;
@@ -3570,12 +3570,12 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
                     state.pindexBestHeaderSent = pBestIndex;
                 } else if (state.fPreferHeaders) {
                     if (vHeaders.size() > 1) {
-                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: %u headers, range (%s, %s), to peer=%d\n", __func__,
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s: %u headers, range (%s, %s), to peer=%d\n", __func__,
                                 vHeaders.size(),
                                 vHeaders.front().GetHash().ToString(),
                                 vHeaders.back().GetHash().ToString(), pto->GetId());
                     } else {
-                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: sending header %s to peer=%d\n", __func__,
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s: sending header %s to peer=%d\n", __func__,
                                 vHeaders.front().GetHash().ToString(), pto->GetId());
                     }
                     connman->PushMessage(pto, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
@@ -3597,14 +3597,14 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
                     // This should be very rare and could be optimized out.
                     // Just log for now.
                     if (chainActive[pindex->nHeight] != pindex) {
-                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Announcing block %s not on main chain (tip=%s)\n",
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Announcing block %s not on main chain (tip=%s)\n",
                             hashToAnnounce.ToString(), chainActive.Tip()->GetBlockHash().ToString());
                     }
 
                     // If the peer's chain has this block, don't inv it back.
                     if (!PeerHasHeader(&state, pindex)) {
                         pto->PushInventory(CInv(MSG_BLOCK, hashToAnnounce));
-                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: sending inv peer=%d hash=%s\n", __func__,
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s: sending inv peer=%d hash=%s\n", __func__,
                             pto->GetId(), hashToAnnounce.ToString());
                     }
                 }

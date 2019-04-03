@@ -199,7 +199,6 @@ public:
     std::vector<unsigned char> vchSig{};
 
     uint256 nCollateralMinConfBlockHash{};
-    int nCollateralMinConfBlockHeight{};
     int nBlockLastPaidPrimary{};
     int nBlockLastPaidSecondary{};
     int nPoSeBanScore{};
@@ -249,7 +248,7 @@ public:
         READWRITE(nTimeLastPaidSecondary);
         READWRITE(nActiveState);
         READWRITE(nCollateralMinConfBlockHash);
-        READWRITE(nCollateralMinConfBlockHeight);
+        READWRITE(activationBlockHeight);
         READWRITE(nBlockLastPaidPrimary);
         READWRITE(nBlockLastPaidSecondary);
         READWRITE(nProtocolVersion);
@@ -324,6 +323,7 @@ public:
     std::string GetStateString() const;
     std::string GetStatus() const;
 
+    int GetActivationBlockHeight() const { return activationBlockHeight; }
     int GetLastPaidTimePrimary() const { return nTimeLastPaidPrimary; }
     int GetLastPaidTimeSecondary() const { return nTimeLastPaidSecondary; }
     int GetLastPaidBlockPrimary() const { return nBlockLastPaidPrimary; }
@@ -343,7 +343,6 @@ public:
         lastPing = from.lastPing;
         vchSig = from.vchSig;
         nCollateralMinConfBlockHash = from.nCollateralMinConfBlockHash;
-        nCollateralMinConfBlockHeight = from.nCollateralMinConfBlockHeight;
         nBlockLastPaidPrimary = from.nBlockLastPaidPrimary;
         nBlockLastPaidSecondary = from.nBlockLastPaidSecondary;
         nPoSeBanScore = from.nPoSeBanScore;

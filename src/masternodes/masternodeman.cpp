@@ -82,6 +82,13 @@ bool CMasternodeMan::Add(CMasternode &mn)
     } 
 
     LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::Add -- Adding new Masternode: addr=%s, %i now\n", mn.addr.ToString(), size() + 1);
+    if (mn.activationBlockHeight == 0)
+    {
+        Coin coin;
+        if (GetUTXOCoin(mn.outpoint, coin)) {
+            mn.activationBlockHeight = coin.nHeight;
+        }        
+    }
     mapMasternodes[mn.outpoint] = mn;
     fMasternodesAdded = true;
     return true;
@@ -104,7 +111,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, const COutPoint& outpoint, CConnman&
         auto it2 = it1->second.find(addrSquashed);
         if (it2 != it1->second.end()) {
             if (GetTime() < it2->second) {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Skip (Last Request Too Recent): %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Skip (Last Request Too Recent): %s %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
                 // we've asked recently, should not repeat too often or we could get banned
                 return;
             }
@@ -523,6 +530,71 @@ bool CMasternodeMan::GetMasternodeInfo(const CScript& payee, masternode_info_t& 
     return false;
 }
 
+bool CMasternodeMan::GetMasternodeInfoFromCollateral(const CScript& payee, masternode_info_t& mnInfoRet)
+{
+    // Already locked?
+    // LOCK(cs);
+    for (const auto& mnpair : mapMasternodes) {
+        CScript scriptCollateralAddress = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
+        if (scriptCollateralAddress == payee) {
+            mnInfoRet = mnpair.second.GetInfo();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CMasternodeMan::GetMasternodeInfoFromCollateral(const CPubKey& pubKeyCollateralAddress, masternode_info_t& mnInfoRet)
+{
+    LOCK(cs);
+    for (const auto& mnpair : mapMasternodes) {
+        if (mnpair.second.pubKeyCollateralAddress == pubKeyCollateralAddress) {
+            mnInfoRet = mnpair.second.GetInfo();
+            return true;
+        }
+    }
+    return false;
+}
+
+int CMasternodeMan::GetNodeActivationHeight(const CPubKey& pubKeyCollateralAddress)
+{
+    return GetNodeActivationHeight(GetScriptForDestination(WitnessV0KeyHash(pubKeyCollateralAddress.GetID())));
+}
+
+int CMasternodeMan::GetNodeActivationHeight(const CScript& payee) 
+{
+    // Already locked?
+    //LOCK(cs);
+    masternode_info_t primaryCheckMnInfo;
+    if (GetMasternodeInfoFromCollateral(payee, primaryCheckMnInfo))
+    {
+        if (primaryCheckMnInfo.activationBlockHeight != 0)
+        {
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from primaryCheckMnInfo\n");
+            return primaryCheckMnInfo.activationBlockHeight;
+        }
+        else
+        {
+            // fix it the hard way then... dammit!
+            Coin coin;
+            if (GetUTXOCoin(primaryCheckMnInfo.outpoint, coin)) {
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from GetUTXOCoin\n");
+                return coin.nHeight;
+            }
+            else
+            {
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Still no activation height\n");
+                return 0;
+            }
+        }            
+    }
+    else
+    {
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Failed to get activation height from the masternode from payee\n");
+        return 0;
+    }
+}
+
 bool CMasternodeMan::Has(const COutPoint& outpoint)
 {
     LOCK(cs);
@@ -565,50 +637,50 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         if (!mnpair.second.IsValidForPayment())
         { 
             //LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] \n");
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Not Valid for Payment) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Not Valid for Payment) \n");
             continue; 
         }
 
         //check protocol version
         if (mnpair.second.nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto())
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Protocol Version Too Low) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Protocol Version Too Low) \n");
             continue; 
         }
 
         //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
         if (mnpayments.IsScheduled(mnpair.second, nBlockHeight))
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Scheduled for payment) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Scheduled for payment) \n");
             continue; 
         }
 
         //it's too new, wait for a cycle
         if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*2.6*60) > GetAdjustedTime())
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Too new) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Too new) \n");
             continue; 
         }
 
         //make sure it has at least as many confirmations as there are masternodes
         if (GetUTXOConfirmations(mnpair.first) < nMnCount)
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Confirmation Count < Masternode Count) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Confirmation Count < Masternode Count) \n");
             continue; 
         }
 
         // Make sure that the activation height is set
-        if (mnpair.second.nCollateralMinConfBlockHeight <= 0)
+        if (mnpair.second.activationBlockHeight <= 0)
         {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee activation height <= zero. Eish. \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee activation height <= zero. Eish. \n");
             continue; 
         }
 
         // Make sure thte activation height is realistic
-        if (mnpair.second.nCollateralMinConfBlockHeight > nBlockHeight)
+        if (mnpair.second.activationBlockHeight > nBlockHeight)
         {
             // Some kind of fair notice of what happened if this fails
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee activation height is in the future... great Scott! \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Primary payee activation height is in the future... great Scott! \n");
             continue; 
         }
 
@@ -616,7 +688,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         // {
         //     // This *could* be (but probably isn't) right... if this is is the first payment to this masternode
         //     int masternodesEnabledBlocks = nBlockHeight - Params().GetConsensus().nMasternodePaymentsStartBlock;
-        //     int primaryPayeeBlockAge = nBlockHeight - mnpair.second.nCollateralMinConfBlockHeight;
+        //     int primaryPayeeBlockAge = nBlockHeight - mnpair.second.activationBlockHeight;
         //     bool irrationalPayeeAge = masternodesEnabledBlocks > nMnCount && primaryPayeeBlockAge > nMnCount;
         //     if (irrationalPayeeAge)
         //     {
@@ -634,14 +706,14 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
     for (const auto& mnpair : mapMasternodes) {
         if (!mnpair.second.IsValidForPayment())
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Not Valid for Payment) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Not Valid for Payment) \n");
             continue; 
         }
 
         //check protocol version
         if (mnpair.second.nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto())
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Protocol Version Too Low) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Protocol Version Too Low) \n");
             continue; 
         }
 
@@ -656,14 +728,14 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         //it's too new, wait for a cycle
         if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*2.6*60) > GetAdjustedTime())
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Too new) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Too new) \n");
             continue; 
         }
 
         //make sure it has at least as many confirmations as there are masternodes
         if (GetUTXOConfirmations(mnpair.first) < nMnCount)
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Confirmation Count < Masternode Count) \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Confirmation Count < Masternode Count) \n");
             continue; 
         }
 
@@ -677,7 +749,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
     //when the network is in the process of upgrading, don't penalize nodes that recently restarted
     if (fFilterSigTime && nCountRet < nMnCount/3)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment -- Defer (Network upgrade)\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment -- Defer (Network upgrade)\n");
         return GetNextMasternodesInQueueForPayment(nBlockHeight, false, nCountRet, mnInfoRet, vSecondaryMnInfoRet);
     }
 
@@ -1061,7 +1133,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         mapSeenMasternodePing.insert(std::make_pair(nHash, mnp));
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MNPING -- Masternode ping, masternode=%s new\n", mnp.masternodeOutpoint.ToStringShort());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MNPING -- Masternode ping, masternode=%s new\n", mnp.masternodeOutpoint.ToStringShort());
 
         // see if we have this Masternode
         CMasternode* pmn = Find(mnp.masternodeOutpoint);

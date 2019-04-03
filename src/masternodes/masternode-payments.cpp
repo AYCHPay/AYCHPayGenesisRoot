@@ -235,6 +235,12 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
 
     /* Yay me... I found a primary... I think */
 
+    /* Check the activation height */
+    if (primaryPayeeActivationHeight == 0)
+    {
+        primaryPayeeActivationHeight = mnodeman.GetNodeActivationHeight(payee);
+    }
+
     // GET MASTERNODE PAYMENT VARIABLES SETUP
     CAmount primaryMasternodePayment = GetMasternodePayments(nBlockHeight, primaryPayeeActivationHeight, blockReward);
     CAmount secondaryPaymentTotal = (Params().GetConsensus().nBlockRewardMasternode * COIN) - primaryMasternodePayment;
@@ -359,7 +365,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
 
             // Avoid processing same vote multiple times if it was already verified earlier
             if (!res.second && res.first->second.IsVerified()) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- hash=%s, nBlockHeight=%d/%d seen\n",
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- hash=%s, nBlockHeight=%d/%d seen\n",
                     nHash.ToString(), vote.nBlockHeight, nCachedBlockHeight);
                 return;
             }
@@ -371,7 +377,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
 
         int nFirstBlock = nCachedBlockHeight - GetStorageLimit();
         if (vote.nBlockHeight < nFirstBlock || vote.nBlockHeight > nCachedBlockHeight + 20) {
-            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote out of range: nFirstBlock=%d, nBlockHeight=%d, nHeight=%d\n", nFirstBlock, vote.nBlockHeight, nCachedBlockHeight);
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote out of range: nFirstBlock=%d, nBlockHeight=%d, nHeight=%d\n", nFirstBlock, vote.nBlockHeight, nCachedBlockHeight);
             return;
         }
 
@@ -416,7 +422,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
         CTxDestination address1;
         ExtractDestination(vote.payee, address1);
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote: address=%s, nBlockHeight=%d, nHeight=%d, prevout=%s, hash=%s new\n",
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote: address=%s, nBlockHeight=%d, nHeight=%d, prevout=%s, hash=%s new\n",
             EncodeDestination(address1), vote.nBlockHeight, nCachedBlockHeight, vote.masternodeOutpoint.ToStringShort(), nHash.ToString());
 
         if (AddOrUpdatePaymentVote(vote)){
@@ -527,7 +533,7 @@ bool CMasternodePayments::AddOrUpdatePaymentVote(const CMasternodePaymentVote& v
     auto it = mapMasternodeBlocksPrimary.emplace(vote.nBlockHeight, CMasternodeBlockPayees(vote.nBlockHeight)).first;
     it->second.AddPayee(vote);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::AddOrUpdatePaymentVote -- added, hash=%s\n", nVoteHash.ToString());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodePayments::AddOrUpdatePaymentVote -- added, hash=%s\n", nVoteHash.ToString());
 
     return true;
 }
@@ -569,7 +575,15 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
     for (const auto& payee : vecPayees) {
         if (payee.GetVoteCount() > nVotes) {
             payeeRet = payee.GetPayee();
-            activationBlockHeightRet = payee.GetActivationHeight();
+            if (payee.GetActivationHeight() != 0)
+            {
+                activationBlockHeightRet = payee.GetActivationHeight();
+            }
+            else
+            {
+                int ah = mnodeman.GetNodeActivationHeight(payee.GetPayee());
+                activationBlockHeightRet = ah;
+            }
             nVotes = payee.GetVoteCount();
         }
     }
@@ -717,6 +731,11 @@ bool CMasternodePaymentVote::IsValid(CNode* pnode, int nValidationHeight, std::s
     if (mnInfo.nProtocolVersion < nMinRequiredProtocol) {
         strError = strprintf("Masternode protocol is too old: nProtocolVersion=%d, nMinRequiredProtocol=%d", mnInfo.nProtocolVersion, nMinRequiredProtocol);
         return false;
+    }
+
+    if (mnInfo.activationBlockHeight == 0 )
+    {
+        mnInfo.activationBlockHeight = mnodeman.GetNodeActivationHeight(mnInfo.pubKeyMasternode);
     }
 
     // Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
@@ -885,7 +904,7 @@ void CMasternodePaymentVote::Relay(CConnman& connman) const
 {
     // Do not relay until fully synced
     if (!masternodeSync.IsSynced()) {
-        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CMasternodePayments::Relay -- won't relay until fully synced\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodePayments::Relay -- won't relay until fully synced\n");
         return;
     }
 

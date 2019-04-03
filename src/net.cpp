@@ -199,7 +199,7 @@ void AdvertiseLocal(CNode *pnode)
         }
         if (addrLocal.IsRoutable())
         {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] AdvertiseLocal: advertising address %s\n", addrLocal.ToString());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] AdvertiseLocal: advertising address %s\n", addrLocal.ToString());
             FastRandomContext insecure_rand;
             pnode->PushAddress(addrLocal, insecure_rand);
         }
@@ -218,7 +218,7 @@ bool AddLocal(const CService& addr, int nScore)
     if (IsLimited(addr))
         return false;
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] AddLocal(%s,%i)\n", addr.ToString(), nScore);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] AddLocal(%s,%i)\n", addr.ToString(), nScore);
 
     {
         LOCK(cs_mapLocalHost);
@@ -241,7 +241,7 @@ bool AddLocal(const CNetAddr &addr, int nScore)
 bool RemoveLocal(const CService& addr)
 {
     LOCK(cs_mapLocalHost);
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] RemoveLocal(%s)\n", addr.ToString());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] RemoveLocal(%s)\n", addr.ToString());
     mapLocalHost.erase(addr);
     return true;
 }
@@ -773,7 +773,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool& complete
             return false;
 
         if (msg.in_data && msg.hdr.nMessageSize > MAX_PROTOCOL_MESSAGE_LENGTH) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Oversized message from peer=%i, disconnecting\n", GetId());
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Oversized message from peer=%i, disconnecting\n", GetId());
             return false;
         }
 
@@ -1110,14 +1110,14 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     }
 
     if (!fNetworkActive) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s dropped: Not accepting new connections\n", addr.ToString());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Connection from %s dropped: Not accepting new connections\n", addr.ToString());
         CloseSocket(hSocket);
         return;
     }
 
     if (!IsSelectableSocket(hSocket))
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s dropped: Non-selectable socket\n", addr.ToString());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Connection from %s dropped: Non-selectable socket\n", addr.ToString());
         CloseSocket(hSocket);
         return;
     }
@@ -1128,7 +1128,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
 
     if (IsBanned(addr) && !whitelisted)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s dropped: (banned)\n", addr.ToString());
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Connection from %s dropped: (banned)\n", addr.ToString());
         CloseSocket(hSocket);
         return;
     }
@@ -1159,7 +1159,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
     pnode->fWhitelisted = whitelisted;
     m_msgproc->InitializeNode(pnode);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Connection from %s accepted\n", addr.ToString());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Connection from %s accepted\n", addr.ToString());
 
     {
         LOCK(cs_vNodes);
@@ -1388,7 +1388,7 @@ void CConnman::ThreadSocketHandler()
                 {
                     // socket closed gracefully
                     if (!pnode->fDisconnect) {
-                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] socket closed\n");
+                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] socket closed\n");
                     }
                     pnode->CloseSocketDisconnect();
                 }
@@ -1425,27 +1425,27 @@ void CConnman::ThreadSocketHandler()
             {
                 if (pnode->nLastRecv == 0 || pnode->nLastSend == 0)
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Socket no message in first 60 seconds, %d %d from %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->GetId());
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Socket no message in first 60 seconds, %d %d from %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->GetId());
                     pnode->fDisconnect = true;
                 }
                 else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL)
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Socket sending timeout: %is\n", nTime - pnode->nLastSend);
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Socket sending timeout: %is\n", nTime - pnode->nLastSend);
                     pnode->fDisconnect = true;
                 }
                 else if (nTime - pnode->nLastRecv > (pnode->nVersion > BIP0031_VERSION ? TIMEOUT_INTERVAL : 90*60))
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Socket receive timeout: %is\n", nTime - pnode->nLastRecv);
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Socket receive timeout: %is\n", nTime - pnode->nLastRecv);
                     pnode->fDisconnect = true;
                 }
                 else if (pnode->nPingNonceSent && pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 < GetTimeMicros())
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Ping timeout: %fs\n", 0.000001 * (GetTimeMicros() - pnode->nPingUsecStart));
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Ping timeout: %fs\n", 0.000001 * (GetTimeMicros() - pnode->nPingUsecStart));
                     pnode->fDisconnect = true;
                 }
                 else if (!pnode->fSuccessfullyConnected)
                 {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Version handshake timeout from %d\n", pnode->GetId());
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Version handshake timeout from %d\n", pnode->GetId());
                     pnode->fDisconnect = true;
                 }
             }
@@ -1501,14 +1501,14 @@ void ThreadMapPort()
             char externalIPAddress[40];
             r = UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, externalIPAddress);
             if(r != UPNPCOMMAND_SUCCESS)
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] UPnP: GetExternalIPAddress() returned %d\n", r);
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] UPnP: GetExternalIPAddress() returned %d\n", r);
             else
             {
                 if (externalIPAddress[0])
                 {
                     CNetAddr resolved;
                     if(LookupHost(externalIPAddress, resolved, false)) {
-                        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] UPnP: ExternalIPAddress = %s\n", resolved.ToString().c_str());
+                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] UPnP: ExternalIPAddress = %s\n", resolved.ToString().c_str());
                         AddLocal(resolved, LOCAL_UPNP);
                     }
                 }
@@ -1543,7 +1543,7 @@ void ThreadMapPort()
         catch (const boost::thread_interrupted&)
         {
             r = UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, port.c_str(), "TCP", 0);
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] UPNP_DeletePortMapping() returned: %d\n", r);
+            LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] UPNP_DeletePortMapping() returned: %d\n", r);
             freeUPNPDevlist(devlist); devlist = nullptr;
             FreeUPNPUrls(&urls);
             throw;
@@ -1705,7 +1705,7 @@ bool CConnman::GetTryNewOutboundPeer()
 void CConnman::SetTryNewOutboundPeer(bool flag)
 {
     m_try_another_outbound_peer = flag;
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Setting try another outbound peer=%s\n", flag ? "true" : "false");
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Setting try another outbound peer=%s\n", flag ? "true" : "false");
 }
 
 // Return the number of peers we have over our outbound connection limit
@@ -1875,7 +1875,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)
                 int randsleep = GetRandInt(FEELER_SLEEP_WINDOW * 1000);
                 if (!interruptNet.sleep_for(std::chrono::milliseconds(randsleep)))
                     return;
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Making feeler connection to %s\n", addrConnect.ToString());
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Making feeler connection to %s\n", addrConnect.ToString());
             }
 
             OpenNetworkConnection(addrConnect, (int)setConnected.size() >= std::min(nMaxConnections - 1, 2), &grant, nullptr, false, fFeeler);
@@ -2870,7 +2870,7 @@ void CNode::AskFor(const CInv& inv)
         nRequestTime = it->second;
     else
         nRequestTime = 0;
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] AskFor %s  %d (%s) peer=%d\n", inv.ToString(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000), id);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] AskFor %s  %d (%s) peer=%d\n", inv.ToString(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000), id);
 
     // Make sure not to reuse time indexes to keep things in the same order
     int64_t nNow = GetTimeMicros() - 1000000;
@@ -2897,7 +2897,7 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)
 {
     size_t nMessageSize = msg.data.size();
     size_t nTotalSize = nMessageSize + CMessageHeader::HEADER_SIZE;
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Sending %s (%d bytes) peer=%d\n",  SanitizeString(msg.command.c_str()), nMessageSize, pnode->GetId());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Sending %s (%d bytes) peer=%d\n",  SanitizeString(msg.command.c_str()), nMessageSize, pnode->GetId());
 
     std::vector<unsigned char> serializedHeader;
     serializedHeader.reserve(CMessageHeader::HEADER_SIZE);
