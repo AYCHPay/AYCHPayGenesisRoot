@@ -567,7 +567,7 @@ int CMasternodeMan::GetNodeActivationHeight(const CScript& payee)
         {
             if (primaryCheckMnInfo.activationBlockHeight != 0)
             {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "xxyyzz [Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from primaryCheckMnInfo\n");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from primaryCheckMnInfo\n");
                 return primaryCheckMnInfo.activationBlockHeight;
             }
             else
@@ -575,19 +575,19 @@ int CMasternodeMan::GetNodeActivationHeight(const CScript& payee)
                 // fix it the hard way then... dammit!
                 Coin coin;
                 if (GetUTXOCoin(primaryCheckMnInfo.outpoint, coin)) {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "xxyyzz [Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from GetUTXOCoin\n");
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from GetUTXOCoin\n");
                     return coin.nHeight;
                 }
                 else
                 {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "xxyyzz [Masternodes] CMasternodeMan::GetNodeActivationHeight -- Still no activation height\n");
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Still no activation height\n");
                     return 0;
                 }
             }            
         }
         else
         {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "xxyyzz [Masternodes] CMasternodeMan::GetNodeActivationHeight -- Failed to get activation height from the masternode from payee\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Failed to get activation height from the masternode from payee\n");
             return 0;
         }
 }
