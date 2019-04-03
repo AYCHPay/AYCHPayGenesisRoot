@@ -365,7 +365,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
 
             // Avoid processing same vote multiple times if it was already verified earlier
             if (!res.second && res.first->second.IsVerified()) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- hash=%s, nBlockHeight=%d/%d seen\n",
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- hash=%s, nBlockHeight=%d/%d seen\n",
                     nHash.ToString(), vote.nBlockHeight, nCachedBlockHeight);
                 return;
             }

@@ -508,12 +508,12 @@ bool ConnectSocketDirectly(const CService &addrConnect, const SOCKET& hSocket, i
             if (getsockopt(hSocket, SOL_SOCKET, SO_ERROR, &nRet, &nRetSize) == SOCKET_ERROR)
 #endif
             {
-                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] getsockopt() for %s failed: %s\n", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] getsockopt() for %s failed: %s\n", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));
                 return false;
             }
             if (nRet != 0)
             {
-                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] connect() to %s failed after select(): %s\n", addrConnect.ToString(), NetworkErrorString(nRet));
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] connect() to %s failed after select(): %s\n", addrConnect.ToString(), NetworkErrorString(nRet));
                 return false;
             }
         }
@@ -523,7 +523,7 @@ bool ConnectSocketDirectly(const CService &addrConnect, const SOCKET& hSocket, i
         else
 #endif
         {
-            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::NET, "[Networking] connect() to %s failed: %s\n", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));
+            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::NET, "[Networking] connect() to %s failed: %s\n", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));
             return false;
         }
     }
