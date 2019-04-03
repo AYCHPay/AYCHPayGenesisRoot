@@ -346,6 +346,8 @@ UniValue masternode(const JSONRPCRequest& request)
         }
 
         mnObj.push_back(Pair("status", activeMasternode.GetStatus()));
+        mnObj.push_back(Pair("activation_block_height", activeMasternode.activationBlockHeight));
+
         return mnObj;
     }
 
@@ -534,6 +536,7 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 objMN.push_back(Pair("lastpaidtime", mn.GetLastPaidTimePrimary()));
                 objMN.push_back(Pair("lastpaidblock", mn.GetLastPaidBlockPrimary()));
                 objMN.push_back(Pair("pose_ban_score", mn.nPoSeBanScore));
+                objMN.push_back(Pair("activation_block_height", mn.activationBlockHeight));
                 obj.push_back(Pair(strOutpoint, objMN));
             } else if (strMode == "lastpaidblock") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
@@ -562,6 +565,9 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 if (strFilter !="" && strStatus.find(strFilter) == std::string::npos &&
                     strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, strStatus));
+            } else if (strMode == "activation_block_height") {
+                if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
+                obj.push_back(Pair(strOutpoint, mn.activationBlockHeight));
             }
         }
     }

@@ -235,6 +235,12 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
 
     /* Yay me... I found a primary... I think */
 
+    /* Check the activation height */
+    if (primaryPayeeActivationHeight == 0)
+    {
+        primaryPayeeActivationHeight = mnodeman.GetNodeActivationHeight(payee);
+    }
+
     // GET MASTERNODE PAYMENT VARIABLES SETUP
     CAmount primaryMasternodePayment = GetMasternodePayments(nBlockHeight, primaryPayeeActivationHeight, blockReward);
     CAmount secondaryPaymentTotal = (Params().GetConsensus().nBlockRewardMasternode * COIN) - primaryMasternodePayment;
@@ -569,7 +575,15 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
     for (const auto& payee : vecPayees) {
         if (payee.GetVoteCount() > nVotes) {
             payeeRet = payee.GetPayee();
-            activationBlockHeightRet = payee.GetActivationHeight();
+            if (payee.GetActivationHeight() != 0)
+            {
+                activationBlockHeightRet = payee.GetActivationHeight();
+            }
+            else
+            {
+                int ah = mnodeman.GetNodeActivationHeight(payee.GetPayee());
+                activationBlockHeightRet = ah;
+            }
             nVotes = payee.GetVoteCount();
         }
     }
@@ -717,6 +731,11 @@ bool CMasternodePaymentVote::IsValid(CNode* pnode, int nValidationHeight, std::s
     if (mnInfo.nProtocolVersion < nMinRequiredProtocol) {
         strError = strprintf("Masternode protocol is too old: nProtocolVersion=%d, nMinRequiredProtocol=%d", mnInfo.nProtocolVersion, nMinRequiredProtocol);
         return false;
+    }
+
+    if (mnInfo.activationBlockHeight == 0 )
+    {
+        mnInfo.activationBlockHeight = mnodeman.GetNodeActivationHeight(mnInfo.pubKeyMasternode);
     }
 
     // Only masternodes should try to check masternode rank for old votes - they need to pick the right winner for future blocks.
