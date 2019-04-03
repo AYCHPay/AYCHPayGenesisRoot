@@ -288,7 +288,7 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
                     amountToPaySecondary += secondariesPaymentChange;
                     changeApplied = true;
                 }
-                CTxOut masternodeSecondaryPaymentTx = CTxOut(secondaryItemPayment, secondaryPayees[i]);
+                CTxOut masternodeSecondaryPaymentTx = CTxOut(amountToPaySecondary, secondaryPayees[i]);
                 vtxoutMasternodeRet.push_back(masternodeSecondaryPaymentTx);
                 txNew.vout.push_back(masternodeSecondaryPaymentTx);
                 LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodePayments::FillBlockPayees -- Secondary Masternode payment %lld to %s\n", amountToPaySecondary / COIN, EncodeDestination(CScriptID(secondaryPayees[i])));
