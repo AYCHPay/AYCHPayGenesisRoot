@@ -38,7 +38,7 @@ void CMasternodeSync::BumpAssetLastTime(const std::string& strFuncName)
 {
     if (IsSynced() || IsFailed()) return;
     nTimeLastBumped = GetTime();
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeSync::BumpAssetLastTime -- %s\n", strFuncName);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeSync::BumpAssetLastTime -- %s\n", strFuncName);
 }
 
 std::string CMasternodeSync::GetAssetName()

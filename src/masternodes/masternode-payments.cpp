@@ -377,7 +377,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
 
         int nFirstBlock = nCachedBlockHeight - GetStorageLimit();
         if (vote.nBlockHeight < nFirstBlock || vote.nBlockHeight > nCachedBlockHeight + 20) {
-            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote out of range: nFirstBlock=%d, nBlockHeight=%d, nHeight=%d\n", nFirstBlock, vote.nBlockHeight, nCachedBlockHeight);
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote out of range: nFirstBlock=%d, nBlockHeight=%d, nHeight=%d\n", nFirstBlock, vote.nBlockHeight, nCachedBlockHeight);
             return;
         }
 
@@ -422,7 +422,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
         CTxDestination address1;
         ExtractDestination(vote.payee, address1);
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote: address=%s, nBlockHeight=%d, nHeight=%d, prevout=%s, hash=%s new\n",
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote: address=%s, nBlockHeight=%d, nHeight=%d, prevout=%s, hash=%s new\n",
             EncodeDestination(address1), vote.nBlockHeight, nCachedBlockHeight, vote.masternodeOutpoint.ToStringShort(), nHash.ToString());
 
         if (AddOrUpdatePaymentVote(vote)){
@@ -533,7 +533,7 @@ bool CMasternodePayments::AddOrUpdatePaymentVote(const CMasternodePaymentVote& v
     auto it = mapMasternodeBlocksPrimary.emplace(vote.nBlockHeight, CMasternodeBlockPayees(vote.nBlockHeight)).first;
     it->second.AddPayee(vote);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodePayments::AddOrUpdatePaymentVote -- added, hash=%s\n", nVoteHash.ToString());
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodePayments::AddOrUpdatePaymentVote -- added, hash=%s\n", nVoteHash.ToString());
 
     return true;
 }
@@ -904,7 +904,7 @@ void CMasternodePaymentVote::Relay(CConnman& connman) const
 {
     // Do not relay until fully synced
     if (!masternodeSync.IsSynced()) {
-        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CMasternodePayments::Relay -- won't relay until fully synced\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodePayments::Relay -- won't relay until fully synced\n");
         return;
     }
 
