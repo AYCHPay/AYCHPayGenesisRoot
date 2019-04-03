@@ -111,7 +111,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, const COutPoint& outpoint, CConnman&
         auto it2 = it1->second.find(addrSquashed);
         if (it2 != it1->second.end()) {
             if (GetTime() < it2->second) {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Skip (Last Request Too Recent): %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::AskForMN -- Skip (Last Request Too Recent): %s %s\n", addrSquashed.ToString(), outpoint.ToStringShort());
                 // we've asked recently, should not repeat too often or we could get banned
                 return;
             }
@@ -532,7 +532,8 @@ bool CMasternodeMan::GetMasternodeInfo(const CScript& payee, masternode_info_t& 
 
 bool CMasternodeMan::GetMasternodeInfoFromCollateral(const CScript& payee, masternode_info_t& mnInfoRet)
 {
-    LOCK(cs);
+    // Already locked?
+    // LOCK(cs);
     for (const auto& mnpair : mapMasternodes) {
         CScript scriptCollateralAddress = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
         if (scriptCollateralAddress == payee) {
@@ -562,34 +563,36 @@ int CMasternodeMan::GetNodeActivationHeight(const CPubKey& pubKeyCollateralAddre
 
 int CMasternodeMan::GetNodeActivationHeight(const CScript& payee) 
 {
-        masternode_info_t primaryCheckMnInfo;
-        if (GetMasternodeInfoFromCollateral(payee, primaryCheckMnInfo))
+    // Already locked?
+    //LOCK(cs);
+    masternode_info_t primaryCheckMnInfo;
+    if (GetMasternodeInfoFromCollateral(payee, primaryCheckMnInfo))
+    {
+        if (primaryCheckMnInfo.activationBlockHeight != 0)
         {
-            if (primaryCheckMnInfo.activationBlockHeight != 0)
-            {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from primaryCheckMnInfo\n");
-                return primaryCheckMnInfo.activationBlockHeight;
-            }
-            else
-            {
-                // fix it the hard way then... dammit!
-                Coin coin;
-                if (GetUTXOCoin(primaryCheckMnInfo.outpoint, coin)) {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from GetUTXOCoin\n");
-                    return coin.nHeight;
-                }
-                else
-                {
-                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Still no activation height\n");
-                    return 0;
-                }
-            }            
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from primaryCheckMnInfo\n");
+            return primaryCheckMnInfo.activationBlockHeight;
         }
         else
         {
-            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Failed to get activation height from the masternode from payee\n");
-            return 0;
-        }
+            // fix it the hard way then... dammit!
+            Coin coin;
+            if (GetUTXOCoin(primaryCheckMnInfo.outpoint, coin)) {
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Activation height from GetUTXOCoin\n");
+                return coin.nHeight;
+            }
+            else
+            {
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Still no activation height\n");
+                return 0;
+            }
+        }            
+    }
+    else
+    {
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNodeActivationHeight -- Failed to get activation height from the masternode from payee\n");
+        return 0;
+    }
 }
 
 bool CMasternodeMan::Has(const COutPoint& outpoint)
