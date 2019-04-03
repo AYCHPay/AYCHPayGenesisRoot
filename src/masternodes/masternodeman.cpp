@@ -1133,7 +1133,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
 
         mapSeenMasternodePing.insert(std::make_pair(nHash, mnp));
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] MNPING -- Masternode ping, masternode=%s new\n", mnp.masternodeOutpoint.ToStringShort());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MNPING -- Masternode ping, masternode=%s new\n", mnp.masternodeOutpoint.ToStringShort());
 
         // see if we have this Masternode
         CMasternode* pmn = Find(mnp.masternodeOutpoint);
