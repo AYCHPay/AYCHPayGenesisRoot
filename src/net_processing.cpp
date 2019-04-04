@@ -631,7 +631,7 @@ void PeerLogicValidation::FinalizeNode(NodeId nodeid, bool& fUpdateConnectionTim
         assert(nPeersWithValidatedDownloads == 0);
         assert(g_outbound_peers_with_protect_from_disconnect == 0);
     }
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Cleared nodestate for peer=%d\n", nodeid);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Cleared nodestate for peer=%d\n", nodeid);
 }
 
 bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats) {
@@ -1387,7 +1387,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
                 if (topush) {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "ProcessGetData -- pushing: inv = %s\n", inv.ToString());
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "ProcessGetData -- pushing: inv = %s\n", inv.ToString());
                     connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::MNGOVERNANCEOBJECTVOTE, ss));
                     push = true;
                 }
@@ -1652,7 +1652,7 @@ bool static ProcessHeadersMessage(CNode *pfrom, CConnman *connman, const std::ve
                 // nMinimumChainWork, even if a peer has a chain past our tip,
                 // as an anti-DoS measure.
                 if (IsOutboundDisconnectionCandidate(pfrom)) {
-                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Disconnecting outbound peer %d -- headers chain has insufficient work\n", pfrom->GetId());
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Disconnecting outbound peer %d -- headers chain has insufficient work\n", pfrom->GetId());
                     pfrom->fDisconnect = true;
                 }
             }
@@ -2102,10 +2102,10 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             return error("message getdata size() = %u", vInv.size());
         }
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Received getdata (%u invsz) peer=%d\n", vInv.size(), pfrom->GetId());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Received getdata (%u invsz) peer=%d\n", vInv.size(), pfrom->GetId());
 
         if (vInv.size() > 0) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Received getdata for: %s peer=%d\n", vInv[0].ToString(), pfrom->GetId());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Received getdata for: %s peer=%d\n", vInv[0].ToString(), pfrom->GetId());
         }
 
         pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
@@ -3241,7 +3241,7 @@ void PeerLogicValidation::ConsiderEviction(CNode *pto, int64_t time_in_seconds)
             // message to give the peer a chance to update us.
             if (state.m_chain_sync.m_sent_getheaders) {
                 // They've run out of time to catch up!
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Disconnecting outbound peer %d for old chain, best known block = %s\n", pto->GetId(), state.pindexBestKnownBlock != nullptr ? state.pindexBestKnownBlock->GetBlockHash().ToString() : "<none>");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Disconnecting outbound peer %d for old chain, best known block = %s\n", pto->GetId(), state.pindexBestKnownBlock != nullptr ? state.pindexBestKnownBlock->GetBlockHash().ToString() : "<none>");
                 pto->fDisconnect = true;
             } else {
                 assert(state.m_chain_sync.m_work_header);

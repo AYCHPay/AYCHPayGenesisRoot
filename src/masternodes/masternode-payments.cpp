@@ -51,7 +51,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
     CAmount nGovernanceBlockMaxValue = blockReward + CGovernanceBlock::GetPaymentsLimit(nBlockHeight);
     bool isGovernanceBlockMaxValueMet = (block.vtx[0]->GetValueOut() <= nGovernanceBlockMaxValue);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] block.vtx[0]->GetValueOut() %lld <= nGovernanceBlockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nGovernanceBlockMaxValue);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] block.vtx[0]->GetValueOut() %lld <= nGovernanceBlockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nGovernanceBlockMaxValue);
 
     if (!masternodeSync.IsSynced() || fLiteMode) {
         // not enough data but at least it must NOT exceed governanceblock max value

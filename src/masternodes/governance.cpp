@@ -323,7 +323,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, CConnman
     auto objpair = mapObjects.emplace(nHash, govobj);
 
     if (!objpair.second) {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::AddGovernanceObject -- already have governance object %s\n", nHash.ToString());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::AddGovernanceObject -- already have governance object %s\n", nHash.ToString());
         return;
     }
 
@@ -331,7 +331,7 @@ void CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj, CConnman
 
     if (govobj.nObjectType == GOVERNANCE_OBJECT_TRIGGER) {
         if (!triggerman.AddNewTrigger(nHash)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::AddGovernanceObject -- undo adding invalid trigger object: hash = %s\n", nHash.ToString());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::AddGovernanceObject -- undo adding invalid trigger object: hash = %s\n", nHash.ToString());
             CGovernanceObject& objref = objpair.first->second;
             objref.fCachedDelete = true;
             if (objref.nDeletionTime == 0) {
@@ -600,7 +600,7 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     case MSG_GOVERNANCE_OBJECT:
     {
         if (mapObjects.count(inv.hash) == 1 || mapPostponedObjects.count(inv.hash) == 1) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false\n");
             return false;
         }
     }
@@ -608,13 +608,13 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     case MSG_GOVERNANCE_OBJECT_VOTE:
     {
         if (cmapVoteToObject.HasKey(inv.hash)) {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false\n");
             return false;
         }
     }
     break;
     default:
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest unknown type, returning false\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest unknown type, returning false\n");
         return false;
     }
 
@@ -634,10 +634,10 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     hash_s_cit it = setHash->find(inv.hash);
     if (it == setHash->end()) {
         setHash->insert(inv.hash);
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest added inv to requested set\n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest added inv to requested set\n");
     }
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest reached end, returning true\n");
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceManager::ConfirmInventoryRequest reached end, returning true\n");
     return true;
 }
 
@@ -853,7 +853,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
         ostr << "CGovernanceManager::ProcessVote -- Old invalid vote "
                 << ", MN outpoint = " << vote.GetMasternodeOutpoint().ToStringShort()
                 << ", governance object hash = " << nHashGovobj.ToString();
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
         LEAVE_CRITICAL_SECTION(cs);
         return false;
@@ -868,11 +868,11 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
         if (cmmapOrphanVotes.Insert(nHashGovobj, vote_time_pair_t(vote, GetAdjustedTime() + GOVERNANCE_ORPHAN_EXPIRATION_TIME))) {
             LEAVE_CRITICAL_SECTION(cs);
             RequestGovernanceObject(pfrom, nHashGovobj, connman);
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
             return false;
         }
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         LEAVE_CRITICAL_SECTION(cs);
         return false;
     }

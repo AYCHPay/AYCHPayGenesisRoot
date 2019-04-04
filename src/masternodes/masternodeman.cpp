@@ -153,7 +153,7 @@ void CMasternodeMan::Check()
 {
     LOCK2(cs_main, cs);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::Check -- nLastSentinelPingTime=%d, IsSentinelPingActive()=%d\n", nLastSentinelPingTime, IsSentinelPingActive());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::Check -- nLastSentinelPingTime=%d, IsSentinelPingActive()=%d\n", nLastSentinelPingTime, IsSentinelPingActive());
 
     for (auto& mnpair : mapMasternodes) {
         // NOTE: internally it checks only every Params().GetConsensus().nMasternodeCheckSeconds seconds
