@@ -611,9 +611,21 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransactionRef& txNew, in
 
     int nMaxSignatures = 0;
     std::string strPayeesPossible = "";
+    CAmount possibleAmount = 0;
 
-    int activationHeight = 0;
-    CAmount nMasternodePayment = GetMasternodePayments(nBlockHeight, activationHeight, blockReward);
+    // The max that can be paid... in crayon
+    double masternodeTotal = Params().GetConsensus().nBlockRewardMasternode;
+    double minSecondariesAmount = Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount;
+    int maxSecondaryCount = Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount;
+    CAmount nMaxMasternodeAmount = (masternodeTotal - (minSecondariesAmount * maxSecondaryCount)) * COIN;
+    CAmount nMinMasternodeAmount = minSecondariesAmount;
+
+    // Sanity check:
+    int activationHeight = -nBlockHeight;
+    CAmount nMasternodeCalculatedPayment = GetMasternodePayments(nBlockHeight, activationHeight, blockReward);
+
+    assert(nMaxMasternodeAmount == nMasternodeCalculatedPayment);
+
 
     //require at least MNPAYMENTS_SIGNATURES_REQUIRED signatures
 
@@ -627,9 +639,20 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransactionRef& txNew, in
     if (nMaxSignatures < MNPAYMENTS_SIGNATURES_REQUIRED) return true;
 
     for (const auto& payee : vecPayees) {
-        if (payee.GetVoteCount() >= MNPAYMENTS_SIGNATURES_REQUIRED) {
+        int payeeVoteCount = payee.GetVoteCount();
+        if (payeeVoteCount >= MNPAYMENTS_SIGNATURES_REQUIRED) {
             for (const auto& txout : txNew->vout) {
-                if (payee.GetPayee() == txout.scriptPubKey && txout.nValue >= nMasternodePayment && txout.nValue <= (nMasternodePayment + CAmount(10000000))) {
+                CAmount actualAmount = txout.nValue;
+                CAmount maxPaymentallowed = nMaxMasternodeAmount;
+                bool checkPayeeMatch = payee.GetPayee() == txout.scriptPubKey;
+                bool checkGreaterThan = actualAmount >= nMinMasternodeAmount;
+                bool checkLessThan = actualAmount <= maxPaymentallowed;
+
+
+                if (checkPayeeMatch 
+                    && checkGreaterThan
+                    && checkLessThan
+                    ) {
                     LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::IsTransactionValid -- Found required payment\n");
                     return true;
                 }
@@ -646,7 +669,7 @@ bool CMasternodeBlockPayees::IsTransactionValid(const CTransactionRef& txNew, in
         }
     }
 
-    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::IsTransactionValid -- ERROR: Missing required payment, possible payees: '%s', amount: %f GENX\n", strPayeesPossible, (float)nMasternodePayment / COIN);
+    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::IsTransactionValid -- ERROR: Missing required payment, possible payees: '%s', amount: %f GENX\n", strPayeesPossible, (float)possibleAmount / COIN);
     return false;
 }
 
