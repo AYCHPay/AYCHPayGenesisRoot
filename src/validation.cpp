@@ -1437,7 +1437,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     if (!pindexBestInvalid || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
         pindexBestInvalid = pindexNew;
 
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] %s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+    LogPrintG(BCLogLevel::LOG_ERROR, BCLog::BLOCKVALID, "[BlockValidation] %s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
       log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
       pindexNew->GetBlockTime()));
@@ -2398,8 +2398,7 @@ void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainPar
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexNew->GetBlockTime()),
       GuessVerificationProgress(chainParams.TxData(), pindexNew), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());
     if (!warningMessages.empty())
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation]  warning='%s'", boost::algorithm::join(warningMessages, ", "));
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::BLOCKVALID, "[BlockValidation] \n");
+        LogPrintG(BCLogLevel::LOG_WARNING, BCLog::BLOCKVALID, "[BlockValidation]  warning='%s'", boost::algorithm::join(warningMessages, ", "));
 
 }
 
@@ -4359,7 +4358,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     }
 
     LogPrintG(BCLogLevel::LOG_INFO, BCLog::BLOCKVALID, "[BlockValidation] [DONE].\n");
-    LogPrintG(BCLogLevel::LOG_INFO, BCLog::BLOCKVALID, "[BlockValidation] No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
+    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::BLOCKVALID, "[BlockValidation] No coin database inconsistencies in last %i blocks (%i transactions)\n", chainActive.Height() - pindexState->nHeight, nGoodTransactions);
 
     return true;
 }
