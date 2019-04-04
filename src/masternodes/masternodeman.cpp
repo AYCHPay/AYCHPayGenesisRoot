@@ -759,7 +759,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
     // then secondaries (the logic remains the same, but the input is different)
     sort(vecMasternodeLastPaidSecondary.begin(), vecMasternodeLastPaidSecondary.end(), CompareLastPaidBlock());
 
-    // Calcualte the primary
+    // Calculate the primary
     uint256 blockHash;
     if (!GetBlockHash(blockHash, nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1))) {
         LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::GetNextMasternodesInQueueForPayment -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight - (Params().GetConsensus().nCoinbaseMaturity + 1));
