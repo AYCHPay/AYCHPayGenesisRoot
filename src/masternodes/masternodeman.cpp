@@ -698,7 +698,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         //     }
         // }
 
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Selected \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Selected \n");
         vecMasternodeLastPaid.push_back(std::make_pair(mnpair.second.GetLastPaidBlockPrimary(), &mnpair.second));
     }
 
@@ -740,7 +740,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         }
 
         // Add it to the secondaries list as well, but use the lastpaid secondary as the first term
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Selected \n");
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Selected \n");
         vecMasternodeLastPaidSecondary.push_back(std::make_pair(mnpair.second.GetLastPaidBlockSecondary(), &mnpair.second));
     }
 
