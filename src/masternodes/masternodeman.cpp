@@ -413,12 +413,12 @@ int CMasternodeMan::CountCollateralisedAtHeight(int nProtocolVersion, int blockH
     for (const auto& mnpair : mapMasternodes) {
         if (mnpair.second.activationBlockHeight > blockHeight)
         { 
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CountCollateralisedAtHeight -- Skip (Activation block height too high)\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::CountCollateralisedAtHeight -- Skip (Activation block height too high)\n");
             continue; 
         }
         if (onlyEnabled && !mnpair.second.IsEnabled())
         {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::CountCollateralisedAtHeight -- Skip (Masternode not enabled)\n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::CountCollateralisedAtHeight -- Skip (Masternode not enabled)\n");
             continue;
         }
         nCount++;
@@ -453,7 +453,7 @@ void CMasternodeMan::DsegUpdate(CNode* pnode, CConnman& connman)
         if (!(pnode->addr.IsRFC1918() || pnode->addr.IsLocal())) {
             auto it = mWeAskedForMasternodeList.find(addrSquashed);
             if (it != mWeAskedForMasternodeList.end() && GetTime() < (*it).second) {
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::DsegUpdate -- we already asked %s for the list; skipping...\n", addrSquashed.ToString());
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::DsegUpdate -- we already asked %s for the list; skipping...\n", addrSquashed.ToString());
                 return;
             }
         }
@@ -470,8 +470,8 @@ void CMasternodeMan::DsegUpdate(CNode* pnode, CConnman& connman)
     int64_t askAgain = GetTime() + DSEG_UPDATE_SECONDS;
     mWeAskedForMasternodeList[addrSquashed] = askAgain;
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::DsegUpdate -- asked %s for the list\n", pnode->addr.ToString());
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::DsegUpdate -- %s", pnode->addr.ToString());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::DsegUpdate -- asked %s for the list\n", pnode->addr.ToString());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::DsegUpdate -- %s", pnode->addr.ToString());
 }
 
 CMasternode* CMasternodeMan::Find(const COutPoint &outpoint)
