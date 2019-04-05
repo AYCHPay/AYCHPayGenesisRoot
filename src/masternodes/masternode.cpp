@@ -374,8 +374,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                 continue;
             }
             
-            int activationHeight = 0;
-            CAmount nMasternodePaymentPrimary = GetMasternodePayments(pindexActive->nHeight, activationHeight, block.vtx[0]->GetValueOut());
+            CAmount nMasternodePaymentPrimary = GetMasternodePayments(pindexActive->nHeight, activationBlockHeight, block.vtx[0]->GetValueOut());
 
             for (const auto& txout : block.vtx[0]->vout)
             {
