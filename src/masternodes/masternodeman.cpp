@@ -656,7 +656,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         }
 
         //it's too new, wait for a cycle
-        if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*2.6*60) > GetAdjustedTime())
+        if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*60) > GetAdjustedTime())
         { 
             LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Too new) \n");
             continue; 
@@ -726,7 +726,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         // }
 
         //it's too new, wait for a cycle
-        if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*2.6*60) > GetAdjustedTime())
+        if (fFilterSigTime && mnpair.second.sigTime + ((nMnCount/Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount)*60) > GetAdjustedTime())
         { 
             LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Skip (Too new) \n");
             continue; 
