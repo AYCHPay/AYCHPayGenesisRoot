@@ -648,12 +648,12 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
             continue; 
         }
 
-        // //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
-        // if (mnpayments.IsScheduled(mnpair.second, nBlockHeight))
-        // { 
-        //     LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Scheduled for payment) \n");
-        //     continue; 
-        // }
+        //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
+        if (mnpayments.IsScheduled(mnpair.second, nBlockHeight))
+        { 
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Skip (Scheduled for payment) \n");
+            continue; 
+        }
 
         //it's too new, wait for a cycle
         if (fFilterSigTime && mnpair.second.sigTime + (nMnCount*60) > GetAdjustedTime())
@@ -676,7 +676,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
             continue; 
         }
 
-        // Make sure thte activation height is realistic
+        // Make sure the activation height is realistic
         if (mnpair.second.activationBlockHeight > nBlockHeight)
         {
             // Some kind of fair notice of what happened if this fails
