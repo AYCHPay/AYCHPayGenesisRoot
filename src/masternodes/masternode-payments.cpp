@@ -569,25 +569,57 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
     LOCK(cs_vecPayees);
 
     if (vecPayees.empty()) {
-        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::GetBestPayee -- ERROR: couldn't find any payee\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::GetBestPayee -- ERROR: couldn't find any payee (payee list is empty)\n");
         return false;
     }
 
     // primary
     int nVotes = -1;
+    int activationHeight = 0;
+    int64_t lastPaid = 0;
     for (const auto& payee : vecPayees) {
-        if (payee.GetVoteCount() > nVotes) {
-            payeeRet = payee.GetPayee();
-            if (payee.GetActivationHeight() != 0)
+        // Flatten out the values...
+        int voteCount = payee.GetVoteCount();
+        CScript currentPayee = payee.GetPayee();
+        // Try to look up the masternode
+        masternode_info_t mNode;
+        bool gotNode = mnodeman.GetMasternodeInfo(currentPayee, mNode);
+        // Check for (and try to fix) wonkiness...
+        int payeeActivationHeight = payee.GetActivationHeight();
+        if (payeeActivationHeight == 0)
+        {
+            if (gotNode && mNode.activationBlockHeight != 0)
             {
-                activationBlockHeightRet = payee.GetActivationHeight();
+                payeeActivationHeight = mNode.activationBlockHeight;
             }
             else
             {
-                int ah = mnodeman.GetNodeActivationHeight(payee.GetPayee());
-                activationBlockHeightRet = ah;
+                payeeActivationHeight = mnodeman.GetNodeActivationHeight(payee.GetPayee());
             }
-            nVotes = payee.GetVoteCount();
+        }
+
+        // Validations
+        bool voteWin = voteCount > nVotes;
+        bool voteTie = voteCount == nVotes;
+        bool lastPaidWin = gotNode && mNode.nTimeLastPaidPrimary < lastPaid;
+        bool activationHeightWin = payeeActivationHeight < activationHeight || activationHeight == 0;
+        // Logic
+        if (
+            // First check: Clear winner with more votes 
+            voteWin ||
+            // Second check: The votes are equal, so the MN paid longest ago gets a chance
+            (voteTie && lastPaidWin) ||
+            // Third check: if for some reason the last paid does not give us a clear winner... the one activated earliest wins.
+            (voteTie && activationHeightWin)
+            ) 
+        {
+            // Update the outgoing values
+            payeeRet = currentPayee;
+            activationBlockHeightRet = payeeActivationHeight;
+            // Update the internal state
+            nVotes = voteCount;
+            lastPaid = mNode.nTimeLastPaidPrimary;
+            activationHeight = payeeActivationHeight;
         }
     }
 
