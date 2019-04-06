@@ -374,13 +374,26 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                 continue;
             }
             
-            CAmount nMasternodePaymentPrimary = GetMasternodePayments(pindexActive->nHeight, activationBlockHeight, block.vtx[0]->GetValueOut());
+            // Adding this as a sanity check... as we specify the order of the payments:
+            // This can be calculated dynamically, but a fixed value is sufficient for now, 
+            // as this method is called a lot.
+            // 0 = Miner
+            // 1-5 = Founders
+            // 6 = Primary Masternode
+            // 7 = First Secondary Masternode Payment (may receive more than the other secondaries)
+            // 8+ = The remainder of the secondaries payments and pool deductions etc.
+            int primaryMnPaymentPosition = 6; // starting from 0
 
+            CAmount nMasternodePaymentPrimary = GetMasternodePayments(pindexActive->nHeight, activationBlockHeight, block.vtx[0]->GetValueOut());
+            double readableMnPayValue = nMasternodePaymentPrimary / COIN;
+
+            int positionTracker = 0;
             for (const auto& txout : block.vtx[0]->vout)
             {
                 CAmount txValue = txout.nValue;
                 bool payeeMatch = mnpayee == txout.scriptPubKey;
                 bool valueMatch = nMasternodePaymentPrimary == txValue;
+                double readableTxValue = txValue / COIN;
                 if (payeeMatch)
                 {
                     // make debugging easier
@@ -390,6 +403,16 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         nBlockLastPaidPrimary = pindexActive->nHeight;
                         nTimeLastPaidPrimary = pindexActive->nTime;
                         LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
+                        return;
+                    }
+                    // Check that we have not missed something...
+                    else if (positionTracker == primaryMnPaymentPosition)
+                    {
+                        // Still mark it as primary paid, even if the value is off :S
+                        nBlockLastPaidPrimary = pindexActive->nHeight;
+                        nTimeLastPaidPrimary = pindexActive->nTime;
+                        // this is badong... let someone know (If you don't know what badong is, watch https://www.youtube.com/watch?v=O6_P_ZWwJ3Q)
+                        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- found at position 6 in block %d pays %f instead of %f\n", outpoint.ToStringShort(), pindexActive->nHeight, readableTxValue, readableMnPayValue);
                         return;
                     }
                     else
@@ -404,7 +427,8 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
                         return;
                     }
-                }                
+                }    
+                positionTracker++;            
             }
         }
 
