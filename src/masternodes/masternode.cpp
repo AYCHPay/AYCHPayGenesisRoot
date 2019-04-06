@@ -436,17 +436,23 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                     {
                         // Reaching this code means that:
                         // There is a payment in the coinbase, to a masternode address that is:
-                        // either a miner address or a founder address
-                        // interesting, but not useful (other than for debugging)
-                        if (positionTracker == 0)
+                        // either a miner address
+                        // which is interesting, but not useful (other than for debugging)
+                        bool isMasternodeMiner = positionTracker == 0;
+                        // or it could be among the founder's payments... which means the block payments are really really broken
+                        bool isMasternodePaymentAmongFounders = positionTracker > 0 && positionTracker < primaryMnPaymentPosition;
+
+                        if (isMasternodeMiner)
                         {
                             // Miner and masternode address...
                             LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is mining to their masternode address\n", outpoint.ToStringShort());
                         }
-                        else if (positionTracker > 0 && positionTracker < primaryMnPaymentPosition)
+                        else if (isMasternodePaymentAmongFounders)
                         {
-                            // Miner and masternode address...
-                            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is is a founder address masternode address\n", outpoint.ToStringShort());
+                            // Barring time travel this is not possible
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is is a founder address masternode address\n", outpoint.ToStringShort());
+                            // kill it with fire....
+                            assert(!isMasternodePaymentAmongFounders);
                         }
                         
                     }
