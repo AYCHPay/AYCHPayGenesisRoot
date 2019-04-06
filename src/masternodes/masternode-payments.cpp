@@ -230,7 +230,10 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
         // fill payee with locally calculated winner and hope for the best
         payee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
         // Calculate the primaryPayeeActivationHeight for this locally calculated winner...
-        primaryPayeeActivationHeight = mnInfo.activationBlockHeight;
+        if (mnInfo.activationBlockHeight != 0)
+        {
+            primaryPayeeActivationHeight = mnInfo.activationBlockHeight;
+        }
     }
 
     /* Yay me... I found a primary... I think */
@@ -523,7 +526,7 @@ bool CMasternodePayments::AddOrUpdatePaymentVote(const CMasternodePaymentVote& v
     if (!GetBlockHash(blockHash, vote.nBlockHeight - 101)) return false;
 
     uint256 nVoteHash = vote.GetHash();
-    
+
     if (HasVerifiedPaymentVote(nVoteHash)) return false;
 
     LOCK2(cs_mapMasternodeBlocks, cs_mapMasternodePaymentVotes);
