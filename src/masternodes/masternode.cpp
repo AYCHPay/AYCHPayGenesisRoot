@@ -140,7 +140,7 @@ void CMasternode::Check(bool fForce)
     if (!fForce && (GetTime() - nTimeLastChecked < Params().GetConsensus().nMasternodeCheckSeconds)) return;
     nTimeLastChecked = GetTime();
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::Check -- Masternode %s is in %s state\n", outpoint.ToStringShort(), GetStateString());
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::Check -- Masternode %s is in %s state\n", outpoint.ToStringShort(), GetStateString());
 
     //once spent, stop doing the checks
     if (IsOutpointSpent()) return;
@@ -150,7 +150,7 @@ void CMasternode::Check(bool fForce)
         Coin coin;
         if (!GetUTXOCoin(outpoint, coin)) {
             nActiveState = MASTERNODE_OUTPOINT_SPENT;
-            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::Check -- Failed to find Masternode UTXO, masternode=%s\n", outpoint.ToStringShort());
+            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::Check -- Failed to find Masternode UTXO, masternode=%s\n", outpoint.ToStringShort());
             return;
         }
         else
@@ -378,13 +378,17 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
 
             for (const auto& txout : block.vtx[0]->vout)
             {
-                if (mnpayee == txout.scriptPubKey && nMasternodePaymentPrimary == txout.nValue) {
+                CAmount txValue = txout.nValue;
+                bool payeeMatch = mnpayee == txout.scriptPubKey;
+                bool valueMatch = nMasternodePaymentPrimary == txValue;
+                if (payeeMatch && valueMatch) 
+                {
                     nBlockLastPaidPrimary = pindexActive->nHeight;
                     nTimeLastPaidPrimary = pindexActive->nTime;
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
                     return;
                 }
-                else if (mnpayee == txout.scriptPubKey)
+                else if (payeeMatch && valueMatch)
                 {
                     // This is a bit fuzzy for my liking, but the logic:
                     // * This is the coinbase transaction
@@ -393,7 +397,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                     // Should suffice to substantiate the claim that this is a secondary masternode payment to me
                     nBlockLastPaidSecondary = pindexActive->nHeight;
                     nTimeLastPaidSecondary = pindexActive->nTime;
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
                     return;
                 }
                 
@@ -406,7 +410,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
 
     // Last payment for this masternode wasn't found in latest mnpayments blocks
     // or it was found in mnpayments blocks but wasn't found in the blockchain.
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- keeping old %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with payment to %s -- keeping old %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
 }
 
 //#ifdef ENABLE_WALLET

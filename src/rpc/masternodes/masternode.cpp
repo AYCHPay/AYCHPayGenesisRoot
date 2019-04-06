@@ -154,6 +154,8 @@ UniValue masternode(const JSONRPCRequest& request)
         obj.push_back(Pair("lastseen",              mnInfo.nTimeLastPing));
         obj.push_back(Pair("activeseconds",         mnInfo.nTimeLastPing - mnInfo.sigTime));
         obj.push_back(Pair("activationblockheight", mnInfo.activationBlockHeight));
+        obj.push_back(Pair("lastpaidprimary",       mnInfo.nTimeLastPaidPrimary));
+        obj.push_back(Pair("lastpaidsecondary",     mnInfo.nTimeLastPaidSecondary));
         return obj;
     }
 
@@ -533,8 +535,10 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 objMN.push_back(Pair("sentinelstate", (mn.lastPing.fSentinelIsCurrent ? "current" : "expired")));
                 objMN.push_back(Pair("lastseen", (int64_t)mn.lastPing.sigTime));
                 objMN.push_back(Pair("activeseconds", (int64_t)(mn.lastPing.sigTime - mn.sigTime)));
-                objMN.push_back(Pair("lastpaidtime", mn.GetLastPaidTimePrimary()));
-                objMN.push_back(Pair("lastpaidblock", mn.GetLastPaidBlockPrimary()));
+                objMN.push_back(Pair("lastpaidtimeprimary", mn.GetLastPaidTimePrimary()));
+                objMN.push_back(Pair("lastpaidblockprimary", mn.GetLastPaidBlockPrimary()));
+                objMN.push_back(Pair("lastpaidtimesecondary", mn.GetLastPaidTimeSecondary()));
+                objMN.push_back(Pair("lastpaidblocksecondary", mn.GetLastPaidBlockSecondary()));
                 objMN.push_back(Pair("pose_ban_score", mn.nPoSeBanScore));
                 objMN.push_back(Pair("activation_block_height", mn.activationBlockHeight));
                 obj.push_back(Pair(strOutpoint, objMN));

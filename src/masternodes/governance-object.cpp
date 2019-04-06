@@ -110,7 +110,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
         // nothing to do here, not an error
         std::ostringstream ostr;
         ostr << "CGovernanceObject::ProcessVote -- Already known valid vote";
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_NONE);
         return false;
     }
@@ -123,10 +123,10 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
             if (pfrom) {
                 mnodeman.AskForMN(pfrom, vote.GetMasternodeOutpoint(), connman);
             }
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         }
         else {
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         }
         return false;
     }
@@ -137,14 +137,14 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
     if (eSignal == VOTE_SIGNAL_NONE) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::ProcessVote -- Vote signal: none";
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_WARNING);
         return false;
     }
     if (eSignal > MAX_SUPPORTED_VOTE_SIGNAL) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::ProcessVote -- Unsupported vote signal: " << CGovernanceVoting::ConvertSignalToString(vote.GetSignal());
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
         return false;
     }
@@ -155,7 +155,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
     if (vote.GetTimestamp() < voteInstanceRef.nCreationTime) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::ProcessVote -- Obsolete vote";
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_NONE);
         return false;
     }
@@ -170,7 +170,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
                  << ", MN outpoint = " << vote.GetMasternodeOutpoint().ToStringShort()
                  << ", governance object hash = " << GetHash().ToString()
                  << ", time delta = " << nTimeDelta;
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
             exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
             nVoteTimeUpdate = nNow;
             return false;
@@ -184,7 +184,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
                 << ", MN outpoint = " << vote.GetMasternodeOutpoint().ToStringShort()
                 << ", governance object hash = " << GetHash().ToString()
                 << ", vote hash = " << vote.GetHash().ToString();
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
         governance.AddInvalidVote(vote);
         return false;
@@ -194,7 +194,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
         ostr << "CGovernanceObject::ProcessVote -- Unable to add governance vote"
              << ", MN outpoint = " << vote.GetMasternodeOutpoint().ToStringShort()
              << ", governance object hash = " << GetHash().ToString();
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] %s\n", ostr.str());
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] %s\n", ostr.str());
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
         return false;
     }

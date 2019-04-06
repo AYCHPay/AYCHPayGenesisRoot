@@ -561,7 +561,7 @@ UniValue importwallet(const JSONRPCRequest& request)
                 assert(key.VerifyPubKey(pubkey));
                 CKeyID keyid = pubkey.GetID();
                 if (pwallet->HaveKey(keyid)) {
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Skipping import of %s (key already present)\n", EncodeDestination(keyid));
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Skipping import of %s (key already present)\n", EncodeDestination(keyid));
                     continue;
                 }
                 int64_t nTime = DecodeDumpTime(vstr[1]);
@@ -579,7 +579,7 @@ UniValue importwallet(const JSONRPCRequest& request)
                         fLabel = true;
                     }
                 }
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Importing %s...\n", EncodeDestination(keyid));
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Importing %s...\n", EncodeDestination(keyid));
                 if (!pwallet->AddKeyPubKey(key, pubkey)) {
                     fGood = false;
                     continue;
@@ -592,7 +592,7 @@ UniValue importwallet(const JSONRPCRequest& request)
                std::vector<unsigned char> vData(ParseHex(vstr[0]));
                CScript script = CScript(vData.begin(), vData.end());
                if (pwallet->HaveCScript(script)) {
-                   LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::RPC, "[RPC] Skipping import of %s (script already present)\n", vstr[0]);
+                   LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::RPC, "[RPC] Skipping import of %s (script already present)\n", vstr[0]);
                    continue;
                }
                if(!pwallet->AddCScript(script)) {

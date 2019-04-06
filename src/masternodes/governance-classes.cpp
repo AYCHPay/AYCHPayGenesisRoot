@@ -168,7 +168,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
                 break;
             }
         }
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- %smarked for removal\n", remove ? "" : "NOT ");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- %smarked for removal\n", remove ? "" : "NOT ");
 
         if (remove) {
             LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceTriggerManager::CleanAndRemove -- Removing trigger object\n");
@@ -665,7 +665,7 @@ bool CGovernanceBlock::IsExpired()
 
     int nExpirationBlock = nBlockHeight + nExpirationBlocks;
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- nBlockHeight = %d, nExpirationBlock = %d\n", nBlockHeight, nExpirationBlock);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- nBlockHeight = %d, nExpirationBlock = %d\n", nBlockHeight, nExpirationBlock);
 
     if (governance.GetCachedBlockHeight() > nExpirationBlock) {
         LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] CGovernanceBlock::IsExpired -- Outdated trigger found\n");
