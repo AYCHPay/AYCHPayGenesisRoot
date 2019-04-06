@@ -573,6 +573,9 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
         return false;
     }
 
+    // Work with a local list of masternodes to avoid deadlocks :(
+    std::map<COutPoint, CMasternode> localMasternodeList = mnodeman.GetFullMasternodeMap();
+
     // primary
     int nVotes = -1;
     int activationHeight = 0;
@@ -582,8 +585,16 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
         int voteCount = payee.GetVoteCount();
         CScript currentPayee = payee.GetPayee();
         // Try to look up the masternode
+        bool gotNode = false;
         masternode_info_t mNode;
-        bool gotNode = mnodeman.GetMasternodeInfo(currentPayee, mNode);
+        // Copied from masternodeman, to avoid having to deal with dealocks
+        for (const auto& mnpair : localMasternodeList) {
+            CScript scriptCollateralAddress = GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()));
+            if (scriptCollateralAddress == currentPayee) {
+                mNode = mnpair.second.GetInfo();
+                gotNode = true;
+            }
+        }
         // Check for (and try to fix) wonkiness...
         int payeeActivationHeight = payee.GetActivationHeight();
         if (payeeActivationHeight == 0)
