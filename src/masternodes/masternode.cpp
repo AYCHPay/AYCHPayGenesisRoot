@@ -381,26 +381,30 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                 CAmount txValue = txout.nValue;
                 bool payeeMatch = mnpayee == txout.scriptPubKey;
                 bool valueMatch = nMasternodePaymentPrimary == txValue;
-                if (payeeMatch && valueMatch) 
+                if (payeeMatch)
                 {
-                    nBlockLastPaidPrimary = pindexActive->nHeight;
-                    nTimeLastPaidPrimary = pindexActive->nTime;
-                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
-                    return;
-                }
-                else if (payeeMatch && valueMatch)
-                {
-                    // This is a bit fuzzy for my liking, but the logic:
-                    // * This is the coinbase transaction
-                    // * I am a masternode
-                    // * I am being paid in the coinbase tx, as a mn, but it is not as the primary
-                    // Should suffice to substantiate the claim that this is a secondary masternode payment to me
-                    nBlockLastPaidSecondary = pindexActive->nHeight;
-                    nTimeLastPaidSecondary = pindexActive->nTime;
-                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
-                    return;
-                }
-                
+                    // make debugging easier
+                    std::string mnPayeeAddressString = EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(pubKeyCollateralAddress.GetID()))));
+                    if (valueMatch)
+                    {
+                        nBlockLastPaidPrimary = pindexActive->nHeight;
+                        nTimeLastPaidPrimary = pindexActive->nTime;
+                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
+                        return;
+                    }
+                    else
+                    {
+                        // This is a bit fuzzy for my liking, but the logic:
+                        // * This is the coinbase transaction
+                        // * I am a masternode
+                        // * I am being paid in the coinbase tx, as a mn, but it is not as the primary
+                        // Should suffice to substantiate the claim that this is a secondary masternode payment to me
+                        nBlockLastPaidSecondary = pindexActive->nHeight;
+                        nTimeLastPaidSecondary = pindexActive->nTime;
+                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
+                        return;
+                    }
+                }                
             }
         }
 
