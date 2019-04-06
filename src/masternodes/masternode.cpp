@@ -432,6 +432,25 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
                         return;
                     }
+                    else
+                    {
+                        // Reaching this code means that:
+                        // There is a payment in the coinbase, to a masternode address that is:
+                        // either a miner address or a founder address
+                        // interesting, but not useful (other than for debugging)
+                        if (positionTracker == 0)
+                        {
+                            // Miner and masternode address...
+                            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is mining to their masternode address\n", outpoint.ToStringShort());
+                        }
+                        else if (positionTracker > 0 && positionTracker < primaryMnPaymentPosition)
+                        {
+                            // Miner and masternode address...
+                            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is is a founder address masternode address\n", outpoint.ToStringShort());
+                        }
+                        
+                    }
+                    
                 }    
                 positionTracker++;            
             }
