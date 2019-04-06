@@ -10,7 +10,7 @@
 #include "crypto/sha256.h"
 #include "utilstrencodings.h"
 
-#include "sodium.h"
+#include "blake2.h"
 
 #include <cstring>
 #include <exception>
@@ -21,7 +21,7 @@
 
 #include <boost/static_assert.hpp>
 
-typedef crypto_generichash_blake2b_state eh_HashState;
+typedef blake2b_state  eh_HashState;
 typedef uint32_t eh_index;
 typedef uint8_t eh_trunc;
 
@@ -281,5 +281,35 @@ inline bool EhOptimisedSolveUncancellable(unsigned int n, unsigned int k, const 
     } else {                                             \
         throw std::invalid_argument("Unsupported Equihash parameters"); \
     }
+
+static inline void store32(void *dst, uint32_t w)
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+    memcpy(dst, &w, sizeof(w));
+#else
+    uint8_t *p = (uint8_t *)dst;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w;
+#endif
+}
+
+static inline void store64(void *dst, uint64_t w)
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+    memcpy(dst, &w, sizeof(w));
+#else
+    uint8_t *p = (uint8_t *)dst;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w; w >>= 8;
+    *p++ = (uint8_t)w;
+#endif
+}
 
 #endif // GENESIS_EQUIHASH_H

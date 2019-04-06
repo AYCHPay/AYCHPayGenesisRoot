@@ -4,20 +4,19 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-package=libsodium
-$(package)_version=1.0.17
-$(package)_download_path=https://download.libsodium.org/libsodium/releases/
+package=libb2
+$(package)_version=0.98
+$(package)_download_path=https://github.com/BLAKE2/libb2/releases/download/v$($(package)_version)/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=0CC3DAE33E642CC187B5CEB467E0AD0E1B51DCBA577DE1190E9FFA17766AC2B1
-$(package)_dependencies=
-$(package)_config_opts=
+$(package)_sha256_hash=e869e0c3a93bc56d1052eccbe9cd925b8a8c7308b417532829a700cf374b036f
+$(package)_patches=cross_compile.patch
 
 define $(package)_preprocess_cmds
-  cd $($(package)_build_subdir); ./autogen.sh
+  patch ./configure < $($(package)_patch_dir)/cross_compile.patch
 endef
 
 define $(package)_config_cmds
-  $($(package)_autoconf) --enable-static --disable-shared
+  $($(package)_autoconf)
 endef
 
 define $(package)_build_cmds
