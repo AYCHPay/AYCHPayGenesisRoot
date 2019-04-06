@@ -29,6 +29,22 @@ struct CompareLastPaidBlock
     bool operator()(const std::pair<int, const CMasternode*>& t1,
                     const std::pair<int, const CMasternode*>& t2) const
     {
+        if (t1.first != t2.first)
+        {
+            return t1.first < t2.first;
+        }
+        else
+        {
+            if (t1.second->activationBlockHeight != t2.second->activationBlockHeight)
+            {
+                return t1.second->activationBlockHeight < t2.second->activationBlockHeight;
+            }
+            else
+            {
+                return t1.second->outpoint < t2.second->outpoint
+            }            
+        }
+        
         return (t1.first != t2.first) ? (t1.first < t2.first) : (t1.second->outpoint < t2.second->outpoint);
     }
 };
