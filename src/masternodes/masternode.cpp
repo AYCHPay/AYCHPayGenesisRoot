@@ -408,11 +408,15 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                     // Check that we have not missed something...
                     else if (positionTracker == primaryMnPaymentPosition)
                     {
+                        if (pindexActive->nHeight - nBlockLastPaidPrimary < mnCount)
+                        {
+                            LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- in block %d was paid in block %d when there are %d masternodes\n", outpoint.ToStringShort(), pindexActive->nHeight, nBlockLastPaidPrimary, mnCount);
+                        }
                         // Still mark it as primary paid, even if the value is off :S
                         nBlockLastPaidPrimary = pindexActive->nHeight;
                         nTimeLastPaidPrimary = pindexActive->nTime;
                         // this is badong... let someone know (If you don't know what badong is, watch https://www.youtube.com/watch?v=O6_P_ZWwJ3Q)
-                        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- found at position 6 in block %d pays %f instead of %f\n", outpoint.ToStringShort(), pindexActive->nHeight, readableTxValue, readableMnPayValue);
+                        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- in block %d pays %f instead of %f\n", outpoint.ToStringShort(), pindexActive->nHeight, readableTxValue, readableMnPayValue);
                         return;
                     }
                     else
