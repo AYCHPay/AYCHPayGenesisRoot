@@ -41,7 +41,7 @@ struct CompareLastPaidBlock
             }
             else
             {
-                return t1.second->outpoint < t2.second->outpoint
+                return t1.second->outpoint < t2.second->outpoint;
             }            
         }
         
