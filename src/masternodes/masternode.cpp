@@ -408,6 +408,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                     // Check that we have not missed something...
                     else if (positionTracker == primaryMnPaymentPosition)
                     {
+                        // Living the dream... masternode was paid as a primary too recently
                         if (pindexActive->nHeight - nBlockLastPaidPrimary < mnCount)
                         {
                             LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- in block %d was paid in block %d when there are %d masternodes\n", outpoint.ToStringShort(), pindexActive->nHeight, nBlockLastPaidPrimary, mnCount);
@@ -419,7 +420,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- in block %d pays %f instead of %f\n", outpoint.ToStringShort(), pindexActive->nHeight, readableTxValue, readableMnPayValue);
                         return;
                     }
-                    else
+                    else if (positionTracker > primaryMnPaymentPosition)
                     {
                         // This is a bit fuzzy for my liking, but the logic:
                         // * This is the coinbase transaction
