@@ -560,7 +560,7 @@ void CMasternodeBlockPayees::AddPayee(const CMasternodePaymentVote& vote)
             return;
         }
     }
-    CMasternodePayee payeeNew(vote.payee, vote.activationBlockHeight, nVoteHash);
+    CMasternodePayee payeeNew(vote.payee, nVoteHash);
     vecPayees.push_back(payeeNew);
 }
 

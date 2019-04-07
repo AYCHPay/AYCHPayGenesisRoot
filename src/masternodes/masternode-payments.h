@@ -50,19 +50,17 @@ class CMasternodePayee
 {
 private:
     CScript scriptPubKey;
-    int activationBlockHeight; // this is the block at which the payment reached the minimum number of confirms
     std::vector<uint256> vecVoteHashes;
+    int reservedForFuture = 0; 
 
 public:
     CMasternodePayee() :
         scriptPubKey(),
-        activationBlockHeight(0),
         vecVoteHashes()
         {}
 
-    CMasternodePayee(CScript payee, int activationHeight, uint256 hashIn) :
+    CMasternodePayee(CScript payee, uint256 hashIn) :
         scriptPubKey(payee),
-        activationBlockHeight(activationHeight),
         vecVoteHashes()
     {
         vecVoteHashes.push_back(hashIn);
@@ -73,13 +71,11 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(*(CScriptBase*)(&scriptPubKey));
-        READWRITE(activationBlockHeight);
+        READWRITE(reservedForFuture);
         READWRITE(vecVoteHashes);
     }
 
     CScript GetPayee() const { return scriptPubKey; }
-    int GetActivationHeight() const { return activationBlockHeight; }
-
     void AddVoteHash(uint256 hashIn) { vecVoteHashes.push_back(hashIn); }
     std::vector<uint256> GetVoteHashes() const { return vecVoteHashes; }
     int GetVoteCount() const { return vecVoteHashes.size(); }
