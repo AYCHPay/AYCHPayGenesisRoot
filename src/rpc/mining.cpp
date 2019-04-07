@@ -920,7 +920,6 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         if (strCompare == strAddress)
         {
             mnDebugNode = mnpair.second;
-            mnDebugFound = true;
         }
         // else
         // {
