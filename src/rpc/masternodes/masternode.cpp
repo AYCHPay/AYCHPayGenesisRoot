@@ -42,7 +42,7 @@ UniValue masternode(const JSONRPCRequest& request)
             strCommand != "start-alias" && strCommand != "start-all" && strCommand != "start-missing" &&
          strCommand != "start-disabled" && strCommand != "outputs" &&
 #endif // ENABLE_WALLET
-         strCommand != "list" && strCommand != "list-conf" && strCommand != "count" &&
+         strCommand != "list" && strCommand != "list-conf" && strCommand != "count" && strCommand != "maturity" &&
          strCommand != "debug" && strCommand != "current" && strCommand != "winner" && strCommand != "winners" && strCommand != "genkey" &&
          strCommand != "connect" && strCommand != "status"))
             throw std::runtime_error(
@@ -182,9 +182,9 @@ UniValue masternode(const JSONRPCRequest& request)
         int nHeight = 0;
 
         // format: masternode maturity address
-        if (request.params.size() == 3 || request.params.size() == 4)
+        if (request.params.size() == 2 || request.params.size() == 3)
         {
-            std::string strAddress = request.params[2].get_str();
+            std::string strAddress = request.params[1].get_str();
             if (strAddress.length() == 0)
             {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, "Please specify a masternode");
@@ -241,7 +241,7 @@ UniValue masternode(const JSONRPCRequest& request)
             }
         }
 
-        if (request.params.size() == 3)
+        if (request.params.size() == 2)
         {
             // Use the current chain height
             LOCK(cs_main);
@@ -249,17 +249,23 @@ UniValue masternode(const JSONRPCRequest& request)
             if (!pindex) return NullUniValue;
             nHeight = pindex->nHeight;
         }
-        else if (request.params.size() == 4)
+        else if (request.params.size() == 3)
         {
             // use the specified height
             nHeight = atoi(request.params[3].get_str());
         }
 
         int activationHeight = node.activationBlockHeight;
+
+        // Some basic validation
+        if (nHeight < Params().GetConsensus().nMasternodePaymentsStartBlock || nHeight < activationHeight)
+        {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Please specify a valid block height");
+        }
+
         CAmount maxMasternodePayment = GetMasternodePayments(nHeight, activationHeight, GetBlockSubsidy(nHeight, Params().GetConsensus()));
 
         UniValue obj(UniValue::VOBJ);
-
         if (!fFound) {
             obj.push_back(Pair("result", "failed"));
             obj.push_back(Pair("errorMessage", "Could not find the masternode"));
@@ -268,11 +274,12 @@ UniValue masternode(const JSONRPCRequest& request)
         {
             obj.push_back(Pair("height", nHeight));
             obj.push_back(Pair("activation_block_height", activationHeight));
+            // add % maturation
+            // add total available amount
             obj.push_back(Pair("matured_amount", maxMasternodePayment));
         }
 
         return obj;
-
     }
 
 #ifdef ENABLE_WALLET
