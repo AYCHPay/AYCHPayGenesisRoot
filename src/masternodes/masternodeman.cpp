@@ -814,7 +814,8 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         sampleSize = vecMasternodeLastPaidSecondary.size();
     }
     // copy sampleSize items to the output
-    for(int i=0; i< (int)sampleSize; ++i){
+    // <= to account for potentially skipping the one selected as a primary
+    for(int i=0; i<= (int)sampleSize; ++i){
         const CMasternode *pBestSecondaryMasternode = vecMasternodeLastPaidSecondary[i].second;
         if (pBestSecondaryMasternode)
         {
@@ -823,7 +824,12 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
             {
                 vSecondaryMnInfoRet.push_back(pBestSecondaryMasternode->GetInfo());
             }
-        }        
+        } 
+        if (vSecondaryMnInfoRet.size() == sampleSize)
+        {
+            // do not take more than you need
+            break;
+        }
     }
 
     return mnInfoRet.fInfoValid;

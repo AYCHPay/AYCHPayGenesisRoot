@@ -268,7 +268,18 @@ UniValue masternode(const JSONRPCRequest& request)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Please specify a valid block height");
         }
 
-        CAmount maxMasternodePayment = GetMasternodePayments(nHeight, activationHeight, GetBlockSubsidy(nHeight, Params().GetConsensus()));
+        // Establish base values
+        CAmount totalReward = Params().GetConsensus().nBlockRewardMasternode * COIN;
+        int thresholdAge = Params().GetConsensus().nMasternodeMaturityThreshold * Params().GetConsensus().nMasternodeMaturityBlockMultiplier;
+        CAmount maxSecondaryCount = Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount;
+        CAmount minimumSecondaryDeduction = (maxSecondaryCount * Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount) * COIN;
+        CAmount minimumPrimaryPayment = Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount * COIN;
+        CAmount blockRewardBase = GetBlockSubsidy(nHeight, Params().GetConsensus());
+        CAmount allowedPayment = totalReward - minimumSecondaryDeduction;
+
+        // Using Calls...
+        CAmount maxMasternodePayment = GetMasternodePayments(nHeight, activationHeight, blockRewardBase);
+
 
         UniValue obj(UniValue::VOBJ);
         if (!fFound) {
@@ -277,7 +288,16 @@ UniValue masternode(const JSONRPCRequest& request)
         }
         else
         {
+            // Base
             obj.push_back(Pair("height", nHeight));
+            obj.push_back(Pair("block_subsidy", blockRewardBase));
+            obj.push_back(Pair("masternode_subsidy_total", totalReward));
+            // Thresholds
+            obj.push_back(Pair("threshold_block_age", thresholdAge));
+            obj.push_back(Pair("max_secondary_masternode_count", maxSecondaryCount));
+            obj.push_back(Pair("min_masternode_payment", minimumPrimaryPayment));
+            obj.push_back(Pair("max_masternode_payment", allowedPayment));
+            // Metrics
             obj.push_back(Pair("activation_block_height", activationHeight));
             obj.push_back(Pair("block_age", nHeight - activationHeight));
             obj.push_back(Pair("matured_amount_genxis", maxMasternodePayment));

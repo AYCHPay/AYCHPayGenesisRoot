@@ -473,11 +473,11 @@ CAmount GetMasternodePayments(int nHeight, int activationHeight, CAmount blockVa
     else
     {
         // This masternode must only be paid according to its maturity level
-        CAmount proratedPayment = ceil((allowedPayment / thresholdAge) * blockAge);
+        CAmount proratedPayment = ceil((allowedPayment / (double)thresholdAge) * (double)blockAge);
         // Doing it this way makes the transition smooth-ish and avoids creating dust (<1 genx)
-        if ((proratedPayment + minimumPrimaryPayment) < (minimumPrimaryPayment * 2))
+        if (proratedPayment < minimumPrimaryPayment)
         {
-            return minimumPrimaryPayment + proratedPayment;
+            return minimumPrimaryPayment;
         }
         else
         {
