@@ -276,10 +276,20 @@ UniValue masternode(const JSONRPCRequest& request)
         CAmount minimumPrimaryPayment = Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount * COIN;
         CAmount blockRewardBase = GetBlockSubsidy(nHeight, Params().GetConsensus());
         CAmount allowedPayment = totalReward - minimumSecondaryDeduction;
+        int blockAge = nHeight - activationHeight;
 
         // Using Calls...
         CAmount maxMasternodePayment = GetMasternodePayments(nHeight, activationHeight, blockRewardBase);
+        CAmount actualMasternodePayment = 0;
 
+        if (blockAge >= thresholdAge)
+        {
+            actualMasternodePayment = allowedPayment;
+        }
+        else
+        {
+            actualMasternodePayment = ceil((allowedPayment / (double)thresholdAge) * (double)blockAge);
+        }
 
         UniValue obj(UniValue::VOBJ);
         if (!fFound) {
@@ -299,8 +309,9 @@ UniValue masternode(const JSONRPCRequest& request)
             obj.push_back(Pair("max_masternode_payment", allowedPayment));
             // Metrics
             obj.push_back(Pair("activation_block_height", activationHeight));
-            obj.push_back(Pair("block_age", nHeight - activationHeight));
-            obj.push_back(Pair("matured_amount_genxis", maxMasternodePayment));
+            obj.push_back(Pair("block_age", blockAge));
+            obj.push_back(Pair("matured_amount_actual", actualMasternodePayment));
+            obj.push_back(Pair("matured_amount_reported", maxMasternodePayment));
         }
 
         return obj;
