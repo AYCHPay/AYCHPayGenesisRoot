@@ -576,10 +576,14 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
     // Work with a local list of masternodes to avoid deadlocks :(
     std::map<COutPoint, CMasternode> localMasternodeList = mnodeman.GetFullMasternodeMap();
 
-    // primary
+    // internal state
     int nVotes = -1;
     int activationHeight = 0;
     int64_t lastPaid = 0;
+    // (in)sanity checks
+    CScript selectedPayee;
+    int selectedActivationHeight;
+
     for (const auto& payee : vecPayees) {
         // Flatten out the values...
         int voteCount = payee.GetVoteCount();
@@ -587,26 +591,29 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
         // Try to look up the masternode
         bool gotNode = false;
         masternode_info_t mNode;
+
+        CTxDestination payeeDestinationAddress;
+        ExtractDestination(payee.GetPayee(), payeeDestinationAddress);
+        std::string strAddress = EncodeDestination(payeeDestinationAddress);
+
         // Copied from masternodeman, to avoid having to deal with dealocks
         for (const auto& mnpair : localMasternodeList) {
-            CScript scriptCollateralAddress = GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()));
-            if (scriptCollateralAddress == currentPayee) {
+            // Not optimal, but makes it easier to debug
+            std::string strCompare = EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
+            if (strCompare == strAddress) {
                 mNode = mnpair.second.GetInfo();
                 gotNode = true;
-            }
+            } 
         }
         // Check for (and try to fix) wonkiness...
-        int payeeActivationHeight = payee.GetActivationHeight();
-        if (payeeActivationHeight == 0)
+        int payeeActivationHeight = 0;
+        if (gotNode && mNode.activationBlockHeight != 0)
         {
-            if (gotNode && mNode.activationBlockHeight != 0)
-            {
-                payeeActivationHeight = mNode.activationBlockHeight;
-            }
-            else
-            {
-                payeeActivationHeight = mnodeman.GetNodeActivationHeight(payee.GetPayee());
-            }
+            payeeActivationHeight = mNode.activationBlockHeight;
+        }
+        else
+        {
+            payeeActivationHeight = mnodeman.GetNodeActivationHeight(payee.GetPayee());
         }
 
         // Validations
@@ -631,7 +638,16 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
             nVotes = voteCount;
             lastPaid = mNode.nTimeLastPaidPrimary;
             activationHeight = payeeActivationHeight;
+            // Update sanity check values
+            selectedPayee = currentPayee;
+            selectedActivationHeight = payeeActivationHeight;
         }
+    }
+
+    // sanity checking
+    if (selectedPayee != payeeRet || selectedActivationHeight != activationBlockHeightRet)
+    {
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::GetBestPayee -- The results of the sanity check are in... and they're not good\n");
     }
 
     return (nVotes > -1);
