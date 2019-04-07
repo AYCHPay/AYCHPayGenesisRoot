@@ -200,6 +200,10 @@ UniValue masternode(const JSONRPCRequest& request)
                         node = mnpair.second;
                         fFound = true;
                     }
+                    // else
+                    // {
+                    //     fprintf(stdout, "%s is not %s \n", strCompare.c_str(), strAddress.c_str());
+                    // }
                 }
             }
             else if (strAddress.length() == 46)
@@ -207,7 +211,8 @@ UniValue masternode(const JSONRPCRequest& request)
                 // script
                 for (const auto& mnpair : mapMasternodes) {
                     std::string strOutpoint = mnpair.first.ToStringShort();
-                    if (strOutpoint.find(strAddress) != std::string::npos || strAddress == HexStr(mnpair.second.pubKeyMasternode))
+                    std::string strCompare = HexStr(mnpair.second.pubKeyMasternode);
+                    if (strOutpoint.find(strAddress) != std::string::npos || strAddress == strCompare)
                     {
                         node = mnpair.second;
                         fFound = true;
@@ -252,7 +257,7 @@ UniValue masternode(const JSONRPCRequest& request)
         else if (request.params.size() == 3)
         {
             // use the specified height
-            nHeight = atoi(request.params[3].get_str());
+            nHeight = atoi(request.params[2].get_str());
         }
 
         int activationHeight = node.activationBlockHeight;
@@ -274,9 +279,8 @@ UniValue masternode(const JSONRPCRequest& request)
         {
             obj.push_back(Pair("height", nHeight));
             obj.push_back(Pair("activation_block_height", activationHeight));
-            // add % maturation
-            // add total available amount
-            obj.push_back(Pair("matured_amount", maxMasternodePayment));
+            obj.push_back(Pair("block_age", nHeight - activationHeight));
+            obj.push_back(Pair("matured_amount_genxis", maxMasternodePayment));
         }
 
         return obj;
