@@ -13,7 +13,7 @@
 #include <streams.h>
 #include <uint256.h>
 #include <util.h>
-#include <sodium.h>
+#include <blake2.h>
 
 // LWMA for BTC clones
 // Copyright (c) 2017-2018 The Bitcoin Gold developers
