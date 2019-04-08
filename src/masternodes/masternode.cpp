@@ -357,12 +357,27 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
 
     LOCK(cs_mapMasternodeBlocks);
 
-    for (int i = 0; pindexActive->nHeight > nBlockLastPaidPrimary && i < nMaxBlocksToScanBack; i++) {
+    int scanBack = 0;
+    if (nBlockLastPaidPrimary > nBlockLastPaidSecondary)
+    {
+        scanBack = nBlockLastPaidSecondary;
+    }
+    else
+    {
+        scanBack = nBlockLastPaidPrimary;
+    }
+
+    // keep track of what is found 
+    bool foundPrimary = false;
+    bool foundSecondary = false;
+
+    for (int i = 0; pindexActive->nHeight > scanBack && i < nMaxBlocksToScanBack; i++) {
         size_t checkitOut = mnpayments.mapMasternodeBlocksPrimary.count(pindexActive->nHeight);
-        bool hazIt = mnpayments.mapMasternodeBlocksPrimary[pindexActive->nHeight].HasPayeeWithVotes(mnpayee, 2);
+        //bool hazIt = mnpayments.mapMasternodeBlocksPrimary[pindexActive->nHeight].HasPayeeWithVotes(mnpayee, 2);
         int mnCount = mnodeman.CountMasternodes(-1);
 
-        if ((mnCount > 2 && checkitOut && hazIt) || (mnCount <= 2))
+        // if ((mnCount > 2 && checkitOut && hazIt) || (mnCount <= 2))
+        if ((mnCount > 2 && checkitOut) || (mnCount <= 2))
         {
             if (blockPos.IsNull() == true) {
                 return;
@@ -402,8 +417,18 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                     {
                         nBlockLastPaidPrimary = pindexActive->nHeight;
                         nTimeLastPaidPrimary = pindexActive->nTime;
-                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
-                        return;
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with primary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidPrimary);
+                        foundPrimary = true;
+                        if (foundSecondary)
+                        {
+                            // I've found both values
+                            return;
+                        }
+                        else
+                        {
+                            // still looking for the other one...
+                            break;
+                        }
                     }
                     // Check that we have not missed something...
                     else if (positionTracker == primaryMnPaymentPosition)
@@ -417,8 +442,18 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         nBlockLastPaidPrimary = pindexActive->nHeight;
                         nTimeLastPaidPrimary = pindexActive->nTime;
                         // this is badong... let someone know (If you don't know what badong is, watch https://www.youtube.com/watch?v=O6_P_ZWwJ3Q)
-                        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- in block %d pays %f instead of %f\n", outpoint.ToStringShort(), pindexActive->nHeight, readableTxValue, readableMnPayValue);
-                        return;
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- Bad value in masternode payment. %s -- in block %d pays %f instead of %f\n", outpoint.ToStringShort(), pindexActive->nHeight, readableTxValue, readableMnPayValue);
+                        foundPrimary = true;
+                        if (foundSecondary)
+                        {
+                            // I've found both values
+                            return;
+                        }
+                        else
+                        {
+                            // still looking for the other one...
+                            break;
+                        }
                     }
                     else if (positionTracker > primaryMnPaymentPosition)
                     {
@@ -429,8 +464,18 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         // Should suffice to substantiate the claim that this is a secondary masternode payment to me
                         nBlockLastPaidSecondary = pindexActive->nHeight;
                         nTimeLastPaidSecondary = pindexActive->nTime;
-                        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
-                        return;
+                        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- searching for block with secondary payment to %s -- found new %d\n", outpoint.ToStringShort(), nBlockLastPaidSecondary);
+                        foundSecondary = true;
+                        if (foundPrimary)
+                        {
+                            // I've found both values
+                            return;
+                        }
+                        else
+                        {
+                            // still looking for the other one...
+                            break;
+                        }
                     }
                     else
                     {
@@ -454,9 +499,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                             // kill it with fire....
                             assert(!isMasternodePaymentAmongFounders);
                         }
-                        
                     }
-                    
                 }    
                 positionTracker++;            
             }
