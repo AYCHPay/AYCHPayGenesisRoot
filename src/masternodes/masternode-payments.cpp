@@ -86,7 +86,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
         strErrorRet = strprintf("invalid governanceblock detected at height %d", nBlockHeight);
         return false;
     }
-    LogPrintG(BCLogLevel::LOG_WARNING, BCLog::GOV, "[Governance] IsBlockValueValid -- No triggered governanceblock detected at height %d\n", nBlockHeight);
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::GOV, "[Governance] IsBlockValueValid -- No triggered governanceblock detected at height %d\n", nBlockHeight);
     if (!isBlockRewardValueMet) {
         strErrorRet = strprintf("coinbase pays too much at height %d (actual=%d vs limit=%d), exceeded block reward, no triggered governanceblock detected",
             nBlockHeight, block.vtx[0]->GetValueOut(), blockReward);
@@ -982,7 +982,7 @@ void CMasternodePayments::CheckBlockVotes(int nBlockHeight)
         debugStr += strprintf("    - %s: %d\n", item.first.ToStringShort(), item.second);
     }
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] %s", debugStr);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] %s", debugStr);
 }
 
 void CMasternodePaymentVote::Relay(CConnman& connman) const

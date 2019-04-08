@@ -1240,11 +1240,11 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, const std::string& strCommand,
             SendVerifyReply(pfrom, mnv, connman);
         } else if (mnv.vchSig2.empty()) {
             // CASE 2: we _probably_ got verification we requested from some masternode
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMessage (MNVERIFY) -- (Probably) Got requested verification reply we requested from a masternode \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMessage (MNVERIFY) -- (Probably) Got requested verification reply we requested from a masternode \n");
             ProcessVerifyReply(pfrom, mnv);
         } else {
             // CASE 3: we _probably_ got verification broadcast signed by some masternode which verified another one
-            LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMessage (MNVERIFY) -- (Probably) Got requested verification broadcast signed by some masternode which verified another one \n");
+            LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::ProcessMessage (MNVERIFY) -- (Probably) Got requested verification broadcast signed by some masternode which verified another one \n");
             ProcessVerifyBroadcast(pfrom, mnv);
         }
     }
