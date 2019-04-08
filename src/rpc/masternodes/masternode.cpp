@@ -563,8 +563,10 @@ UniValue masternodelist(const JSONRPCRequest& request)
 
     if (request.fHelp || (
                 strMode != "activeseconds" && strMode != "addr" && strMode != "daemon" && strMode != "full" && strMode != "info" && strMode != "json" &&
-                strMode != "lastseen" && strMode != "lastpaidtime" && strMode != "lastpaidblock" &&
-                strMode != "protocol" && strMode != "payee" && strMode != "pubkey" &&
+                strMode != "lastseen" && 
+                strMode != "lastpaidtime"  && strMode != "lastpaidtimes"  && strMode != "lastpaidtimeprimary"  && strMode != "lastpaidtimesecondary" && 
+                strMode != "lastpaidblock" && strMode != "lastpaidblocks" && strMode != "lastpaidblockprimary" && strMode != "lastpaidblocksecondary" &&
+                strMode != "protocol" && strMode != "payee" && strMode != "pubkey" && strMode != "posebanscore" &&
                 strMode != "rank" && strMode != "sentinel" && strMode != "status"))
     {
         throw std::runtime_error(
@@ -575,30 +577,49 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 "2. \"filter\"    (string, optional) Filter results. Partial match by outpoint by default in all modes,\n"
                 "                                    additional matches in some modes are also available\n"
                 "\nAvailable modes:\n"
-                "  activeseconds  - Print number of seconds masternode recognized by the network as enabled\n"
-                "                   (since latest issued \"masternode start/start-many/start-alias\")\n"
-                "  addr           - Print ip address associated with a masternode (can be additionally filtered, partial match)\n"
-                "  daemon         - Print daemon version of a masternode (can be additionally filtered, exact match)\n"
-                "  full           - Print info in format 'status protocol payee lastseen activeseconds lastpaidtime lastpaidblock IP'\n"
-                "                   (can be additionally filtered, partial match)\n"
-                "  info           - Print info in format 'status protocol payee lastseen activeseconds sentinelversion sentinelstate IP'\n"
-                "                   (can be additionally filtered, partial match)\n"
-                "  json           - Print info in JSON format (can be additionally filtered, partial match)\n"
-                "  lastpaidblock  - Print the last block height a node was paid on the network\n"
-                "  lastpaidtime   - Print the last time a node was paid on the network\n"
-                "  lastseen       - Print timestamp of when a masternode was last seen on the network\n"
-                "  payee          - Print Genesis address associated with a masternode (can be additionally filtered,\n"
-                "                   partial match)\n"
-                "  protocol       - Print protocol of a masternode (can be additionally filtered, exact match)\n"
-                "  pubkey         - Print the masternode (not collateral) public key\n"
-                "  rank           - Print rank of a masternode based on current block\n"
-                "  sentinel       - Print sentinel version of a masternode (can be additionally filtered, exact match)\n"
-                "  status         - Print masternode status: PRE_ENABLED / ENABLED / EXPIRED / SENTINEL_PING_EXPIRED / NEW_START_REQUIRED /\n"
-                "                   UPDATE_REQUIRED / POSE_BAN / OUTPOINT_SPENT (can be additionally filtered, partial match)\n"
+                "  activation_block_height  - Print the block height at which a masternode was activated\n"
+                "  activeseconds            - Print number of seconds masternode recognized by the network as enabled\n"
+                "                               (since latest issued \"masternode start/start-many/start-alias\")\n"
+                "  addr                     - Print ip address associated with a masternode (can be additionally filtered, partial match)\n"
+                "  daemon                   - Print daemon version of a masternode (can be additionally filtered, exact match)\n"
+                "  full                     - Print info in format 'status protocol payee lastseen activeseconds lastpaidtime lastpaidblock IP'\n"
+                "                               (can be additionally filtered, partial match)\n"
+                "  info                     - Print info in format 'status protocol payee lastseen activeseconds sentinelversion sentinelstate IP'\n"
+                "                             (can be additionally filtered, partial match)\n"
+                "  json                     - Print info in JSON format (can be additionally filtered, partial match)\n"
+                "  lastpaidblockprimary     - Print the last block height a node was paid on the network as a primary\n"
+                "  lastpaidblock            - alias for lastpaidblock\n"
+                "  lastpaidblocksecondary   - Print the last block height a node was paid on the network as a secondary\n"
+                "  lastpaidblocks           - Print the last block heights a node was paid on the network as either a primary or secondary\n"
+                "  lastpaidtimeprimary      - Print the last time a node was paid on the network as a primary\n"
+                "  lastpaidtime             - Alias for lastpaidtimeprimary\n"
+                "  lastpaidtimesecondary    - Print the last time a node was paid on the network as a secondary\n"
+                "  lastpaidtimes            - Print the last times a node was paid on the network as either a primary or secondary\n"
+                "  lastseen                 - Print timestamp of when a masternode was last seen on the network\n"
+                "  payee                    - Print Genesis address associated with a masternode (can be additionally filtered,\n"
+                "                               partial match)\n"
+                "  posebanscore             - Print PoSeBan score of a masternode\n"
+                "  protocol                 - Print protocol of a masternode (can be additionally filtered, exact match)\n"
+                "  pubkey                   - Print the masternode (not collateral) public key\n"
+                "  rank                     - Print rank of a masternode based on current block\n"
+                "  sentinel                 - Print sentinel version of a masternode (can be additionally filtered, exact match)\n"
+                "  status                   - Print masternode status: PRE_ENABLED / ENABLED / EXPIRED / SENTINEL_PING_EXPIRED / NEW_START_REQUIRED /\n"
+                "                               UPDATE_REQUIRED / POSE_BAN / OUTPOINT_SPENT (can be additionally filtered, partial match)\n"
                 );
     }
 
-    if (strMode == "full" || strMode == "json" || strMode == "lastpaidtime" || strMode == "lastpaidblock") {
+    if (
+        strMode == "full" || 
+        strMode == "json" || 
+        strMode == "lastpaidtime" || 
+        strMode == "lastpaidtimes" || 
+        strMode == "lastpaidtimeprimary" || 
+        strMode == "lastpaidtimesecondary" || 
+        strMode == "lastpaidblock" ||
+        strMode == "lastpaidblocks" ||
+        strMode == "lastpaidblockprimary" ||
+        strMode == "lastpaidblocksecondary"
+        ) {
         CBlockIndex* pindex = NULL;
         {
             LOCK(cs_main);
@@ -739,6 +760,9 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 if (strFilter !="" && strPayee.find(strFilter) == std::string::npos &&
                     strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, strPayee));
+            } else if (strMode == "posebanscore") {
+                if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
+                obj.push_back(Pair(strOutpoint, mn.nPoSeBanScore));
             } else if (strMode == "protocol") {
                 if (strFilter !="" && strFilter != strprintf("%d", mn.nProtocolVersion) &&
                     strOutpoint.find(strFilter) == std::string::npos) continue;
