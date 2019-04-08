@@ -739,8 +739,10 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockSecondary()));
             } else if (strMode == "lastpaidblocks") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
-                obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockPrimary()));
-                obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockSecondary()));
+                UniValue lpbObj(UniValue::VOBJ);
+                lpbObj.push_back(Pair("primary", mn.GetLastPaidBlockPrimary()));
+                lpbObj.push_back(Pair("secondary", mn.GetLastPaidBlockSecondary()));
+                obj.push_back(Pair(strOutpoint, lpbObj));
             } else if (strMode == "lastpaidtime" || strMode == "lastpaidtimeprimary") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimePrimary()));
@@ -749,8 +751,10 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimeSecondary()));
             } else if (strMode == "lastpaidtimes") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
-                obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimePrimary()));
-                obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimeSecondary()));
+                UniValue lptObj(UniValue::VOBJ);
+                lptObj.push_back(Pair("primary", mn.GetLastPaidTimePrimary()));
+                lptObj.push_back(Pair("secondary", mn.GetLastPaidTimeSecondary()));
+                obj.push_back(Pair(strOutpoint, lptObj));
             } else if (strMode == "lastseen") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, (int64_t)mn.lastPing.sigTime));
