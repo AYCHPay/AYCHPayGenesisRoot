@@ -816,7 +816,7 @@ void static GenesisMiner(CWallet *pwallet)
             while (true) 
             {
                 // Hash state
-                crypto_generichash_blake2b_state state;
+                blake2b_state state;
                 if (Params().IsAfterSwitch(pblock->nHeight))
                 {
                     EhInitialiseState(n, k, state, "GENX_PoW");
@@ -832,12 +832,12 @@ void static GenesisMiner(CWallet *pwallet)
                 ss << I;
 
                 // H(I||...
-                crypto_generichash_blake2b_update(&state, (unsigned char*)&ss[0], ss.size());
+                blake2b_update(&state, (unsigned char*)&ss[0], ss.size());
 
                 // H(I||V||...
-                crypto_generichash_blake2b_state curr_state;
+                blake2b_state curr_state;
                 curr_state = state;
-                crypto_generichash_blake2b_update(&curr_state, pblock->nNonce.begin(), pblock->nNonce.size());
+                blake2b_update(&curr_state, pblock->nNonce.begin(), pblock->nNonce.size());
 
                 // (x_1, x_2, ...) = A(I, V, n, k)
                 //LogPrint("pow", "Running Equihash solver \"%s\" with nNonce = %s\n", solver, pblock->nNonce.ToString());

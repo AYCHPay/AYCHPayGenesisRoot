@@ -391,7 +391,7 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
     }
 
     /// debug print
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Trying connection %s lastseen=%.1fhrs\n",
+    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] Trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString(),
         pszDest ? 0.0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
@@ -487,7 +487,7 @@ void CConnman::DumpBanlist()
         SetBannedSetDirty(false);
     }
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] Flushed %d banned node ips/subnets to banlist.dat  %dms\n",
         banmap.size(), GetTimeMillis() - nStart);
 }
 
@@ -497,7 +497,7 @@ void CNode::CloseSocketDisconnect()
     LOCK(cs_hSocket);
     if (hSocket != INVALID_SOCKET)
     {
-        LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] disconnecting peer=%d\n", id);
+        LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] disconnecting peer=%d\n", id);
         CloseSocket(hSocket);
     }
 }
@@ -628,7 +628,7 @@ void CConnman::SweepBanned()
                 setBanned.erase(it++);
                 setBannedIsDirty = true;
                 notifyUI = true;
-                LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: Removed banned node ip/subnet from banlist.dat: %s\n", __func__, subNet.ToString());
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s: Removed banned node ip/subnet from banlist.dat: %s\n", __func__, subNet.ToString());
             }
             else
                 ++it;
@@ -2189,7 +2189,7 @@ void Discover(boost::thread_group& threadGroup)
             for (const CNetAddr &addr : vaddr)
             {
                 if (AddLocal(addr, LOCAL_IF))
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: %s - %s\n", __func__, pszHostName, addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::NET, "[Networking] %s: %s - %s\n", __func__, pszHostName, addr.ToString());
             }
         }
     }
@@ -2209,14 +2209,14 @@ void Discover(boost::thread_group& threadGroup)
                 struct sockaddr_in* s4 = (struct sockaddr_in*)(ifa->ifa_addr);
                 CNetAddr addr(s4->sin_addr);
                 if (AddLocal(addr, LOCAL_IF))
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: IPv4 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] %s: IPv4 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
             }
             else if (ifa->ifa_addr->sa_family == AF_INET6)
             {
                 struct sockaddr_in6* s6 = (struct sockaddr_in6*)(ifa->ifa_addr);
                 CNetAddr addr(s6->sin6_addr);
                 if (AddLocal(addr, LOCAL_IF))
-                    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::NET, "[Networking] %s: IPv6 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
+                    LogPrintG(BCLogLevel::LOG_INFO, BCLog::NET, "[Networking] %s: IPv6 %s: %s\n", __func__, ifa->ifa_name, addr.ToString());
             }
         }
         freeifaddrs(myaddrs);

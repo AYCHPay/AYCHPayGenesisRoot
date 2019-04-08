@@ -42,7 +42,7 @@ UniValue masternode(const JSONRPCRequest& request)
             strCommand != "start-alias" && strCommand != "start-all" && strCommand != "start-missing" &&
          strCommand != "start-disabled" && strCommand != "outputs" &&
 #endif // ENABLE_WALLET
-         strCommand != "list" && strCommand != "list-conf" && strCommand != "count" &&
+         strCommand != "list" && strCommand != "list-conf" && strCommand != "count" && strCommand != "maturity" &&
          strCommand != "debug" && strCommand != "current" && strCommand != "winner" && strCommand != "winners" && strCommand != "genkey" &&
          strCommand != "connect" && strCommand != "status"))
             throw std::runtime_error(
@@ -54,14 +54,15 @@ UniValue masternode(const JSONRPCRequest& request)
                 "  count        - Get information about number of masternodes (DEPRECATED options: 'total', 'enabled', 'qualify', 'all')\n"
                 "  current      - Print info on current masternode winner to be paid the next block (calculated locally)\n"
                 "  genkey       - Generate new masternodeprivkey\n"
+                "  list         - Print list of all known masternodes (see masternodelist for more info)\n"
+                "  list-conf    - Print masternode.conf in JSON format\n"
+                "  maturity     - Calculate the maturity stats for a masternode\n"
 #ifdef ENABLE_WALLET
                 "  outputs      - Print masternode compatible outputs\n"
                 "  start-alias  - Start single remote masternode by assigned alias configured in masternode.conf\n"
                 "  start-<mode> - Start remote masternodes configured in masternode.conf (<mode>: 'all', 'missing', 'disabled')\n"
 #endif // ENABLE_WALLET
                 "  status       - Print masternode status information\n"
-                "  list         - Print list of all known masternodes (see masternodelist for more info)\n"
-                "  list-conf    - Print masternode.conf in JSON format\n"
                 "  winner       - Print info on next masternode winner to vote for\n"
                 "  winners      - Print list of masternode winners\n"
                 );
@@ -154,6 +155,165 @@ UniValue masternode(const JSONRPCRequest& request)
         obj.push_back(Pair("lastseen",              mnInfo.nTimeLastPing));
         obj.push_back(Pair("activeseconds",         mnInfo.nTimeLastPing - mnInfo.sigTime));
         obj.push_back(Pair("activationblockheight", mnInfo.activationBlockHeight));
+        obj.push_back(Pair("lastpaidprimary",       mnInfo.nTimeLastPaidPrimary));
+        obj.push_back(Pair("lastpaidsecondary",     mnInfo.nTimeLastPaidSecondary));
+        return obj;
+    }
+
+    if (strCommand == "maturity")
+    {
+        if (request.params.size() < 2)
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Please specify a masternode");
+
+        for (CWalletRef pwallet : vpwallets) {
+            EnsureWalletIsUnlocked(pwallet);
+            LOCK(pwallet->cs_wallet);
+        }
+
+        // needed parameter(s):
+        // masternode identifier either a genx address or outpoint
+        // block at which to calculate (optional) if not specified, will calculate at the current block height
+        // show manual calc vs. using call
+
+        // A local list of masternodes
+        CMasternode node;
+        std::map<COutPoint, CMasternode> mapMasternodes = mnodeman.GetFullMasternodeMap();
+        bool fFound = false;
+        int nHeight = 0;
+
+        // format: masternode maturity address
+        if (request.params.size() == 2 || request.params.size() == 3)
+        {
+            std::string strAddress = request.params[1].get_str();
+            if (strAddress.length() == 0)
+            {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Please specify a masternode");
+            }
+            else if (strAddress.length() == 34)
+            {
+                // genx address
+                for (const auto& mnpair : mapMasternodes) {
+                    CTxDestination address = CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID())));
+                    std::string strCompare = EncodeDestination(address);
+                    if (strCompare == strAddress)
+                    {
+                        node = mnpair.second;
+                        fFound = true;
+                    }
+                    // else
+                    // {
+                    //     fprintf(stdout, "%s is not %s \n", strCompare.c_str(), strAddress.c_str());
+                    // }
+                }
+            }
+            else if (strAddress.length() == 46)
+            {
+                // script
+                for (const auto& mnpair : mapMasternodes) {
+                    std::string strOutpoint = mnpair.first.ToStringShort();
+                    std::string strCompare = HexStr(mnpair.second.pubKeyMasternode);
+                    if (strOutpoint.find(strAddress) != std::string::npos || strAddress == strCompare)
+                    {
+                        node = mnpair.second;
+                        fFound = true;
+                    }
+                }
+            }
+            else if (strAddress.length() == 66)
+            {
+                // outpoint
+                // e.g.: 7611ef05f9666c8b6698042674dd079f002b558dd9e851ecb6dda84d84c16239-1 
+                for (const auto& mnpair : mapMasternodes) {
+                    std::string strCompare = mnpair.first.ToStringShort();
+                    if (strCompare == strAddress)
+                    {
+                        node = mnpair.second;
+                        fFound = true;
+                    }
+                }
+            }
+            else if (std::count(strAddress.begin(), strAddress.end(), '.') == 3)
+            {
+                // looks kinda like an ip address - yes, I know this is not a great solution...
+                for (const auto& mnpair : mapMasternodes) {
+                    std::string strCompare = mnpair.second.addr.ToStringIP();
+                    if (strCompare == strAddress)
+                    {
+                        node = mnpair.second;
+                        fFound = true;
+                    }
+                }
+            }
+        }
+
+        if (request.params.size() == 2)
+        {
+            // Use the current chain height
+            LOCK(cs_main);
+            CBlockIndex* pindex = chainActive.Tip();
+            if (!pindex) return NullUniValue;
+            nHeight = pindex->nHeight;
+        }
+        else if (request.params.size() == 3)
+        {
+            // use the specified height
+            nHeight = atoi(request.params[2].get_str());
+        }
+
+        int activationHeight = node.activationBlockHeight;
+
+        // Some basic validation
+        if (nHeight < Params().GetConsensus().nMasternodePaymentsStartBlock || nHeight < activationHeight)
+        {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Please specify a valid block height");
+        }
+
+        // Establish base values
+        CAmount totalReward = Params().GetConsensus().nBlockRewardMasternode * COIN;
+        int thresholdAge = Params().GetConsensus().nMasternodeMaturityThreshold * Params().GetConsensus().nMasternodeMaturityBlockMultiplier;
+        CAmount maxSecondaryCount = Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount;
+        CAmount minimumSecondaryDeduction = (maxSecondaryCount * Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount) * COIN;
+        CAmount minimumPrimaryPayment = Params().GetConsensus().aMasternodeMaturiySecondariesMinAmount * COIN;
+        CAmount blockRewardBase = GetBlockSubsidy(nHeight, Params().GetConsensus());
+        CAmount allowedPayment = totalReward - minimumSecondaryDeduction;
+        int blockAge = nHeight - activationHeight;
+
+        // Using Calls...
+        CAmount maxMasternodePayment = GetMasternodePayments(nHeight, activationHeight, blockRewardBase);
+        CAmount actualMasternodePayment = 0;
+
+        if (blockAge >= thresholdAge)
+        {
+            actualMasternodePayment = allowedPayment;
+        }
+        else
+        {
+            actualMasternodePayment = ceil((allowedPayment / (double)thresholdAge) * (double)blockAge);
+        }
+
+        UniValue obj(UniValue::VOBJ);
+        if (!fFound) {
+            obj.push_back(Pair("result", "failed"));
+            obj.push_back(Pair("errorMessage", "Could not find the masternode"));
+        }
+        else
+        {
+            // Base
+            obj.push_back(Pair("height", nHeight));
+            obj.push_back(Pair("block_subsidy", blockRewardBase));
+            obj.push_back(Pair("masternode_subsidy_total", totalReward));
+            // Thresholds
+            obj.push_back(Pair("threshold_block_age", thresholdAge));
+            obj.push_back(Pair("max_secondary_masternode_count", maxSecondaryCount));
+            obj.push_back(Pair("min_masternode_payment", minimumPrimaryPayment));
+            obj.push_back(Pair("max_masternode_payment", allowedPayment));
+            // Metrics
+            obj.push_back(Pair("activation_block_height", activationHeight));
+            obj.push_back(Pair("block_age", blockAge));
+            obj.push_back(Pair("matured_amount_actual", actualMasternodePayment));
+            obj.push_back(Pair("matured_amount_reported", maxMasternodePayment));
+        }
+
         return obj;
     }
 
@@ -306,6 +466,9 @@ UniValue masternode(const JSONRPCRequest& request)
             mnObj.push_back(Pair("txHash", mne.getTxHash()));
             mnObj.push_back(Pair("outputIndex", mne.getOutputIndex()));
             mnObj.push_back(Pair("status", strStatus));
+            mnObj.push_back(Pair("activationBlockHeight", mn.activationBlockHeight));
+            mnObj.push_back(Pair("lastPaidBlockPrimary", mn.nBlockLastPaidPrimary));
+            mnObj.push_back(Pair("lastPaidBlockSecondary", mn.nBlockLastPaidSecondary));
             resultObj.push_back(Pair(mne.getAlias(), mnObj));
         }
 
@@ -533,9 +696,11 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 objMN.push_back(Pair("sentinelstate", (mn.lastPing.fSentinelIsCurrent ? "current" : "expired")));
                 objMN.push_back(Pair("lastseen", (int64_t)mn.lastPing.sigTime));
                 objMN.push_back(Pair("activeseconds", (int64_t)(mn.lastPing.sigTime - mn.sigTime)));
-                objMN.push_back(Pair("lastpaidtime", mn.GetLastPaidTimePrimary()));
-                objMN.push_back(Pair("lastpaidblock", mn.GetLastPaidBlockPrimary()));
-                objMN.push_back(Pair("pose_ban_score", mn.nPoSeBanScore));
+                objMN.push_back(Pair("lastpaidtimeprimary", mn.GetLastPaidTimePrimary()));
+                objMN.push_back(Pair("lastpaidblockprimary", mn.GetLastPaidBlockPrimary()));
+                objMN.push_back(Pair("lastpaidtimesecondary", mn.GetLastPaidTimeSecondary()));
+                objMN.push_back(Pair("lastpaidblocksecondary", mn.GetLastPaidBlockSecondary()));
+                objMN.push_back(Pair("posebanscore", mn.nPoSeBanScore));
                 objMN.push_back(Pair("activation_block_height", mn.activationBlockHeight));
                 obj.push_back(Pair(strOutpoint, objMN));
             } else if (strMode == "lastpaidblock") {

@@ -37,16 +37,26 @@ int Equihash<N,K>::InitialiseState(eh_HashState& base_state, const std::string p
 {
     uint32_t le_N = htole32(N);
     uint32_t le_K = htole32(K);
-    unsigned char personalization[crypto_generichash_blake2b_PERSONALBYTES] = {};
+    unsigned char personalization[BLAKE2B_PERSONALBYTES] = {};
     //LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::POW, "[ProofOfWork] Equihash Initialise State called with %s\n", personalizationString);
     memcpy(personalization, personalizationString.c_str(), 8);
     memcpy(personalization+8,  &le_N, 4);
     memcpy(personalization+12, &le_K, 4);
-    return crypto_generichash_blake2b_init_salt_personal(&base_state,
-                                                         NULL, 0, // No key.
-                                                         (512/N)*N/8,
-                                                         NULL,    // No salt.
-                                                         personalization);
+
+    blake2b_param param[1];
+    param->digest_length = (512/N)*N/8;
+    param->key_length    = 0;
+    param->fanout        = 1;
+    param->depth         = 1;
+    store32(&param->leaf_length, 0);
+    store64(&param->node_offset, 0);
+    param->node_depth    = 0;
+    param->inner_length  = 0;
+    memset(param->reserved, 0, sizeof(param->reserved));
+    memset(param->salt, 0, sizeof(param->salt));
+    memcpy(param->personal, personalization, BLAKE2B_PERSONALBYTES);
+
+    return blake2b_init_param(&base_state, param);
 }
 
 void GenerateHash(const eh_HashState& base_state, eh_index g,
@@ -55,9 +65,8 @@ void GenerateHash(const eh_HashState& base_state, eh_index g,
     eh_HashState state;
     state = base_state;
     eh_index lei = htole32(g);
-    crypto_generichash_blake2b_update(&state, (const unsigned char*) &lei,
-                                      sizeof(eh_index));
-    crypto_generichash_blake2b_final(&state, hash, hLen);
+    blake2b_update(&state, (const unsigned char*) &lei, sizeof(eh_index));
+    blake2b_final(&state, hash, hLen);
 }
 
 void ExpandArray(const unsigned char* in, size_t in_len,

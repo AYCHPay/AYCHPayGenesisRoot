@@ -23,10 +23,6 @@ Files: src/secp256k1/build-aux/m4/ax_prog_cc_for_build.m4
 Copyright: 2008 Paolo Bonzini <bonzini@gnu.org>
 License: GNU-All-permissive-License
 
-Files: depends/sources/libsodium-*.tar.gz
-Copyright: 2013-2016 Frank Denis
-License: ISC
-
 Files: src/qt/res/icons/add.png
        src/qt/res/icons/address-book.png
        src/qt/res/icons/chevron.png

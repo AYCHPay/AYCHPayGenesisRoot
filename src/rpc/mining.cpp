@@ -30,6 +30,7 @@
 
 #include <masternodes/governance-classes.h>
 #include <masternodes/masternode-payments.h>
+#include <masternodes/masternodeman.h>
 #include <masternodes/masternode-sync.h>
 
 #include <memory>
@@ -139,7 +140,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
 	// Solve Equihash.
-	crypto_generichash_blake2b_state eh_state;
+	blake2b_state eh_state;
     // EhInitialiseState(n, k, eh_state, Params().IsAfterSwitch(nHeight));
     if (Params().IsAfterSwitch(nHeight))
     {
@@ -156,7 +157,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
 	ss << I;
 
 	// H(I||...
-	crypto_generichash_blake2b_update(&eh_state, (unsigned char*)&ss[0], ss.size());
+	blake2b_update(&eh_state, (unsigned char*)&ss[0], ss.size());
 
 	while (nMaxTries > 0 && ((int)pblock->nNonce.GetUint64(0) & nInnerLoopMask) < nInnerLoopCount) 
 	{
@@ -165,9 +166,9 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
 	    pblock->nNonce = ArithToUint256(UintToArith256(pblock->nNonce) + 1);
 
 	    // H(I||V||...
-	    crypto_generichash_blake2b_state curr_state;
+	    blake2b_state  curr_state;
 	    curr_state = eh_state;
-	    crypto_generichash_blake2b_update(&curr_state, pblock->nNonce.begin(), pblock->nNonce.size());
+        blake2b_update(&curr_state, pblock->nNonce.begin(), pblock->nNonce.size());
 
 	    // (x_1, x_2, ...) = A(I, V, n, k)
 	    std::function<bool(std::vector<unsigned char>)> validBlock = [&pblock](std::vector<unsigned char> soln) 
@@ -611,7 +612,16 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     // next bock is a governanceblock and we need governance info to correctly construct it
     if (!masternodeSync.IsSynced()
         && CGovernanceBlock::IsValidBlockHeight(chainActive.Height() + 1))
+        {
             throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is syncing with network...");
+        }
+        else
+        {
+            // Make sure we're using up to date information...
+            CBlockIndex* pindexTemp = chainActive.Tip();
+            mnodeman.UpdateLastPaid(pindexTemp);
+        }
+        
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -873,23 +883,59 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("founders", founderScriptsObjArray));
 
     CAmount masternodeTotalAmount = Params().GetConsensus().nBlockRewardMasternode * COIN; // masternode total amount
-    result.push_back(Pair("masternodes_total", (int64_t)masternodeTotalAmount));
 
+    // Debug Masternode primary payments
+    // get the masternode list...
+    CMasternode mnDebugNode;
+    std::map<COutPoint, CMasternode> mnDebugMapMasternodes = mnodeman.GetFullMasternodeMap();
+    // The address to pay
+    std::string strAddress;
+
+    CAmount masternodeActual = 0;
     UniValue masternodeObjArray(UniValue::VARR);
     if (pblock->vtxoutMasternode.size()) {
+        bool foundFirst = false;
+        
         for (const auto& txout : pblock->vtxoutMasternode) {
             UniValue entry(UniValue::VOBJ);
             CTxDestination dest;
             ExtractDestination(txout.scriptPubKey, dest);
             entry.push_back(Pair("payee", EncodeDestination(dest).c_str()));
+            if (!foundFirst)
+            {
+                strAddress = EncodeDestination(dest);
+                foundFirst = true;
+            }
             entry.push_back(Pair("script", HexStr(txout.scriptPubKey)));
             entry.push_back(Pair("amount", txout.nValue));
             masternodeObjArray.push_back(entry);
+            masternodeActual += txout.nValue;
         }
     }
-    result.push_back(Pair("masternodes", masternodeObjArray));
+
+    // genx address
+    for (const auto& mnpair : mnDebugMapMasternodes) {
+        CTxDestination address = CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID())));
+        std::string strCompare = EncodeDestination(address);
+        if (strCompare == strAddress)
+        {
+            mnDebugNode = mnpair.second;
+        }
+        // else
+        // {
+        //     fprintf(stdout, "%s is not %s \n", strCompare.c_str(), strAddress.c_str());
+        // }
+    }
+
+    CAmount blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
+    CAmount masternodePrimaryEstimate = GetMasternodePayments(pindexPrev->nHeight+1, mnDebugNode.activationBlockHeight, blockRewardBase);
+
     result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
     result.push_back(Pair("masternode_payments_enforced", true));
+    result.push_back(Pair("masternodes_total", (int64_t)masternodeTotalAmount));
+    result.push_back(Pair("masternode_payments_actual", masternodeActual));
+    result.push_back(Pair("primary_masternode_estimate", masternodePrimaryEstimate));
+    result.push_back(Pair("masternodes", masternodeObjArray));
 
     CAmount governannceBlockAmount = Params().GetConsensus().nBlockRewardGovernance * COIN; // governance per block amount
     result.push_back(Pair("governanceblock_amount", (int64_t)governannceBlockAmount));

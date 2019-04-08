@@ -51,7 +51,7 @@ bool IsBlockValueValid(const CBlock& block, int nBlockHeight, CAmount blockRewar
     CAmount nGovernanceBlockMaxValue = blockReward + CGovernanceBlock::GetPaymentsLimit(nBlockHeight);
     bool isGovernanceBlockMaxValueMet = (block.vtx[0]->GetValueOut() <= nGovernanceBlockMaxValue);
 
-    LogPrintG(BCLogLevel::LOG_NOTICE, BCLog::GOV, "[Governance] block.vtx[0]->GetValueOut() %lld <= nGovernanceBlockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nGovernanceBlockMaxValue);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::GOV, "[Governance] block.vtx[0]->GetValueOut() %lld <= nGovernanceBlockMaxValue %lld\n", block.vtx[0]->GetValueOut(), nGovernanceBlockMaxValue);
 
     if (!masternodeSync.IsSynced() || fLiteMode) {
         // not enough data but at least it must NOT exceed governanceblock max value
@@ -230,7 +230,10 @@ void CMasternodePayments::FillBlockPayees(CMutableTransaction& txNew, int nBlock
         // fill payee with locally calculated winner and hope for the best
         payee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnInfo.pubKeyCollateralAddress.GetID()))));
         // Calculate the primaryPayeeActivationHeight for this locally calculated winner...
-        primaryPayeeActivationHeight = mnInfo.activationBlockHeight;
+        if (mnInfo.activationBlockHeight != 0)
+        {
+            primaryPayeeActivationHeight = mnInfo.activationBlockHeight;
+        }
     }
 
     /* Yay me... I found a primary... I think */
@@ -523,7 +526,7 @@ bool CMasternodePayments::AddOrUpdatePaymentVote(const CMasternodePaymentVote& v
     if (!GetBlockHash(blockHash, vote.nBlockHeight - 101)) return false;
 
     uint256 nVoteHash = vote.GetHash();
-    
+
     if (HasVerifiedPaymentVote(nVoteHash)) return false;
 
     LOCK2(cs_mapMasternodeBlocks, cs_mapMasternodePaymentVotes);
@@ -557,7 +560,7 @@ void CMasternodeBlockPayees::AddPayee(const CMasternodePaymentVote& vote)
             return;
         }
     }
-    CMasternodePayee payeeNew(vote.payee, vote.activationBlockHeight, nVoteHash);
+    CMasternodePayee payeeNew(vote.payee, nVoteHash);
     vecPayees.push_back(payeeNew);
 }
 
@@ -566,26 +569,85 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
     LOCK(cs_vecPayees);
 
     if (vecPayees.empty()) {
-        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::GetBestPayee -- ERROR: couldn't find any payee\n");
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::GetBestPayee -- ERROR: couldn't find any payee (payee list is empty)\n");
         return false;
     }
 
-    // primary
+    // Work with a local list of masternodes to avoid deadlocks :(
+    std::map<COutPoint, CMasternode> localMasternodeList = mnodeman.GetFullMasternodeMap();
+
+    // internal state
     int nVotes = -1;
+    int activationHeight = 0;
+    int64_t lastPaid = 0;
+    // (in)sanity checks
+    CScript selectedPayee;
+    int selectedActivationHeight;
+
     for (const auto& payee : vecPayees) {
-        if (payee.GetVoteCount() > nVotes) {
-            payeeRet = payee.GetPayee();
-            if (payee.GetActivationHeight() != 0)
-            {
-                activationBlockHeightRet = payee.GetActivationHeight();
-            }
-            else
-            {
-                int ah = mnodeman.GetNodeActivationHeight(payee.GetPayee());
-                activationBlockHeightRet = ah;
-            }
-            nVotes = payee.GetVoteCount();
+        // Flatten out the values...
+        int voteCount = payee.GetVoteCount();
+        CScript currentPayee = payee.GetPayee();
+        // Try to look up the masternode
+        bool gotNode = false;
+        masternode_info_t mNode;
+
+        CTxDestination payeeDestinationAddress;
+        ExtractDestination(payee.GetPayee(), payeeDestinationAddress);
+        std::string strAddress = EncodeDestination(payeeDestinationAddress);
+
+        // Copied from masternodeman, to avoid having to deal with dealocks
+        for (const auto& mnpair : localMasternodeList) {
+            // Not optimal, but makes it easier to debug
+            std::string strCompare = EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
+            if (strCompare == strAddress) {
+                mNode = mnpair.second.GetInfo();
+                gotNode = true;
+            } 
         }
+        // Check for (and try to fix) wonkiness...
+        int payeeActivationHeight = 0;
+        if (gotNode && mNode.activationBlockHeight != 0)
+        {
+            payeeActivationHeight = mNode.activationBlockHeight;
+        }
+        else
+        {
+            payeeActivationHeight = mnodeman.GetNodeActivationHeight(payee.GetPayee());
+        }
+
+        // Validations
+        bool voteWin = voteCount > nVotes;
+        bool voteTie = voteCount == nVotes;
+        bool lastPaidWin = gotNode && mNode.nTimeLastPaidPrimary < lastPaid;
+        bool activationHeightWin = payeeActivationHeight < activationHeight || activationHeight == 0;
+        // Logic
+        if (
+            // First check: Clear winner with more votes 
+            voteWin ||
+            // Second check: The votes are equal, so the MN paid longest ago gets a chance
+            (voteTie && lastPaidWin) ||
+            // Third check: if for some reason the last paid does not give us a clear winner... the one activated earliest wins.
+            (voteTie && activationHeightWin)
+            ) 
+        {
+            // Update the outgoing values
+            payeeRet = currentPayee;
+            activationBlockHeightRet = payeeActivationHeight;
+            // Update the internal state
+            nVotes = voteCount;
+            lastPaid = mNode.nTimeLastPaidPrimary;
+            activationHeight = payeeActivationHeight;
+            // Update sanity check values
+            selectedPayee = currentPayee;
+            selectedActivationHeight = payeeActivationHeight;
+        }
+    }
+
+    // sanity checking
+    if (selectedPayee != payeeRet || selectedActivationHeight != activationBlockHeightRet)
+    {
+        LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternodeBlockPayees::GetBestPayee -- The results of the sanity check are in... and they're not good\n");
     }
 
     return (nVotes > -1);

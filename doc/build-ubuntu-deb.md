@@ -24,6 +24,7 @@ These dependencies are required:
  libssl      | Crypto           | Random Number Generation, Elliptic Curve Cryptography
  libboost    | Utility          | Library for threading, data structures, etc
  libevent    | Networking       | OS independent asynchronous networking
+ libb2       | Crypto           | Crypto Library, lighter than libsodium
 
 Optional dependencies:
 
@@ -53,7 +54,7 @@ Dependency Build Instructions:
 
 Build requirements:
 
-    sudo apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils python3 libsodium-dev git curl
+    sudo apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils python3 libb2-dev git curl
     sudo apt-get install libboost-all-dev
 
 BerkeleyDB is required for the wallet.
