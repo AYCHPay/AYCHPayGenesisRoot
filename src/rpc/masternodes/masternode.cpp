@@ -674,7 +674,7 @@ UniValue masternodelist(const JSONRPCRequest& request)
             } else if (strMode == "json") {
                 std::ostringstream streamInfo;
                 streamInfo <<  mn.addr.ToStringIP() << " " <<
-                               mn.addr.ToStringPort << " " <<
+                               mn.addr.ToStringPort() << " " <<
                                EncodeDestination(mn.pubKeyCollateralAddress.GetID()) << " " <<
                                mn.GetStatus() << " " <<
                                mn.nProtocolVersion << " " <<
