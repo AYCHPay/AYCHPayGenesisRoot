@@ -649,6 +649,8 @@ UniValue masternodelist(const JSONRPCRequest& request)
                                (int64_t)(mn.lastPing.sigTime - mn.sigTime) << " " << std::setw(10) <<
                                mn.GetLastPaidTimePrimary() << " "  << std::setw(6) <<
                                mn.GetLastPaidBlockPrimary() << " " <<
+                               mn.GetLastPaidTimeSecondary() << " "  << std::setw(6) <<
+                               mn.GetLastPaidBlockSecondary() << " " <<
                                mn.addr.ToString();
                 std::string strFull = streamFull.str();
                 if (strFilter !="" && strFull.find(strFilter) == std::string::npos &&
@@ -671,17 +673,22 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 obj.push_back(Pair(strOutpoint, strInfo));
             } else if (strMode == "json") {
                 std::ostringstream streamInfo;
-                streamInfo <<  mn.addr.ToString() << " " <<
+                streamInfo <<  mn.addr.ToStringIP() << " " <<
+                               mn.addr.ToStringPort << " " <<
                                EncodeDestination(mn.pubKeyCollateralAddress.GetID()) << " " <<
                                mn.GetStatus() << " " <<
-                                mn.nProtocolVersion << " " <<
+                               mn.nProtocolVersion << " " <<
                                mn.lastPing.nDaemonVersion << " " <<
                                SafeIntVersionToString(mn.lastPing.nSentinelVersion) << " " <<
                                (mn.lastPing.fSentinelIsCurrent ? "current" : "expired") << " " <<
                                (int64_t)mn.lastPing.sigTime << " " <<
                                (int64_t)(mn.lastPing.sigTime - mn.sigTime) << " " <<
                                mn.GetLastPaidTimePrimary() << " " <<
-                               mn.GetLastPaidBlockPrimary();
+                               mn.GetLastPaidBlockPrimary() << " " <<
+                               mn.GetLastPaidTimeSecondary() << " " <<
+                               mn.GetLastPaidBlockSecondary() << " " <<
+                               mn.nPoSeBanScore <<
+                               mn.activationBlockHeight;
                 std::string strInfo = streamInfo.str();
                 if (strFilter !="" && strInfo.find(strFilter) == std::string::npos &&
                     strOutpoint.find(strFilter) == std::string::npos) continue;
@@ -703,12 +710,26 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 objMN.push_back(Pair("posebanscore", mn.nPoSeBanScore));
                 objMN.push_back(Pair("activation_block_height", mn.activationBlockHeight));
                 obj.push_back(Pair(strOutpoint, objMN));
-            } else if (strMode == "lastpaidblock") {
+            } else if (strMode == "lastpaidblock" || strMode == "lastpaidblockprimary") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockPrimary()));
-            } else if (strMode == "lastpaidtime") {
+            } else if (strMode == "lastpaidblocksecondary") {
+                if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
+                obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockSecondary()));
+            } else if (strMode == "lastpaidblocks") {
+                if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
+                obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockPrimary()));
+                obj.push_back(Pair(strOutpoint, mn.GetLastPaidBlockSecondary()));
+            } else if (strMode == "lastpaidtime" || strMode == "lastpaidtimeprimary") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimePrimary()));
+            } else if (strMode == "lastpaidtimesecondary") {
+                if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
+                obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimeSecondary()));
+            } else if (strMode == "lastpaidtimes") {
+                if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
+                obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimePrimary()));
+                obj.push_back(Pair(strOutpoint, mn.GetLastPaidTimeSecondary()));
             } else if (strMode == "lastseen") {
                 if (strFilter !="" && strOutpoint.find(strFilter) == std::string::npos) continue;
                 obj.push_back(Pair(strOutpoint, (int64_t)mn.lastPing.sigTime));
