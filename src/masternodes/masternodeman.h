@@ -213,6 +213,7 @@ public:
     bool IsMnbRecoveryRequested(const uint256& hash) { return mMnbRecoveryRequests.count(hash); }
 
     void UpdateLastPaid(const CBlockIndex* pindex, bool lock = true);
+    void UpdateLastPaidGlobal(const CBlockIndex* pindex, int nMaxBlocksToScanBack);
 
     void AddDirtyGovernanceObjectHash(const uint256& nHash)
     {

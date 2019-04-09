@@ -5,6 +5,7 @@
 
 #include <masternodes/activemasternode.h>
 #include <addrman.h>
+#include <base58.h>
 #include <clientversion.h>
 #include <masternodes/governance.h>
 #include <masternodes/masternode-payments.h>
@@ -1993,6 +1994,129 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
     return true;
 }
 
+// This is a simplified version of what is done, when UpdateLastPaid is called for each masternode
+void CMasternodeMan::UpdateLastPaidGlobal(const CBlockIndex* pindex, int nMaxBlocksToScanBack)
+{
+    if (!pindex) return;
+
+    // Make our own list to make lookups easier
+    std::map<CScript, CMasternode> localNodeMap;
+    for (const auto& mnpair : mapMasternodes) {
+        CScript mnpayee = GetScriptForDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
+        localNodeMap[mnpayee] = mnpair.second;
+    }
+    
+    const CBlockIndex *pindexActive = chainActive.Tip();
+    assert(pindexActive);
+
+    CDiskBlockPos blockPos = pindexActive->GetBlockPos();
+    int maxSecondaryCount = Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount;
+
+    // Simplified... always go as far back as we can
+    for (int i = 0; i < nMaxBlocksToScanBack; i++) {
+        size_t checkitOut = mnpayments.mapMasternodeBlocksPrimary.count(pindexActive->nHeight);
+        int mnCount = CountMasternodes(-1);
+
+        if ((mnCount > 2 && checkitOut) || (mnCount <= 2))
+        {
+            if (blockPos.IsNull() == true) {
+                return;
+            }
+
+            CBlock block;
+            if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
+            {
+                continue;
+            }
+
+            // Check that we are not wasting our time with a block that has no MN payments
+            if (block.vtx[0]->vout.size() < 7)
+            {
+                continue;
+            }
+
+            // Explained in the individual masternode run version.
+            int primaryMnPaymentPosition = 6; // starting from 0
+            // Setting this to -1, so the initial increment sets it to 0.
+            int positionTracker = -1;
+            for (const auto& txout : block.vtx[0]->vout)
+            {
+                positionTracker++;
+                if (positionTracker < primaryMnPaymentPosition)
+                {
+                    continue;
+                }
+
+                // If we've made it this far, get some basic info about the tx
+                CScript txPayee = txout.scriptPubKey;
+                int nHeight = pindexActive->nHeight;
+                uint32_t nTime = pindexActive->nTime;
+                // Once we enforce the amount and the primary payee... do this:
+                // CAmount txValue = txout.nValue;
+                // CAmount nMasternodePaymentPrimary = GetMasternodePayments(pindexActive->nHeight, activationBlockHeight, block.vtx[0]->GetValueOut());
+                // double readableMnPayValue = nMasternodePaymentPrimary / COIN;
+                
+                // check if we have this mn... otherwise the rest doesn't make sense
+                auto findIt = localNodeMap.find(txPayee);
+                if (findIt == localNodeMap.end())
+                {
+                    // we don't got this mn... nothing to see here... move along!
+                    continue;
+                }
+
+                if (positionTracker == primaryMnPaymentPosition)
+                {
+                    // this is the spot for the primary payment
+                    // these values were off initially. :(
+                    // But a payment was made...
+                    // The value must be enforced when the dust settles.
+                    // Anyhow...
+
+                    // mark as a primary payment if needed
+                    if (findIt->second.nBlockLastPaidPrimary < nHeight)
+                    {
+                        // set it in the local list
+                        findIt->second.nBlockLastPaidPrimary = nHeight;
+                        findIt->second.nTimeLastPaidPrimary = nTime;
+                        // and in the global list
+                        auto globalListIt = mapMasternodes.find(findIt->second.outpoint);
+                        if (globalListIt != mapMasternodes.end())
+                        {
+                            globalListIt->second.nBlockLastPaidPrimary = nHeight;
+                            globalListIt->second.nTimeLastPaidPrimary = nTime;
+                        }
+                    }
+                }
+                // accounting for 20 secondaries and counting from 0... anything after that cannot be a masternode payment anyway
+                else if (positionTracker > primaryMnPaymentPosition && positionTracker < (primaryMnPaymentPosition + maxSecondaryCount + 1)) 
+                {
+                    // From here on, it is a secondary payment
+                    // mark as a secondary payment if needed
+                    if (findIt->second.nBlockLastPaidSecondary < nHeight)
+                    {
+                        // set it in the local list
+                        findIt->second.nBlockLastPaidSecondary = nHeight;
+                        findIt->second.nTimeLastPaidSecondary = nTime;
+                        // and in the global list
+                        auto globalListIt = mapMasternodes.find(findIt->second.outpoint);
+                        if (globalListIt != mapMasternodes.end())
+                        {
+                            globalListIt->second.nBlockLastPaidSecondary = nHeight;
+                            globalListIt->second.nTimeLastPaidSecondary = nTime;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Go back to the previous block if we can... let's Rock!
+        if (pindexActive->pprev == nullptr) { assert(pindexActive); break; }
+        pindexActive = pindexActive->pprev;
+    }
+
+
+}
+
 void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex, bool lock)
 {
     LOCK(cs);
@@ -2017,15 +2141,24 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex, bool lock)
 
     static int nLastRunBlockHeight = 0;
     // Scan at least LAST_PAID_SCAN_BLOCKS but no more than mnpayments.GetStorageLimit()
-    int nMaxBlocksToScanBack = std::max(LAST_PAID_SCAN_BLOCKS, nCachedBlockHeight - nLastRunBlockHeight);
-    nMaxBlocksToScanBack = std::min(nMaxBlocksToScanBack, mnpayments.GetStorageLimit());
+    // int nMaxBlocksToScanBack = std::max(LAST_PAID_SCAN_BLOCKS, nCachedBlockHeight - nLastRunBlockHeight);
+    // nMaxBlocksToScanBack = std::min(nMaxBlocksToScanBack, mnpayments.GetStorageLimit());
+
+    // Actually... go back as far as we can for now
+    int nMaxBlocksToScanBack = mnpayments.GetStorageLimit();
 
     LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::UpdateLastPaid -- nCachedBlockHeight=%d, nLastRunBlockHeight=%d, nMaxBlocksToScanBack=%d\n",
                             nCachedBlockHeight, nLastRunBlockHeight, nMaxBlocksToScanBack);
 
-    for (auto& mnpair : mapMasternodes) {
-        mnpair.second.UpdateLastPaid(pindex, nMaxBlocksToScanBack);
-    }
+    // This is fine when you have a 1:1 relationshaip between blocks and masternodes getting paid
+    // but... we have multiple payees per block, so we need to rethink this, so we don't run through
+    // the chain masternodeCount times.
+    // for (auto& mnpair : mapMasternodes) {
+    //     mnpair.second.UpdateLastPaid(pindex, nMaxBlocksToScanBack);
+    // }
+
+    // Should be faster....
+    UpdateLastPaidGlobal(pindex, nMaxBlocksToScanBack);
 
     nLastRunBlockHeight = nCachedBlockHeight;
 }
