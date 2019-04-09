@@ -575,6 +575,12 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
 
     // Work with a local list of masternodes to avoid deadlocks :(
     std::map<COutPoint, CMasternode> localMasternodeList = mnodeman.GetFullMasternodeMap();
+    // Pre create a map, so we're not doing CPU expensive magic for each item in the list
+    std::map<std::string, CMasternode> nodeMap;
+    for (const auto& mnpair : localMasternodeList) {
+        std::string strCompare = EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
+        nodeMap[strCompare] = mnpair.second;
+    }
 
     // internal state
     int nVotes = -1;
@@ -596,15 +602,19 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
         ExtractDestination(payee.GetPayee(), payeeDestinationAddress);
         std::string strAddress = EncodeDestination(payeeDestinationAddress);
 
+        // This should be ok, as vecPayees comes from the masternode list
+        mNode = nodeMap.find(strAddress)->second.GetInfo();
+        gotNode = true;
+
         // Copied from masternodeman, to avoid having to deal with dealocks
-        for (const auto& mnpair : localMasternodeList) {
-            // Not optimal, but makes it easier to debug
-            std::string strCompare = EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
-            if (strCompare == strAddress) {
-                mNode = mnpair.second.GetInfo();
-                gotNode = true;
-            } 
-        }
+        // for (const auto& mnpair : localMasternodeList) {
+        //     // Not optimal, but makes it easier to debug
+        //     std::string strCompare = EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID()))));
+        //     if (strCompare == strAddress) {
+        //         mNode = mnpair.second.GetInfo();
+        //         gotNode = true;
+        //     } 
+        // }
         // Check for (and try to fix) wonkiness...
         int payeeActivationHeight = 0;
         if (gotNode && mNode.activationBlockHeight != 0)
@@ -613,6 +623,7 @@ bool CMasternodeBlockPayees::GetBestPayee(CScript& payeeRet, int& activationBloc
         }
         else
         {
+            // can't really avoid this check, but it is rarely used, from what I've seen.
             payeeActivationHeight = mnodeman.GetNodeActivationHeight(payee.GetPayee());
         }
 
