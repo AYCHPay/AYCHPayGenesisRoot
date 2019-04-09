@@ -609,6 +609,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         && !mnpayments.GetBlockPayees(chainActive.Height() + 1, payee, payeeActivationHeight))
             throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Genesis is downloading masternode winners...");
 
+    bool debugMasternodes = false;
     // next bock is a governanceblock and we need governance info to correctly construct it
     if (!masternodeSync.IsSynced()
         && CGovernanceBlock::IsValidBlockHeight(chainActive.Height() + 1))
@@ -617,9 +618,12 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         }
         else
         {
-            // Make sure we're using up to date information...
-            CBlockIndex* pindexTemp = chainActive.Tip();
-            mnodeman.UpdateLastPaid(pindexTemp);
+            if (debugMasternodes)
+            {
+                // Make sure we're using up to date information...
+                CBlockIndex* pindexTemp = chainActive.Tip();
+                mnodeman.UpdateLastPaid(pindexTemp);
+            }
         }
         
 
@@ -887,9 +891,13 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     // Debug Masternode primary payments
     // get the masternode list...
     CMasternode mnDebugNode;
-    std::map<COutPoint, CMasternode> mnDebugMapMasternodes = mnodeman.GetFullMasternodeMap();
+    std::map<COutPoint, CMasternode> mnDebugMapMasternodes;
     // The address to pay
     std::string strAddress;
+    if (debugMasternodes)
+    {
+        mnDebugMapMasternodes = mnodeman.GetFullMasternodeMap();
+    }
 
     CAmount masternodeActual = 0;
     UniValue masternodeObjArray(UniValue::VARR);
@@ -914,27 +922,37 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     }
 
     // genx address
-    for (const auto& mnpair : mnDebugMapMasternodes) {
-        CTxDestination address = CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID())));
-        std::string strCompare = EncodeDestination(address);
-        if (strCompare == strAddress)
-        {
-            mnDebugNode = mnpair.second;
+    if (debugMasternodes)
+    {
+        for (const auto& mnpair : mnDebugMapMasternodes) {
+            CTxDestination address = CScriptID(GetScriptForDestination(WitnessV0KeyHash(mnpair.second.pubKeyCollateralAddress.GetID())));
+            std::string strCompare = EncodeDestination(address);
+            if (strCompare == strAddress)
+            {
+                mnDebugNode = mnpair.second;
+            }
+            // else
+            // {
+            //     fprintf(stdout, "%s is not %s \n", strCompare.c_str(), strAddress.c_str());
+            // }
         }
-        // else
-        // {
-        //     fprintf(stdout, "%s is not %s \n", strCompare.c_str(), strAddress.c_str());
-        // }
     }
 
-    CAmount blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
-    CAmount masternodePrimaryEstimate = GetMasternodePayments(pindexPrev->nHeight+1, mnDebugNode.activationBlockHeight, blockRewardBase);
+    CAmount blockRewardBase = blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
+    CAmount masternodePrimaryEstimate = 0;
+    if (debugMasternodes)
+    {
+        masternodePrimaryEstimate = GetMasternodePayments(pindexPrev->nHeight+1, mnDebugNode.activationBlockHeight, blockRewardBase);
+    }
 
     result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
     result.push_back(Pair("masternode_payments_enforced", true));
     result.push_back(Pair("masternodes_total", (int64_t)masternodeTotalAmount));
     result.push_back(Pair("masternode_payments_actual", masternodeActual));
-    result.push_back(Pair("primary_masternode_estimate", masternodePrimaryEstimate));
+    if (debugMasternodes)
+    {
+        result.push_back(Pair("primary_masternode_estimate", masternodePrimaryEstimate));    
+    }
     result.push_back(Pair("masternodes", masternodeObjArray));
 
     CAmount governannceBlockAmount = Params().GetConsensus().nBlockRewardGovernance * COIN; // governance per block amount
