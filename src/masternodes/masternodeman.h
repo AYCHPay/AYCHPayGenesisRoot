@@ -76,6 +76,7 @@ private:
     std::vector<uint256> vecDirtyGovernanceObjectHashes;
 
     int64_t nLastSentinelPingTime;
+    int64_t nUpdateLastPaidBlock = 0;
 
     friend class CMasternodeSync;
     /// Find an entry
@@ -213,6 +214,7 @@ public:
     bool IsMnbRecoveryRequested(const uint256& hash) { return mMnbRecoveryRequests.count(hash); }
 
     void UpdateLastPaid(const CBlockIndex* pindex, bool lock = true);
+    void UpdateLastPaidGlobal(const CBlockIndex* pindex, int nMaxBlocksToScanBack);
 
     void AddDirtyGovernanceObjectHash(const uint256& nHash)
     {

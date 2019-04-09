@@ -125,11 +125,11 @@ bool IsBlockPayeeValid(const CTransactionRef& txNew, int nBlockHeight, CAmount b
     }
     
     if (EnforceMasternodePayments(nBlockHeight)) {
-        LogPrintf("IsBlockPayeeValid -- ERROR: Invalid masternode payment detected at height %d: %s", nBlockHeight, txNew->ToString());
+        //LogPrintf("IsBlockPayeeValid -- ERROR: Invalid masternode payment detected at height %d: %s", nBlockHeight, txNew->ToString());
         return false;
     }
 
-    LogPrintf("IsBlockPayeeValid -- WARNING: Masternode payment enforcement is disabled, accepting any payee\n");
+    //LogPrintf("IsBlockPayeeValid -- WARNING: Masternode payment enforcement is disabled, accepting any payee\n");
     return true;
 }
 
@@ -339,7 +339,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
         netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::MASTERNODEPAYMENTSYNC);
 
         Sync(pfrom, connman);
-        LogPrintf("MASTERNODEPAYMENTSYNC -- Sent Masternode payment votes to peer=%d\n", pfrom->GetId());
+        //LogPrintf("MASTERNODEPAYMENTSYNC -- Sent Masternode payment votes to peer=%d\n", pfrom->GetId());
 
     } else if (strCommand == NetMsgType::MASTERNODEPAYMENTVOTEPRIMARY) { // Masternode Payments Vote for the Winner
 
@@ -368,8 +368,8 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
 
             // Avoid processing same vote multiple times if it was already verified earlier
             if (!res.second && res.first->second.IsVerified()) {
-                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- hash=%s, nBlockHeight=%d/%d seen\n",
-                    nHash.ToString(), vote.nBlockHeight, nCachedBlockHeight);
+                // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- hash=%s, nBlockHeight=%d/%d seen\n",
+                //     nHash.ToString(), vote.nBlockHeight, nCachedBlockHeight);
                 return;
             }
 
@@ -393,7 +393,7 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
         masternode_info_t mnInfo;
         if (!mnodeman.GetMasternodeInfo(vote.masternodeOutpoint, mnInfo)) {
             // mn was not found, so we can't check vote, some info is probably missing
-            LogPrintf("MASTERNODEPAYMENTVOTEPRIMARY -- masternode is missing %s\n", vote.masternodeOutpoint.ToStringShort());
+            //LogPrintf("MASTERNODEPAYMENTVOTEPRIMARY -- masternode is missing %s\n", vote.masternodeOutpoint.ToStringShort());
             mnodeman.AskForMN(pfrom, vote.masternodeOutpoint, connman);
             return;
         }
@@ -402,11 +402,11 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
         if (!vote.CheckSignature(mnInfo.pubKeyMasternode, nCachedBlockHeight, nDos)) {
             if (nDos) {
                 LOCK(cs_main);
-                LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- ERROR: invalid signature\n");
+                LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- ERROR: invalid signature\n");
                 Misbehaving(pfrom->GetId(), nDos);
             } else {
                 // only warn about anything non-critical (i.e. nDos == 0) in debug mode
-                LogPrintG(BCLogLevel::LOG_WARNING, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- WARNING: invalid signature\n");
+                LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- WARNING: invalid signature\n");
             }
             // Either our info or vote info could be outdated.
             // In case our info is outdated, ask for an update,
@@ -418,15 +418,15 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, const std::string& strCom
         }
         
         if (!UpdateLastVote(vote)) {
-            LogPrintf("MASTERNODEPAYMENTVOTEPRIMARY -- masternode already voted, masternode=%s\n", vote.masternodeOutpoint.ToStringShort());
+            //LogPrintf("MASTERNODEPAYMENTVOTEPRIMARY -- masternode already voted, masternode=%s\n", vote.masternodeOutpoint.ToStringShort());
             return;
         }
 
         CTxDestination address1;
         ExtractDestination(vote.payee, address1);
 
-        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote: address=%s, nBlockHeight=%d, nHeight=%d, prevout=%s, hash=%s new\n",
-            EncodeDestination(address1), vote.nBlockHeight, nCachedBlockHeight, vote.masternodeOutpoint.ToStringShort(), nHash.ToString());
+        // LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] MASTERNODEPAYMENTVOTEPRIMARY -- vote: address=%s, nBlockHeight=%d, nHeight=%d, prevout=%s, hash=%s new\n",
+        //     EncodeDestination(address1), vote.nBlockHeight, nCachedBlockHeight, vote.masternodeOutpoint.ToStringShort(), nHash.ToString());
 
         if (AddOrUpdatePaymentVote(vote)){
             vote.Relay(connman);
