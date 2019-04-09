@@ -938,7 +938,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         }
     }
 
-    CAmount blockRewardBase = blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
+    CAmount blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
     CAmount masternodePrimaryEstimate = 0;
     if (debugMasternodes)
     {
