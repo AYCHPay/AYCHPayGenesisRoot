@@ -715,7 +715,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         //     }
         // }
 
-        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Selected \n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment primary -- Selected \n");
         vecMasternodeLastPaid.push_back(std::make_pair(mnpair.second.GetLastPaidBlockPrimary(), &mnpair.second));
     }
 
@@ -757,7 +757,7 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
         }
 
         // Add it to the secondaries list as well, but use the lastpaid secondary as the first term
-        LogPrintG(BCLogLevel::LOG_INFO, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Selected \n");
+        LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::GetNextMasternodesInQueueForPayment secondary -- Selected \n");
         vecMasternodeLastPaidSecondary.push_back(std::make_pair(mnpair.second.GetLastPaidBlockSecondary(), &mnpair.second));
     }
 
@@ -2139,16 +2139,28 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex, bool lock)
         return;
     }
 
-    static int nLastRunBlockHeight = 0;
+    // Actually... go back as far as we can for now
+    int nMaxBlocksToScanBack = 0;
+
+    // use lastpaid to limit the number of blocks...
+    if (nUpdateLastPaidBlock == 0)
+    {
+        // it has not run yet...
+        nMaxBlocksToScanBack = mnpayments.GetStorageLimit();
+    }
+    else
+    {
+        // it has run, so we don't need to dive quite as deeply - add an extra block... just in case ;)
+        nMaxBlocksToScanBack = (nCachedBlockHeight - nUpdateLastPaidBlock) + 1;
+    }
+    
+    // static int nLastRunBlockHeight = 0;
     // Scan at least LAST_PAID_SCAN_BLOCKS but no more than mnpayments.GetStorageLimit()
     // int nMaxBlocksToScanBack = std::max(LAST_PAID_SCAN_BLOCKS, nCachedBlockHeight - nLastRunBlockHeight);
     // nMaxBlocksToScanBack = std::min(nMaxBlocksToScanBack, mnpayments.GetStorageLimit());
 
-    // Actually... go back as far as we can for now
-    int nMaxBlocksToScanBack = mnpayments.GetStorageLimit();
-
-    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::UpdateLastPaid -- nCachedBlockHeight=%d, nLastRunBlockHeight=%d, nMaxBlocksToScanBack=%d\n",
-                            nCachedBlockHeight, nLastRunBlockHeight, nMaxBlocksToScanBack);
+    LogPrintG(BCLogLevel::LOG_DEBUG, BCLog::MN, "[Masternodes] CMasternodeMan::UpdateLastPaid -- nCachedBlockHeight=%d, nUpdateLastPaidBlock=%d, nMaxBlocksToScanBack=%d\n",
+                            nCachedBlockHeight, nUpdateLastPaidBlock, nMaxBlocksToScanBack);
 
     // This is fine when you have a 1:1 relationshaip between blocks and masternodes getting paid
     // but... we have multiple payees per block, so we need to rethink this, so we don't run through
@@ -2160,7 +2172,7 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex* pindex, bool lock)
     // Should be faster....
     UpdateLastPaidGlobal(pindex, nMaxBlocksToScanBack);
 
-    nLastRunBlockHeight = nCachedBlockHeight;
+    nUpdateLastPaidBlock = nCachedBlockHeight;
 }
 
 void CMasternodeMan::UpdateLastSentinelPingTime()

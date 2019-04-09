@@ -76,6 +76,7 @@ private:
     std::vector<uint256> vecDirtyGovernanceObjectHashes;
 
     int64_t nLastSentinelPingTime;
+    int64_t nUpdateLastPaidBlock = 0;
 
     friend class CMasternodeSync;
     /// Find an entry
