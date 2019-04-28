@@ -858,16 +858,17 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("equihashk", (int64_t)(Params().EquihashK())));
 
     // Explicit deduction amounts
-    CAmount finderAmount = Params().GetConsensus().nBlockRewardFinder * COIN ; // miner / minter
-    result.push_back(Pair("finder", (int64_t)finderAmount));
-
+    CAmount blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
     CAmount giveAwaysAmount = Params().GetConsensus().nBlockRewardGiveaways * COIN; // giveaways total
-    result.push_back(Pair("giveaways", (int64_t)giveAwaysAmount));
-
     CAmount infrastructureAmount = Params().GetConsensus().nBlockRewardInfrastructure * COIN; // infrastructure total
-    result.push_back(Pair("infrastructure", (int64_t)infrastructureAmount));
-
     CAmount founderTotalAmount = Params().GetConsensus().nBlockRewardFounders * COIN; // founder total
+    CAmount masternodeTotalAmount = Params().GetConsensus().nBlockRewardMasternode * COIN; // masternode total amount
+    CAmount totalDeduction = giveAwaysAmount + infrastructureAmount + founderTotalAmount + masternodeTotalAmount;
+    CAmount finderAmount = blockRewardBase - totalDeduction ; // miner / minter
+
+    result.push_back(Pair("finder", (int64_t)finderAmount));
+    result.push_back(Pair("giveaways", (int64_t)giveAwaysAmount));
+    result.push_back(Pair("infrastructure", (int64_t)infrastructureAmount));
     result.push_back(Pair("founderstotal", (int64_t)founderTotalAmount));
     
     std::vector<CScript> foundersScripts = Params().GetAllFounderScripts();
@@ -886,7 +887,6 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     }
     result.push_back(Pair("founders", founderScriptsObjArray));
 
-    CAmount masternodeTotalAmount = Params().GetConsensus().nBlockRewardMasternode * COIN; // masternode total amount
 
     // Debug Masternode primary payments
     // get the masternode list...
@@ -938,7 +938,6 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         }
     }
 
-    CAmount blockRewardBase = GetBlockSubsidy(pindexPrev->nHeight+1, Params().GetConsensus());
     CAmount masternodePrimaryEstimate = 0;
     if (debugMasternodes)
     {
@@ -1112,7 +1111,6 @@ UniValue getblocksubsidy(const JSONRPCRequest& request)
         + HelpExampleRpc("getblocksubsidy", "1000")
     );
 
-    RPCTypeCheck(request.params, {UniValue::VNUM});
 
     LOCK(cs_main);
     int nHeight = chainActive.Height() + 1;
@@ -1165,17 +1163,18 @@ UniValue getblocksubsidy(const JSONRPCRequest& request)
     else
     {
         CAmount subsidy = GetBlockSubsidy(nHeight, Params().GetConsensus());
-        CAmount miner = Params().GetConsensus().nBlockRewardFinder * COIN;
         CAmount foundersTotal = Params().GetConsensus().nBlockRewardFounders * COIN;
         CAmount giveawaysAmount = Params().GetConsensus().nBlockRewardGiveaways * COIN;
         CAmount infrastructureAmount = Params().GetConsensus().nBlockRewardInfrastructure * COIN;
         CAmount masternodesTotal = Params().GetConsensus().nBlockRewardMasternode * COIN;
         // Calculate the individual founder's reward
         CAmount ifr = foundersTotal / (int)Params().GetAllFounderScripts().size();
+        CAmount deductions = foundersTotal + giveawaysAmount + infrastructureAmount + masternodesTotal;
+        CAmount miner = subsidy - deductions;
 
         result.push_back(Pair("height", nHeight));
         result.push_back(Pair("total", subsidy));
-        result.push_back(Pair("deductions", subsidy - miner));
+        result.push_back(Pair("deductions", deductions));
         result.push_back(Pair("miner", miner));
         result.push_back(Pair("masternodestotal", masternodesTotal));
         result.push_back(Pair("governancetotal", GetBlockSubsidy(nHeight, Params().GetConsensus(), true)));

@@ -497,7 +497,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                             // Barring time travel this is not possible
                             LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is a founder address masternode address\n", outpoint.ToStringShort());
                             // kill it with fire....
-                            assert(!isMasternodePaymentAmongFounders);
+                            //assert(!isMasternodePaymentAmongFounders);
                         }
                     }
                 }    
