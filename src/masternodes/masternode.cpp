@@ -484,6 +484,7 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         // either a miner address
                         // which is interesting, but not useful (other than for debugging)
                         bool isMasternodeMiner = positionTracker == 0;
+                        // or it could be among the founder's payments... which means the block payments are really really broken
                         bool isMasternodePaymentAmongFounders = positionTracker > 0 && positionTracker < primaryMnPaymentPosition;
 
                         if (isMasternodeMiner)
@@ -494,7 +495,9 @@ void CMasternode::UpdateLastPaid(const CBlockIndex *pindex, int nMaxBlocksToScan
                         else if (isMasternodePaymentAmongFounders)
                         {
                             // Barring time travel this is not possible
-                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is is a founder address masternode address\n", outpoint.ToStringShort());
+                            LogPrintG(BCLogLevel::LOG_ERROR, BCLog::MN, "[Masternodes] CMasternode::UpdateLastPaidBlock -- %s is a founder address masternode address\n", outpoint.ToStringShort());
+                            // kill it with fire....
+                            assert(!isMasternodePaymentAmongFounders);
                         }
                     }
                 }    
