@@ -36,7 +36,7 @@
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread.hpp>
-#include <sodium.h>
+#include <blake2.h>
 #include <crypto/equihash/equihash.h>
 #include <pow/tromp/equi_miner.h>
 #include <functional>
