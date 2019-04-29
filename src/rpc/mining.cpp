@@ -865,6 +865,10 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     CAmount masternodeTotalAmount = Params().GetConsensus().nBlockRewardMasternode * COIN; // masternode total amount
     CAmount totalDeduction = giveAwaysAmount + infrastructureAmount + founderTotalAmount + masternodeTotalAmount;
     CAmount finderAmount = blockRewardBase - totalDeduction ; // miner / minter
+    if (pindexPrev->nHeight + 1 < BIG_BLOCK_REENABLE)
+    {
+        finderAmount = Params().GetConsensus().nBlockRewardFinder * COIN;
+    }
 
     result.push_back(Pair("finder", (int64_t)finderAmount));
     result.push_back(Pair("giveaways", (int64_t)giveAwaysAmount));
@@ -1171,6 +1175,10 @@ UniValue getblocksubsidy(const JSONRPCRequest& request)
         CAmount ifr = foundersTotal / (int)Params().GetAllFounderScripts().size();
         CAmount deductions = foundersTotal + giveawaysAmount + infrastructureAmount + masternodesTotal;
         CAmount miner = subsidy - deductions;
+        if (nHeight < BIG_BLOCK_REENABLE)
+        {
+            miner = Params().GetConsensus().nBlockRewardFinder * COIN;
+        }
 
         result.push_back(Pair("height", nHeight));
         result.push_back(Pair("total", subsidy));
