@@ -806,13 +806,13 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
     // Now calculate the secondaries
     int secondariesToGet = Params().GetConsensus().nMasternodeMaturitySecondariesMaxCount;
     size_t sampleSize = 0;
-    if ((int)vecMasternodeLastPaidSecondary.size() >= secondariesToGet)
+    if ((int)vecMasternodeLastPaidSecondary.size() - 1 >= secondariesToGet)
     {
         sampleSize = secondariesToGet;
     }
     else
     {
-        sampleSize = vecMasternodeLastPaidSecondary.size();
+        sampleSize = vecMasternodeLastPaidSecondary.size() - 1;
     }
     // copy sampleSize items to the output
     // <= to account for potentially skipping the one selected as a primary
@@ -823,7 +823,8 @@ bool CMasternodeMan::GetNextMasternodesInQueueForPayment(int nBlockHeight, bool 
             // make sure we do not add the primary to the secondaries list...
             if (pBestSecondaryMasternode !=  pBestMasternode)
             {
-                vSecondaryMnInfoRet.push_back(pBestSecondaryMasternode->GetInfo());
+                masternode_info_t tempest = pBestSecondaryMasternode->GetInfo();
+                vSecondaryMnInfoRet.push_back(tempest);
             }
         } 
         if (vSecondaryMnInfoRet.size() == sampleSize)
