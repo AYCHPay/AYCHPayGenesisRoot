@@ -104,7 +104,7 @@ static QString GetLangTerritory()
     QString lang_territory = QLocale::system().name();
     // 2) Language from QSettings
     QString lang_territory_qsettings = settings.value("language", "").toString();
-    if (!lang_territory_qsettings.isEmpty())
+    if(!lang_territory_qsettings.isEmpty())
         lang_territory = lang_territory_qsettings;
     // 3) -lang command line argument
     lang_territory = QString::fromStdString(gArgs.GetArg("-lang", lang_territory.toStdString()));
@@ -394,9 +394,7 @@ void GenesisApplication::createWindow(const NetworkStyle *networkStyle)
 
 void GenesisApplication::createSplashScreen(const NetworkStyle *networkStyle)
 {
-//    SplashScreen *splash = new SplashScreen(0, networkStyle);
-//    SplashScreen splash(QPixmap(), 0);
-    SplashScreen *splash = new SplashScreen(QPixmap(), 0);
+    SplashScreen *splash = new SplashScreen(0, networkStyle);
     // We don't hold a direct pointer to the splash screen after creation, but the splash
     // screen will take care of deleting itself when slotFinish happens.
     splash->show();
