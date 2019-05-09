@@ -40,6 +40,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopWidget>
+#include <QDesktopServices>
 #include <QDragEnterEvent>
 #include <QListWidget>
 #include <QMenuBar>
@@ -399,7 +400,25 @@ void GenesisGUI::createActions()
     openConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open Wallet &Configuration File"), this);
     openConfEditorAction->setStatusTip(tr("Open configuration file"));
     openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Masternode Configuration File"), this);
-    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));    
+    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));
+
+    openWebLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Website"), this);
+	openWebLinkAction->setStatusTip(tr("Open Genesis Network Website"));
+    openForumLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Forums"), this);
+	openForumLinkAction->setStatusTip(tr("Open Genesis Network Forums"));
+    openWikiLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Wiki"), this);
+	openWikiLinkAction->setStatusTip(tr("Open Genesis Network Wiki"));
+    openTwitterLinkAction = new QAction(QIcon(":/icons/twitter"), tr("Twitter"), this);
+	openTwitterLinkAction->setStatusTip(tr("Open Genesis Network Twitter"));
+    openRedditLinkAction = new QAction(QIcon(":/icons/reddit"), tr("Reddit"), this);
+	openRedditLinkAction->setStatusTip(tr("Open Genesis Network Reddit"));
+    openYoutubeLinkAction = new QAction(QIcon(":/icons/youtube"), tr("YouTube"), this);
+	openYoutubeLinkAction->setStatusTip(tr("Open Genesis Network YouTube"));
+    openDiscordLinkAction = new QAction(QIcon(":/icons/discord"), tr("Discord"), this);
+	openDiscordLinkAction->setStatusTip(tr("Open Genesis Network Discord"));
+    openGithubLinkAction = new QAction(QIcon(":/icons/github"), tr("Github"), this);
+	openGithubLinkAction->setStatusTip(tr("Open Genesis Network Github"));
+	
     // initially disable the debug window menu items
     openInfoAction->setEnabled(false);
     openRPCConsoleAction->setEnabled(false);
@@ -434,6 +453,17 @@ void GenesisGUI::createActions()
     // Open configs and backup folder from menu
     connect(openConfEditorAction, SIGNAL(triggered()), this, SLOT(showConfEditor()));
     connect(openMNConfEditorAction, SIGNAL(triggered()), this, SLOT(showMNConfEditor()));
+	
+    // Open web links 
+    connect(openWebLinkAction, SIGNAL(triggered()), this, SLOT(webClicked()));
+    connect(openForumLinkAction, SIGNAL(triggered()), this, SLOT(forumClicked()));
+    connect(openWikiLinkAction, SIGNAL(triggered()), this, SLOT(wikiClicked()));
+    connect(openTwitterLinkAction, SIGNAL(triggered()), this, SLOT(twitterClicked()));
+    connect(openRedditLinkAction, SIGNAL(triggered()), this, SLOT(redditClicked()));
+    connect(openYoutubeLinkAction, SIGNAL(triggered()), this, SLOT(youtubeClicked()));
+    connect(openDiscordLinkAction, SIGNAL(triggered()), this, SLOT(discordClicked()));
+    connect(openGithubLinkAction, SIGNAL(triggered()), this, SLOT(githubClicked()));
+	
     // prevents an open debug window from becoming stuck/unusable on client shutdown
     connect(quitAction, SIGNAL(triggered()), rpcConsole, SLOT(hide()));
 
@@ -507,6 +537,20 @@ void GenesisGUI::createMenuBar()
         tools->addAction(openMNConfEditorAction);
     }
 
+	if (walletFrame)
+    {
+	    QMenu *links = appMenuBar->addMenu(tr("&Links"));
+        links->addAction(openWebLinkAction);
+        links->addAction(openForumLinkAction);
+        links->addAction(openWikiLinkAction);
+        links->addSeparator();
+        links->addAction(openTwitterLinkAction);
+        links->addAction(openRedditLinkAction);
+        links->addAction(openYoutubeLinkAction);
+        links->addAction(openDiscordLinkAction);
+        links->addAction(openGithubLinkAction);
+	}
+	
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(showHelpMessageAction);
     help->addSeparator();
@@ -769,6 +813,46 @@ void GenesisGUI::showConfEditor()
 void GenesisGUI::showMNConfEditor()
 {
     GUIUtil::openMNConfigfile();
+}
+
+void GenesisGUI::webClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://genesisnetwork.io/"));
+}
+
+void GenesisGUI::forumClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://genesisnetwork.io/forum/"));
+}
+
+void GenesisGUI::wikiClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://wiki.genesisnetwork.io/"));
+}
+
+void GenesisGUI::twitterClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://twitter.com/genx_network/"));
+}
+
+void GenesisGUI::redditClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.reddit.com/r/genesisnetwork/"));
+}
+
+void GenesisGUI::youtubeClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.youtube.com/channel/UCMj1uKn_RPNsqGS9CC4uJOQ/"));
+}
+
+void GenesisGUI::discordClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://discord.io/genesisnetwork"));
+}
+
+void GenesisGUI::githubClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://github.com/genesisofficial/"));
 }
 
 void GenesisGUI::showHelpMessageClicked()

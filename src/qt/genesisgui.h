@@ -118,6 +118,14 @@ private:
     QAction *openPeersAction;
     QAction *openConfEditorAction;
     QAction *openMNConfEditorAction;
+	QAction *openWebLinkAction;
+    QAction *openForumLinkAction;
+    QAction *openWikiLinkAction;
+	QAction *openTwitterLinkAction;
+    QAction *openRedditLinkAction;
+    QAction *openYoutubeLinkAction;
+	QAction *openDiscordLinkAction;
+    QAction *openGithubLinkAction;
     QAction *openAction;
     QAction *showHelpMessageAction;
 
@@ -238,6 +246,15 @@ private Q_SLOTS:
     void showConfEditor();
     /** Open external (default) editor with masternode.conf */
     void showMNConfEditor();
+	/** Show Web Links */
+    void webClicked();
+    void forumClicked();
+    void wikiClicked();
+    void twitterClicked();
+    void redditClicked();
+    void youtubeClicked();
+    void discordClicked();
+    void githubClicked();
     /** Show help message dialog */
     void showHelpMessageClicked();
 #ifndef Q_OS_MAC
