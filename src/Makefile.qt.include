@@ -328,7 +328,12 @@ RES_ICONS = \
   qt/res/icons/tx_output.png \
   qt/res/icons/tx_mined.png \
   qt/res/icons/warning.png \
-  qt/res/icons/verify.png
+  qt/res/icons/verify.png \
+  qt/res/icons/links_twitter.png \
+  qt/res/icons/links_reddit.png \
+  qt/res/icons/links_youtube.png \
+  qt/res/icons/links_discord.png \
+  qt/res/icons/links_github.png
 
 GENESIS_QT_BASE_CPP = \
   qt/bantablemodel.cpp \

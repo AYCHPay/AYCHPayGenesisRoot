@@ -123,11 +123,11 @@ GenesisGUI::GenesisGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     spinnerFrame(0),
     platformStyle(_platformStyle)
 {
-	
-	/* Open CSS when configured */
+    
+    /* Open CSS when configured */
     this->setStyleSheet(GUIUtil::loadStyleSheet());
 
-	
+    
     QSettings settings;
     if (!restoreGeometry(settings.value("MainWindowGeometry").toByteArray())) {
         // Restore failed (perhaps missing setting), center the window
@@ -403,22 +403,22 @@ void GenesisGUI::createActions()
     openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));
 
     openWebLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Website"), this);
-	openWebLinkAction->setStatusTip(tr("Open Genesis Network Website"));
+    openWebLinkAction->setStatusTip(tr("Open Genesis Network Website"));
     openForumLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Forums"), this);
-	openForumLinkAction->setStatusTip(tr("Open Genesis Network Forums"));
+    openForumLinkAction->setStatusTip(tr("Open Genesis Network Forums"));
     openWikiLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Wiki"), this);
-	openWikiLinkAction->setStatusTip(tr("Open Genesis Network Wiki"));
-    openTwitterLinkAction = new QAction(QIcon(":/icons/twitter"), tr("Twitter"), this);
-	openTwitterLinkAction->setStatusTip(tr("Open Genesis Network Twitter"));
-    openRedditLinkAction = new QAction(QIcon(":/icons/reddit"), tr("Reddit"), this);
-	openRedditLinkAction->setStatusTip(tr("Open Genesis Network Reddit"));
-    openYoutubeLinkAction = new QAction(QIcon(":/icons/youtube"), tr("YouTube"), this);
-	openYoutubeLinkAction->setStatusTip(tr("Open Genesis Network YouTube"));
-    openDiscordLinkAction = new QAction(QIcon(":/icons/discord"), tr("Discord"), this);
-	openDiscordLinkAction->setStatusTip(tr("Open Genesis Network Discord"));
-    openGithubLinkAction = new QAction(QIcon(":/icons/github"), tr("Github"), this);
-	openGithubLinkAction->setStatusTip(tr("Open Genesis Network Github"));
-	
+    openWikiLinkAction->setStatusTip(tr("Open Genesis Network Wiki"));
+    openTwitterLinkAction = new QAction(QIcon(":/icons/links_twitter"), tr("Twitter"), this);
+    openTwitterLinkAction->setStatusTip(tr("Open Genesis Network Twitter"));
+    openRedditLinkAction = new QAction(QIcon(":/icons/links_reddit"), tr("Reddit"), this);
+    openRedditLinkAction->setStatusTip(tr("Open Genesis Network Reddit"));
+    openYoutubeLinkAction = new QAction(QIcon(":/icons/links_youtube"), tr("YouTube"), this);
+    openYoutubeLinkAction->setStatusTip(tr("Open Genesis Network YouTube"));
+    openDiscordLinkAction = new QAction(QIcon(":/icons/links_discord"), tr("Discord"), this);
+    openDiscordLinkAction->setStatusTip(tr("Open Genesis Network Discord"));
+    openGithubLinkAction = new QAction(QIcon(":/icons/links_github"), tr("Github"), this);
+    openGithubLinkAction->setStatusTip(tr("Open Genesis Network Github"));
+    
     // initially disable the debug window menu items
     openInfoAction->setEnabled(false);
     openRPCConsoleAction->setEnabled(false);
@@ -443,7 +443,7 @@ void GenesisGUI::createActions()
     connect(optionsAction, SIGNAL(triggered()), this, SLOT(optionsClicked()));
     connect(toggleHideAction, SIGNAL(triggered()), this, SLOT(toggleHidden()));
     connect(showHelpMessageAction, SIGNAL(triggered()), this, SLOT(showHelpMessageClicked()));
-	
+    
     // Jump directly to tabs in RPC-console
     connect(openInfoAction, SIGNAL(triggered()), this, SLOT(showInfo()));
     connect(openRPCConsoleAction, SIGNAL(triggered()), this, SLOT(showConsole()));
@@ -453,7 +453,7 @@ void GenesisGUI::createActions()
     // Open configs and backup folder from menu
     connect(openConfEditorAction, SIGNAL(triggered()), this, SLOT(showConfEditor()));
     connect(openMNConfEditorAction, SIGNAL(triggered()), this, SLOT(showMNConfEditor()));
-	
+    
     // Open web links 
     connect(openWebLinkAction, SIGNAL(triggered()), this, SLOT(webClicked()));
     connect(openForumLinkAction, SIGNAL(triggered()), this, SLOT(forumClicked()));
@@ -463,7 +463,7 @@ void GenesisGUI::createActions()
     connect(openYoutubeLinkAction, SIGNAL(triggered()), this, SLOT(youtubeClicked()));
     connect(openDiscordLinkAction, SIGNAL(triggered()), this, SLOT(discordClicked()));
     connect(openGithubLinkAction, SIGNAL(triggered()), this, SLOT(githubClicked()));
-	
+    
     // prevents an open debug window from becoming stuck/unusable on client shutdown
     connect(quitAction, SIGNAL(triggered()), rpcConsole, SLOT(hide()));
 
@@ -537,9 +537,9 @@ void GenesisGUI::createMenuBar()
         tools->addAction(openMNConfEditorAction);
     }
 
-	if (walletFrame)
+    if (walletFrame)
     {
-	    QMenu *links = appMenuBar->addMenu(tr("&Links"));
+        QMenu *links = appMenuBar->addMenu(tr("&Links"));
         links->addAction(openWebLinkAction);
         links->addAction(openForumLinkAction);
         links->addAction(openWikiLinkAction);
@@ -549,8 +549,8 @@ void GenesisGUI::createMenuBar()
         links->addAction(openYoutubeLinkAction);
         links->addAction(openDiscordLinkAction);
         links->addAction(openGithubLinkAction);
-	}
-	
+    }
+    
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(showHelpMessageAction);
     help->addSeparator();

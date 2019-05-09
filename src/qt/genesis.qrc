@@ -54,6 +54,11 @@
         <file alias="hd_enabled">res/icons/hd_enabled.png</file>
         <file alias="hd_disabled">res/icons/hd_disabled.png</file>
         <file alias="network_disabled">res/icons/network_disabled.png</file>
+        <file alias="links_twitter">res/icons/links_twitter.png</file>
+        <file alias="links_reddit">res/icons/links_reddit.png</file>
+        <file alias="links_youtube">res/icons/links_youtube.png</file>
+        <file alias="links_discord">res/icons/links_discord.png</file>
+        <file alias="links_github">res/icons/links_github.png</file>
     </qresource>
     <qresource prefix="/css">
         <file alias="default">res/css/default.css</file>
