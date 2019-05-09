@@ -280,7 +280,6 @@ RES_ICONS = \
   qt/res/icons/genesis.ico \
   qt/res/icons/genesis_testnet.ico \
   qt/res/icons/genesis.png \
-  qt/res/icons/masternodes.png \
   qt/res/icons/chevron.png \
   qt/res/icons/clock1.png \
   qt/res/icons/clock2.png \
@@ -311,6 +310,7 @@ RES_ICONS = \
   qt/res/icons/key.png \
   qt/res/icons/lock_closed.png \
   qt/res/icons/lock_open.png \
+  qt/res/icons/masternodes.png \
   qt/res/icons/network_disabled.png \
   qt/res/icons/open.png \
   qt/res/icons/overview.png \
@@ -328,7 +328,12 @@ RES_ICONS = \
   qt/res/icons/tx_output.png \
   qt/res/icons/tx_mined.png \
   qt/res/icons/warning.png \
-  qt/res/icons/verify.png
+  qt/res/icons/verify.png \
+  qt/res/icons/links_twitter.png \
+  qt/res/icons/links_reddit.png \
+  qt/res/icons/links_youtube.png \
+  qt/res/icons/links_discord.png \
+  qt/res/icons/links_github.png
 
 GENESIS_QT_BASE_CPP = \
   qt/bantablemodel.cpp \
