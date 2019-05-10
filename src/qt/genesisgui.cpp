@@ -408,6 +408,8 @@ void GenesisGUI::createActions()
     openForumLinkAction->setStatusTip(tr("Open Genesis Network Forums"));
     openWikiLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Wiki"), this);
     openWikiLinkAction->setStatusTip(tr("Open Genesis Network Wiki"));
+    openStatsLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Infographics"), this);
+    openStatsLinkAction->setStatusTip(tr("Open Genesis Network Infographics"));
     openTwitterLinkAction = new QAction(QIcon(":/icons/links_twitter"), tr("Twitter"), this);
     openTwitterLinkAction->setStatusTip(tr("Open Genesis Network Twitter"));
     openRedditLinkAction = new QAction(QIcon(":/icons/links_reddit"), tr("Reddit"), this);
@@ -458,6 +460,7 @@ void GenesisGUI::createActions()
     connect(openWebLinkAction, SIGNAL(triggered()), this, SLOT(webClicked()));
     connect(openForumLinkAction, SIGNAL(triggered()), this, SLOT(forumClicked()));
     connect(openWikiLinkAction, SIGNAL(triggered()), this, SLOT(wikiClicked()));
+    connect(openStatsLinkAction, SIGNAL(triggered()), this, SLOT(statsClicked()));
     connect(openTwitterLinkAction, SIGNAL(triggered()), this, SLOT(twitterClicked()));
     connect(openRedditLinkAction, SIGNAL(triggered()), this, SLOT(redditClicked()));
     connect(openYoutubeLinkAction, SIGNAL(triggered()), this, SLOT(youtubeClicked()));
@@ -543,6 +546,7 @@ void GenesisGUI::createMenuBar()
         links->addAction(openWebLinkAction);
         links->addAction(openForumLinkAction);
         links->addAction(openWikiLinkAction);
+        links->addAction(openStatsLinkAction);
         links->addSeparator();
         links->addAction(openTwitterLinkAction);
         links->addAction(openRedditLinkAction);
@@ -828,6 +832,11 @@ void GenesisGUI::forumClicked()
 void GenesisGUI::wikiClicked()
 {
     QDesktopServices::openUrl(QUrl("https://wiki.genesisnetwork.io/"));
+}
+
+void GenesisGUI::statsClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://genesisnetwork.io/stats/"));
 }
 
 void GenesisGUI::twitterClicked()
