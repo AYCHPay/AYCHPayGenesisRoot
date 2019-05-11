@@ -20,6 +20,7 @@ static const int DAYS_IN_WEEK = 7;
 static const int WEEKS_IN_MONTH = 4;
 static const int MONTHS_IN_YEAR = 12;
 static const int BONUS_DIVISOR = 100; // Bonus blocks pay out 1% of the max reward of the preceding blocks
+static const int BIG_BLOCK_REENABLE = 420000;
 
 namespace Consensus {
 
