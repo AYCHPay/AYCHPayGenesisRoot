@@ -112,7 +112,20 @@ private:
     QAction *unlockWalletAction;
     QAction *lockWalletAction;
     QAction *aboutQtAction;
+    QAction *openInfoAction;
     QAction *openRPCConsoleAction;
+    QAction *openGraphAction;
+    QAction *openPeersAction;
+    QAction *openConfEditorAction;
+    QAction *openMNConfEditorAction;
+    QAction *openWebLinkAction;
+    QAction *openForumLinkAction;
+    QAction *openWikiLinkAction;
+    QAction *openTwitterLinkAction;
+    QAction *openRedditLinkAction;
+    QAction *openYoutubeLinkAction;
+    QAction *openDiscordLinkAction;
+    QAction *openGithubLinkAction;
     QAction *openAction;
     QAction *showHelpMessageAction;
 
@@ -222,8 +235,26 @@ private Q_SLOTS:
     void aboutClicked();
     /** Show debug window */
     void showDebugWindow();
-    /** Show debug window and set focus to the console */
-    void showDebugWindowActivateConsole();
+
+    /** Show debug window and set focus to the appropriate tab */
+    void showInfo();
+    void showConsole();
+    void showGraph();
+    void showPeers();
+
+    /** Open external (default) editor with genesis.conf */
+    void showConfEditor();
+    /** Open external (default) editor with masternode.conf */
+    void showMNConfEditor();
+    /** Show Web Links */
+    void webClicked();
+    void forumClicked();
+    void wikiClicked();
+    void twitterClicked();
+    void redditClicked();
+    void youtubeClicked();
+    void discordClicked();
+    void githubClicked();
     /** Show help message dialog */
     void showHelpMessageClicked();
 #ifndef Q_OS_MAC

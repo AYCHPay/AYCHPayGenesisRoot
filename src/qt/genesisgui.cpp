@@ -40,6 +40,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QDesktopWidget>
+#include <QDesktopServices>
 #include <QDragEnterEvent>
 #include <QListWidget>
 #include <QMenuBar>
@@ -122,11 +123,11 @@ GenesisGUI::GenesisGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     spinnerFrame(0),
     platformStyle(_platformStyle)
 {
-	
-	/* Open CSS when configured */
+    
+    /* Open CSS when configured */
     this->setStyleSheet(GUIUtil::loadStyleSheet());
 
-	
+    
     QSettings settings;
     if (!restoreGeometry(settings.value("MainWindowGeometry").toByteArray())) {
         // Restore failed (perhaps missing setting), center the window
@@ -225,10 +226,10 @@ GenesisGUI::GenesisGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
 
     // Progress bar and label for blocks download
     progressBarLabel = new QLabel();
-    progressBarLabel->setVisible(false);
+    progressBarLabel->setVisible(true);
     progressBar = new GUIUtil::ProgressBar();
     progressBar->setAlignment(Qt::AlignCenter);
-    progressBar->setVisible(false);
+    progressBar->setVisible(true);
 
     // Override style sheet for progress bar for styles that have a segmented progress bar,
     // as they make the text unreadable (workaround for issue #1071)
@@ -354,54 +355,85 @@ void GenesisGUI::createActions()
     connect(historyAction, SIGNAL(triggered()), this, SLOT(gotoHistoryPage()));
 #endif // ENABLE_WALLET
 
-    quitAction = new QAction(platformStyle->TextColorIcon(":/icons/quit"), tr("E&xit"), this);
+    quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setStatusTip(tr("Quit application"));
     quitAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));
     quitAction->setMenuRole(QAction::QuitRole);
-    aboutAction = new QAction(platformStyle->TextColorIcon(":/icons/about"), tr("&About %1").arg(tr(PACKAGE_NAME)), this);
+    aboutAction = new QAction(QIcon(":/icons/about"), tr("&About %1").arg(tr(PACKAGE_NAME)), this);
     aboutAction->setStatusTip(tr("Show information about %1").arg(tr(PACKAGE_NAME)));
     aboutAction->setMenuRole(QAction::AboutRole);
     aboutAction->setEnabled(false);
-    aboutQtAction = new QAction(platformStyle->TextColorIcon(":/icons/about_qt"), tr("About &Qt"), this);
+    aboutQtAction = new QAction(QIcon(":/icons/about_qt"), tr("About &Qt"), this);
     aboutQtAction->setStatusTip(tr("Show information about Qt"));
     aboutQtAction->setMenuRole(QAction::AboutQtRole);
-    optionsAction = new QAction(platformStyle->TextColorIcon(":/icons/options"), tr("&Options..."), this);
+    optionsAction = new QAction(QIcon(":/icons/options"), tr("&Options..."), this);
     optionsAction->setStatusTip(tr("Modify configuration options for %1").arg(tr(PACKAGE_NAME)));
     optionsAction->setMenuRole(QAction::PreferencesRole);
     optionsAction->setEnabled(false);
-    toggleHideAction = new QAction(platformStyle->TextColorIcon(":/icons/about"), tr("&Show / Hide"), this);
+    toggleHideAction = new QAction(QIcon(":/icons/about"), tr("&Show / Hide"), this);
     toggleHideAction->setStatusTip(tr("Show or hide the main Window"));
 
-    encryptWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
+    encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setStatusTip(tr("Encrypt the private keys that belong to your wallet"));
     encryptWalletAction->setCheckable(true);
-    backupWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
+    backupWalletAction = new QAction(QIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
     backupWalletAction->setStatusTip(tr("Backup wallet to another location"));
-    changePassphraseAction = new QAction(platformStyle->TextColorIcon(":/icons/key"), tr("&Change Passphrase..."), this);
+    changePassphraseAction = new QAction(QIcon(":/icons/key"), tr("&Change Passphrase..."), this);
     changePassphraseAction->setStatusTip(tr("Change the passphrase used for wallet encryption"));
-    unlockWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this);
+    unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this);
     unlockWalletAction->setStatusTip(tr("Unlock wallet"));
-    lockWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_closed"), tr("&Lock Wallet..."), this);
+    lockWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Lock Wallet..."), this);
     lockWalletAction->setStatusTip(tr("Lock wallet"));
-    signMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/edit"), tr("Sign &message..."), this);
+    signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
     signMessageAction->setStatusTip(tr("Sign messages with your Genesis addresses to prove you own them"));
-    verifyMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/verify"), tr("&Verify message..."), this);
+    verifyMessageAction = new QAction(QIcon(":/icons/verify"), tr("&Verify message..."), this);
     verifyMessageAction->setStatusTip(tr("Verify messages to ensure they were signed with specified Genesis addresses"));
 
-    openRPCConsoleAction = new QAction(platformStyle->TextColorIcon(":/icons/debugwindow"), tr("&Debug window"), this);
+    openInfoAction = new QAction(QApplication::style()->standardIcon(QStyle::SP_MessageBoxInformation), tr("&Information"), this);
+    openInfoAction->setStatusTip(tr("Show diagnostic information"));
+    openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug console"), this);
     openRPCConsoleAction->setStatusTip(tr("Open debugging and diagnostic console"));
-    // initially disable the debug window menu item
-    openRPCConsoleAction->setEnabled(false);
+    openGraphAction = new QAction(QIcon(":/icons/connect_4"), tr("&Network Monitor"), this);
+    openGraphAction->setStatusTip(tr("Show network monitor"));
+    openPeersAction = new QAction(QIcon(":/icons/connect_4"), tr("&Peers list"), this);
+    openPeersAction->setStatusTip(tr("Show peers info"));
+    openConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open Wallet &Configuration File"), this);
+    openConfEditorAction->setStatusTip(tr("Open configuration file"));
+    openMNConfEditorAction = new QAction(QIcon(":/icons/edit"), tr("Open &Masternode Configuration File"), this);
+    openMNConfEditorAction->setStatusTip(tr("Open Masternode configuration file"));
 
-    usedSendingAddressesAction = new QAction(platformStyle->TextColorIcon(":/icons/address-book"), tr("&Sending addresses..."), this);
+    openWebLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Website"), this);
+    openWebLinkAction->setStatusTip(tr("Open Genesis Network Website"));
+    openForumLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Forums"), this);
+    openForumLinkAction->setStatusTip(tr("Open Genesis Network Forums"));
+    openWikiLinkAction = new QAction(QIcon(":/icons/genesis"), tr("Wiki"), this);
+    openWikiLinkAction->setStatusTip(tr("Open Genesis Network Wiki"));
+    openTwitterLinkAction = new QAction(QIcon(":/icons/links_twitter"), tr("Twitter"), this);
+    openTwitterLinkAction->setStatusTip(tr("Open Genesis Network Twitter"));
+    openRedditLinkAction = new QAction(QIcon(":/icons/links_reddit"), tr("Reddit"), this);
+    openRedditLinkAction->setStatusTip(tr("Open Genesis Network Reddit"));
+    openYoutubeLinkAction = new QAction(QIcon(":/icons/links_youtube"), tr("YouTube"), this);
+    openYoutubeLinkAction->setStatusTip(tr("Open Genesis Network YouTube"));
+    openDiscordLinkAction = new QAction(QIcon(":/icons/links_discord"), tr("Discord"), this);
+    openDiscordLinkAction->setStatusTip(tr("Open Genesis Network Discord"));
+    openGithubLinkAction = new QAction(QIcon(":/icons/links_github"), tr("Github"), this);
+    openGithubLinkAction->setStatusTip(tr("Open Genesis Network Github"));
+    
+    // initially disable the debug window menu items
+    openInfoAction->setEnabled(false);
+    openRPCConsoleAction->setEnabled(false);
+    openGraphAction->setEnabled(false);
+    openPeersAction->setEnabled(false);
+
+    usedSendingAddressesAction = new QAction(QIcon(":/icons/address-book"), tr("&Sending addresses..."), this);
     usedSendingAddressesAction->setStatusTip(tr("Show the list of used sending addresses and labels"));
-    usedReceivingAddressesAction = new QAction(platformStyle->TextColorIcon(":/icons/address-book"), tr("&Receiving addresses..."), this);
+    usedReceivingAddressesAction = new QAction(QIcon(":/icons/address-book"), tr("&Receiving addresses..."), this);
     usedReceivingAddressesAction->setStatusTip(tr("Show the list of used receiving addresses and labels"));
 
-    openAction = new QAction(platformStyle->TextColorIcon(":/icons/open"), tr("Open &URI..."), this);
+    openAction = new QAction(QIcon(":/icons/open"), tr("Open &URI..."), this);
     openAction->setStatusTip(tr("Open a genesis: URI or payment request"));
 
-    showHelpMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/info"), tr("&Command-line options"), this);
+    showHelpMessageAction = new QAction(QIcon(":/icons/info"), tr("&Command-line options"), this);
     showHelpMessageAction->setMenuRole(QAction::NoRole);
     showHelpMessageAction->setStatusTip(tr("Show the %1 help message to get a list with possible Genesis command-line options").arg(tr(PACKAGE_NAME)));
 
@@ -411,7 +443,27 @@ void GenesisGUI::createActions()
     connect(optionsAction, SIGNAL(triggered()), this, SLOT(optionsClicked()));
     connect(toggleHideAction, SIGNAL(triggered()), this, SLOT(toggleHidden()));
     connect(showHelpMessageAction, SIGNAL(triggered()), this, SLOT(showHelpMessageClicked()));
-    connect(openRPCConsoleAction, SIGNAL(triggered()), this, SLOT(showDebugWindow()));
+    
+    // Jump directly to tabs in RPC-console
+    connect(openInfoAction, SIGNAL(triggered()), this, SLOT(showInfo()));
+    connect(openRPCConsoleAction, SIGNAL(triggered()), this, SLOT(showConsole()));
+    connect(openGraphAction, SIGNAL(triggered()), this, SLOT(showGraph()));
+    connect(openPeersAction, SIGNAL(triggered()), this, SLOT(showPeers()));
+
+    // Open configs and backup folder from menu
+    connect(openConfEditorAction, SIGNAL(triggered()), this, SLOT(showConfEditor()));
+    connect(openMNConfEditorAction, SIGNAL(triggered()), this, SLOT(showMNConfEditor()));
+    
+    // Open web links 
+    connect(openWebLinkAction, SIGNAL(triggered()), this, SLOT(webClicked()));
+    connect(openForumLinkAction, SIGNAL(triggered()), this, SLOT(forumClicked()));
+    connect(openWikiLinkAction, SIGNAL(triggered()), this, SLOT(wikiClicked()));
+    connect(openTwitterLinkAction, SIGNAL(triggered()), this, SLOT(twitterClicked()));
+    connect(openRedditLinkAction, SIGNAL(triggered()), this, SLOT(redditClicked()));
+    connect(openYoutubeLinkAction, SIGNAL(triggered()), this, SLOT(youtubeClicked()));
+    connect(openDiscordLinkAction, SIGNAL(triggered()), this, SLOT(discordClicked()));
+    connect(openGithubLinkAction, SIGNAL(triggered()), this, SLOT(githubClicked()));
+    
     // prevents an open debug window from becoming stuck/unusable on client shutdown
     connect(quitAction, SIGNAL(triggered()), rpcConsole, SLOT(hide()));
 
@@ -431,8 +483,10 @@ void GenesisGUI::createActions()
     }
 #endif // ENABLE_WALLET
 
-    new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C), this, SLOT(showDebugWindowActivateConsole()));
-    new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_D), this, SLOT(showDebugWindow()));
+    new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_I), this, SLOT(showInfo()));
+    new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_C), this, SLOT(showConsole()));
+    new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_G), this, SLOT(showGraph()));
+    new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_P), this, SLOT(showPeers()));
 }
 
 void GenesisGUI::createMenuBar()
@@ -471,11 +525,33 @@ void GenesisGUI::createMenuBar()
     }
     settings->addAction(optionsAction);
 
-    QMenu *help = appMenuBar->addMenu(tr("&Help"));
     if (walletFrame)
     {
-        help->addAction(openRPCConsoleAction);
+        QMenu *tools = appMenuBar->addMenu(tr("&Tools"));
+        tools->addAction(openInfoAction);
+        tools->addAction(openRPCConsoleAction);
+        tools->addAction(openGraphAction);
+        tools->addAction(openPeersAction);
+        tools->addSeparator();
+        tools->addAction(openConfEditorAction);
+        tools->addAction(openMNConfEditorAction);
     }
+
+    if (walletFrame)
+    {
+        QMenu *links = appMenuBar->addMenu(tr("&Links"));
+        links->addAction(openWebLinkAction);
+        links->addAction(openForumLinkAction);
+        links->addAction(openWikiLinkAction);
+        links->addSeparator();
+        links->addAction(openTwitterLinkAction);
+        links->addAction(openRedditLinkAction);
+        links->addAction(openYoutubeLinkAction);
+        links->addAction(openDiscordLinkAction);
+        links->addAction(openGithubLinkAction);
+    }
+    
+    QMenu *help = appMenuBar->addMenu(tr("&Help"));
     help->addAction(showHelpMessageAction);
     help->addSeparator();
     help->addAction(aboutAction);
@@ -658,7 +734,13 @@ void GenesisGUI::createTrayIconMenu()
     trayIconMenu->addAction(verifyMessageAction);
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(optionsAction);
+    trayIconMenu->addAction(openInfoAction);
     trayIconMenu->addAction(openRPCConsoleAction);
+    trayIconMenu->addAction(openGraphAction);
+    trayIconMenu->addAction(openPeersAction);
+    trayIconMenu->addSeparator();
+    trayIconMenu->addAction(openConfEditorAction);
+    trayIconMenu->addAction(openMNConfEditorAction);
 #ifndef Q_OS_MAC // This is built-in on Mac
     trayIconMenu->addSeparator();
     trayIconMenu->addAction(quitAction);
@@ -688,11 +770,7 @@ void GenesisGUI::optionsClicked()
 
 void GenesisGUI::aboutClicked()
 {
-    if (!clientModel)
-        return;
-
-    HelpMessageDialog dlg(this, true);
-    dlg.exec();
+    helpMessageDialog->show();
 }
 
 void GenesisGUI::showDebugWindow()
@@ -703,10 +781,78 @@ void GenesisGUI::showDebugWindow()
     rpcConsole->activateWindow();
 }
 
-void GenesisGUI::showDebugWindowActivateConsole()
+void GenesisGUI::showInfo()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_INFO);
+    showDebugWindow();
+}
+
+void GenesisGUI::showConsole()
 {
     rpcConsole->setTabFocus(RPCConsole::TAB_CONSOLE);
     showDebugWindow();
+}
+
+void GenesisGUI::showGraph()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_GRAPH);
+    showDebugWindow();
+}
+
+void GenesisGUI::showPeers()
+{
+    rpcConsole->setTabFocus(RPCConsole::TAB_PEERS);
+    showDebugWindow();
+}
+
+void GenesisGUI::showConfEditor()
+{
+    GUIUtil::openGenesisConf();
+}
+
+void GenesisGUI::showMNConfEditor()
+{
+    GUIUtil::openMNConfigfile();
+}
+
+void GenesisGUI::webClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://genesisnetwork.io/"));
+}
+
+void GenesisGUI::forumClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://genesisnetwork.io/forum/"));
+}
+
+void GenesisGUI::wikiClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://wiki.genesisnetwork.io/"));
+}
+
+void GenesisGUI::twitterClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://twitter.com/genx_network/"));
+}
+
+void GenesisGUI::redditClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.reddit.com/r/genesisnetwork/"));
+}
+
+void GenesisGUI::youtubeClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://www.youtube.com/channel/UCMj1uKn_RPNsqGS9CC4uJOQ/"));
+}
+
+void GenesisGUI::discordClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://discord.io/genesisnetwork"));
+}
+
+void GenesisGUI::githubClicked()
+{
+    QDesktopServices::openUrl(QUrl("https://github.com/genesisofficial/"));
 }
 
 void GenesisGUI::showHelpMessageClicked()
@@ -952,7 +1098,7 @@ void GenesisGUI::setAdditionalDataSyncProgress(double nSyncProgress)
     if (masternodeSync.IsSynced()) {
         progressBarLabel->setVisible(false);
         progressBar->setVisible(false);
-        labelBlocksIcon->setPixmap(platformStyle->SingleColorIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
+        labelBlocksIcon->setPixmap(QIcon(":/icons/synced").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
     } else {
 
         labelBlocksIcon->setPixmap(platformStyle->SingleColorIcon(QString(
@@ -1087,7 +1233,10 @@ void GenesisGUI::closeEvent(QCloseEvent *event)
 void GenesisGUI::showEvent(QShowEvent *event)
 {
     // enable the debug window when the main window shows up
+    openInfoAction->setEnabled(true);
     openRPCConsoleAction->setEnabled(true);
+    openGraphAction->setEnabled(true);
+    openPeersAction->setEnabled(true);
     aboutAction->setEnabled(true);
     optionsAction->setEnabled(true);
 }

@@ -462,10 +462,10 @@ void openDebugLogfile()
 
 bool openGenesisConf()
 {
-    boost::filesystem::path pathConfig = GetConfigFile(GENESIS_CONF_FILENAME);
+    fs::path pathConfig = GetConfigFile(GENESIS_CONF_FILENAME);
 
     /* Create the file */
-    boost::filesystem::ofstream configFile(pathConfig, std::ios_base::app);
+    fs::ofstream configFile(pathConfig, std::ios_base::app);
     
     if (!configFile.good())
         return false;
@@ -474,6 +474,15 @@ bool openGenesisConf()
     
     /* Open genesis.conf with the associated application */
     return QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(pathConfig)));
+}
+
+void openMNConfigfile()
+{
+    fs::path pathConfig = GetMasternodeConfigFile();
+
+    /* Open masternode.conf with the associated application */
+    if (fs::exists(pathConfig))
+        QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(pathConfig)));
 }
 
 void SubstituteFonts(const QString& language)

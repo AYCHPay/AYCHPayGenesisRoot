@@ -21,10 +21,16 @@ Genesis Official
 | Difficulty Algorithm  | Zawy12's LWMA                                 |
 | Block Size            | 2MB                                           |
 | Confirmation          | 100 Blocks (100 Minutes)                      |
-| Block Reward          | Randomized                                    |
-| Circulation (1 year)  | Theo. Min: 10'512'000 Theo. Max: 525'600'000  |
-| Protocol Support      | IPV4, IPV6, TOR                               |
 | PoW - PoS - MNs       | Yes - Planned - Yes                           |
+
+## Division of Block Reward
+
+| Specification         | Descriptor                                    |
+|-----------------------|-----------------------------------------------|
+| Proof-of-Work Reward  | 350 GENX + Big Blocks                         |
+| Masternode Reward     | Primary: 1-180 GENX - Secondary: 20-199       |
+| Governance            | 90 GENX                                       |
+| Founders              | 60 GENX                                       |
 
 ## Resources
 
@@ -48,4 +54,4 @@ Genesis Official
 
 ## Development Process
 
-The `master` branch is regularly built and tested, but is not guaranteed to be completely stable. Developers typically work on their own branches then create pull requests.
+The `master` branch is regularly built and tested, but is not guaranteed to be completely stable. Developers typically work on their own forks then create pull requests.
