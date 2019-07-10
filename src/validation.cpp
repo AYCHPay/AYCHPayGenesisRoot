@@ -1295,7 +1295,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams, b
         // Make sure the subsidy divides by 4 to make the rest of the math work better
         subsidy -= subsidy % 4;
     }
-    else if (nHeight >= consensusParams.nMasternodePaymentsStartBlock && nHeight >= consensusParams.GetMegaBlockInterval() && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+    else if (consensusParams.IsGovernanceBlock(nHeight))
     {
         // governance block - once a lunar month, on the block following the mega block
         subsidy = consensusParams.nBlockRewardTotal;
@@ -3555,9 +3555,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
         // The 'normal' deductions... i.e. without governance
         auto vBlockDeductionTotal = (consensusParams.nBlockRewardTotal - consensusParams.nBlockRewardFinder) * COIN;
         // In case of governance block, leave the normal amount for the miner
-        if (nHeight >= consensusParams.nMasternodePaymentsStartBlock 
-                && nHeight >= consensusParams.GetMegaBlockInterval() 
-                && (nHeight % consensusParams.GetMegaBlockInterval()) == consensusParams.nGovernanceBlockOffset)
+        if (consensusParams.IsGovernanceBlock(nHeight))
         {
             // Add the value of the governance block as well as the masternode amount to the deduction, 
             // to ensure that the "base payments" are consistent

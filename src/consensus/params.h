@@ -142,6 +142,14 @@ struct Params {
             return false;
         }
     }
+    bool IsGovernanceBlock(int nHeight) const
+    {
+        // Enable when implementing governance
+        //return  nHeight >= nMasternodePaymentsStartBlock && nHeight >= GetMegaBlockInterval() && (nHeight % GetMegaBlockInterval()) == nGovernanceBlockOffset;
+
+        // in the mean time, account for the derpy ultrablock
+        return nHeight == 443521;
+    }
 
     // Masternodes
     int nMasternodePaymentsStartBlock;
