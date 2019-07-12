@@ -9,7 +9,7 @@
  * network protocol versioning
  */
 
-static const int PROTOCOL_VERSION = 70023;
+static const int PROTOCOL_VERSION = 70024;
 
 //! initial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 209;
@@ -51,5 +51,6 @@ static const int GENESIS_BASE = 70020;
 static const int BLOCKRESTRUCTURE_AND_MASTERNODES = 70021;
 static const int MASTERNODE_BLOCK_VALIDATION = 70022;
 static const int BIG_BLOCK_REACTIVATION = 70023;
+static const int ULTRABLOCK_FIXED = 70024;
 
 #endif // GENESIS_VERSION_H

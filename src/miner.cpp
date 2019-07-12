@@ -257,9 +257,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         // The 'normal' deductions... i.e. without governance
         auto vBlockDeductionTotal = (chainparams.GetConsensus().nBlockRewardTotal - chainparams.GetConsensus().nBlockRewardFinder) * COIN;
         // In case of governance block, leave the normal amount for the miner
-        if (nHeight >= chainparams.GetConsensus().nMasternodePaymentsStartBlock 
-                && nHeight >= chainparams.GetConsensus().GetMegaBlockInterval() 
-                && (nHeight % chainparams.GetConsensus().GetMegaBlockInterval()) == chainparams.GetConsensus().nGovernanceBlockOffset)
+        if (chainparams.GetConsensus().IsGovernanceBlock(nHeight))
         {
             // Add the value of the governance block as well as the masternode amount to the deduction, 
             // to ensure that the "base payments" are consistent
