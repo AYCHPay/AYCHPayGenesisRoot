@@ -121,6 +121,7 @@ private:
     QAction *openWebLinkAction;
     QAction *openForumLinkAction;
     QAction *openWikiLinkAction;
+    QAction *openStatsLinkAction;
     QAction *openTwitterLinkAction;
     QAction *openRedditLinkAction;
     QAction *openYoutubeLinkAction;
@@ -250,6 +251,7 @@ private Q_SLOTS:
     void webClicked();
     void forumClicked();
     void wikiClicked();
+    void statsClicked();
     void twitterClicked();
     void redditClicked();
     void youtubeClicked();
