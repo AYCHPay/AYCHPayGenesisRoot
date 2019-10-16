@@ -697,6 +697,7 @@ UniValue masternodelist(const JSONRPCRequest& request)
                 streamInfo <<  mn.addr.ToStringIP() << " " <<
                                mn.addr.ToStringPort() << " " <<
                                EncodeDestination(mn.pubKeyCollateralAddress.GetID()) << " " <<
+                               EncodeDestination(CScriptID(GetScriptForDestination(WitnessV0KeyHash(mn.pubKeyCollateralAddress.GetID())))) << " " <<
                                mn.GetStatus() << " " <<
                                mn.nProtocolVersion << " " <<
                                mn.lastPing.nDaemonVersion << " " <<
